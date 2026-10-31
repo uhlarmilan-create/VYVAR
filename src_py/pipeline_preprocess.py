@@ -129,32 +129,15 @@ def resolve_preprocess_target_coordinates(
     ui_ra_deg: float | None,
     ui_dec_deg: float | None,
 ) -> tuple[float | None, float | None]:
-    """Resolve preprocess target coordinates with DB-first priority.
+    """Resolve preprocess target coordinates (the plate-solve hint).
 
-    Priority:
-    1) ``draft manifest.CENTEROFFIELDRA/DE`` (finite pair; **0/0** is treated as unset - fall through)
-    2) UI values
-    3) median RA/DE from draft light rows
+    Priority (G14-03, Milan 2026-10-31: solved WCS > FITS header pointing > manifest centre):
+    1) ``ui_ra_deg`` / ``ui_dec_deg``: the run's own pointing (RAM-QC medians, or the header / WCS
+       pointing scan of the calibrated lights)
+    2) median RA/DE from draft light rows (header pointing)
+    None, None when neither resolves; the manifest centre is per setup (S6-FIX CENTRE-PER-SETUP) and is the
+    per-light-folder fallback of :func:`manifest_setup_centres` in the QC pass, never a field-level hint.
     """
-    if draft_id is not None:
-        try:
-            drow = db.fetch_obs_draft_by_id(int(draft_id)) or {}
-            ra_db = drow.get("CENTEROFFIELDRA")
-            de_db = drow.get("CENTEROFFIELDDE")
-            if ra_db is not None and de_db is not None:
-                ra_f = float(ra_db)
-                de_f = float(de_db)
-                if math.isfinite(ra_f) and math.isfinite(de_f):
-                    if not (abs(ra_f) < 1e-9 and abs(de_f) < 1e-9):
-                        log_event(
-                            f"INFO: Preprocessing forced to DB coordinates RA:{ra_f}, Dec:{de_f} for stability."
-                        )
-                        return float(ra_f), float(de_f)
-                    log_event(
-                        "DEBUG: draft manifest center is 0/0 - treating as unset; trying UI, then median from manifest files[]."
-                    )
-        except Exception:  # noqa: BLE001
-            pass
     try:
         if ui_ra_deg is not None and ui_dec_deg is not None:
             ra_ui = float(ui_ra_deg)
@@ -177,6 +160,16 @@ def resolve_preprocess_target_coordinates(
         except Exception:  # noqa: BLE001
             pass
     return None, None
+
+
+def manifest_setup_centres(db: VyvarDatabase, draft_id: int) -> dict[str, Any]:
+    """``center_by_setup`` of the draft manifest (the MASTERSTAR WCS centre of each setup from an earlier run);
+    {} when the manifest has none. A manifest that cannot be read is a WARNING, not a silent {}."""
+    try:
+        return dict((db.fetch_obs_draft_by_id(int(draft_id)) or {}).get("CENTER_BY_SETUP") or {})
+    except Exception as exc:  # noqa: BLE001
+        log_event(f"WARNING: Preprocess: manifest field centres not read ({exc})")
+        return {}
 
 
 def calibrated_paths_for_draft_apply_filters(
@@ -341,6 +334,7 @@ def qc_enrich_calibrated_lights_in_place(
     cfg = app_config
     calibrated_root = Path(calibrated_root)
 
+    centre_by_setup: dict[str, Any] = {}
     if db is not None and draft_id is not None:
         _ra_eff, _de_eff = resolve_preprocess_target_coordinates(
             db=db,
@@ -351,6 +345,8 @@ def qc_enrich_calibrated_lights_in_place(
         if _ra_eff is not None and _de_eff is not None:
             inject_pointing_ra_deg = float(_ra_eff)
             inject_pointing_dec_deg = float(_de_eff)
+        else:
+            centre_by_setup = manifest_setup_centres(db, int(draft_id))
 
     log_event(
         f"Preprocess: running QC in-place on draft lights ({calibrated_root})"
@@ -361,6 +357,7 @@ def qc_enrich_calibrated_lights_in_place(
         app_config=cfg,
         target_ra=inject_pointing_ra_deg,
         target_dec=inject_pointing_dec_deg,
+        target_by_setup=centre_by_setup,
         inject_pointing_only_if_missing=inject_pointing_only_if_missing,
         only_paths=only_paths,
         prefilter_rejected=prefilter_rejected,

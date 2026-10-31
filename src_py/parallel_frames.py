@@ -199,12 +199,16 @@ def _worker_bootstrap(parent_pid: int, initializer: Callable[[Any], None] | None
         initializer(ctx)
 
 
-def _run_captured(fn: Callable[[Any], Any], item: Any) -> tuple[Any, list[str]]:
+def _run_captured(fn: Callable[[Any], Any], item: Any) -> tuple[Any, list[str], dict[str, int]]:
+    """Worker side: the result, the collected infolog events and the EXCEPT-FIX counts of this item
+    (G12-30: the run process adds them to its own counters)."""
+    from except_fix_counters import counter_deltas, get_except_fix_counters  # noqa: PLC0415
     from infolog import capture_events  # noqa: PLC0415
 
+    before = get_except_fix_counters().snapshot()
     with capture_events() as events:
         out = fn(item)
-    return out, list(events)
+    return out, list(events), counter_deltas(before)
 
 
 def _run_serial(
@@ -256,6 +260,7 @@ def map_frames(
         from concurrent.futures import ProcessPoolExecutor  # noqa: PLC0415
         from concurrent.futures.process import BrokenProcessPool  # noqa: PLC0415
 
+        from except_fix_counters import add_except_fix_counts  # noqa: PLC0415
         from infolog import replay_events  # noqa: PLC0415
 
         task = functools.partial(_run_captured, fn)
@@ -273,8 +278,9 @@ def map_frames(
                     it = items[nxt]
                     pending.append(ex.submit(task, pack(it) if pack is not None else it))
                     nxt += 1
-                out, events = pending.popleft().result()
+                out, events, counts = pending.popleft().result()
                 replay_events(events)
+                add_except_fix_counts(counts)
                 start += 1
                 yield out
         except (BrokenProcessPool, MemoryError) as exc:

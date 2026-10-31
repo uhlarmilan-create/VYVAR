@@ -41,13 +41,13 @@ def test_run_epsf_stage_lc_only_calls_writer(
     )
     out = run_epsf_stage(
         EpsfStagePaths(platesolve_dir=tmp_path, frames_root=tmp_path / "frames"),
-        cfg=SimpleNamespace(),
+        cfg=SimpleNamespace(vsx_out_of_scope_types=[]),
         do_build=False,
         do_fit_merge=False,
         do_lc=True,
     )
     off = run_epsf_stage(EpsfStagePaths(platesolve_dir=tmp_path, frames_root=tmp_path / "frames"),
-                         cfg=SimpleNamespace(epsf_export_auto=False), do_build=False, do_fit_merge=False, do_lc=True)
+                         cfg=SimpleNamespace(epsf_export_auto=False, vsx_out_of_scope_types=[]), do_build=False, do_fit_merge=False, do_lc=True)
     assert off["export"] is None  # epsf_export_auto off: the ePSF tab's button writes the files
     assert called["kwargs"]["platesolve_dir"] == tmp_path
     assert called["kwargs"]["target_ids"] == ["111"]
@@ -55,8 +55,9 @@ def test_run_epsf_stage_lc_only_calls_writer(
     assert out["export"] == {"n_written": 0, "skipped": {"111": "no ePSF light curve"}}  # EPSF-EXPORT-2026-10
 
 
-def test_run_epsf_stage_fit_gets_the_selected_fit_set(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """EPSF-TARGETS-2026-10: the merge job fits the stage's fit set; ``targets`` overrides cfg.epsf_targets."""
+def test_run_epsf_stage_fit_gets_the_fit_set(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The merge job fits the stage's fit set: every target with an aperture light curve (S6-FIX
+    EPSF-SCOPE-2026-10; the ``epsf_targets`` selection was removed)."""
     seen: dict[str, object] = {}
 
     def _fake_merge(**kwargs):
@@ -68,17 +69,15 @@ def test_run_epsf_stage_fit_gets_the_selected_fit_set(tmp_path: Path, monkeypatc
     _write_fit_set(tmp_path)
     kw = dict(do_build=False, do_fit_merge=True, do_lc=False, draft_id=516)
     paths = EpsfStagePaths(platesolve_dir=tmp_path, frames_root=tmp_path)
-    run_epsf_stage(paths, cfg=SimpleNamespace(epsf_targets="E*"), **kw)
-    assert seen["fit_set"].selection == "E*" and seen["fit_set"].target_ids == {"111"}
-    seen.clear()
-    out = run_epsf_stage(paths, cfg=SimpleNamespace(epsf_targets="E*"), targets="EA", **kw)
-    assert not seen and out["fit_set"]["selection"] == "EA" and out["fit_set"]["n_total"] == 0
+    out = run_epsf_stage(paths, cfg=SimpleNamespace(vsx_out_of_scope_types=["EA"]), **kw)
+    assert seen["fit_set"].target_ids == {"111"} and out["fit_set"]["n_total"] == 2
 
 
-def test_run_epsf_stage_skips_fit_and_lc_when_nothing_is_selected(
+def test_run_epsf_stage_skips_fit_and_lc_when_every_target_is_out_of_scope(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """EPSF-TARGETS-2026-10: no target matches the selection -> fit and LC skipped."""
+    """S6-FIX EPSF-SCOPE-2026-10: a target excluded by vsx_out_of_scope_types is never fitted, also when an
+    aperture light curve of it exists -> nothing to fit, fit and LC skipped."""
 
     def _boom(**kwargs):
         raise AssertionError("must not be called")
@@ -89,7 +88,7 @@ def test_run_epsf_stage_skips_fit_and_lc_when_nothing_is_selected(
     _write_fit_set(tmp_path, vsx_type="ROT")
     out = run_epsf_stage(
         EpsfStagePaths(platesolve_dir=tmp_path, frames_root=tmp_path),
-        cfg=SimpleNamespace(epsf_targets="E*"),
+        cfg=SimpleNamespace(vsx_out_of_scope_types=["ROT"]),
         do_build=False,
         draft_id=516,
     )

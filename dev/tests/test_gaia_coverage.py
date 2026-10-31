@@ -55,9 +55,14 @@ class _Sky:
         self.calls: list[str] = []
 
     def __call__(self, adql: str) -> pd.DataFrame:
+        if "COUNT(*)" in adql:  # NEW-2 (T19): the top-up checks its rows against COUNT(*)
+            return pd.DataFrame({"n": [len(self._rows(adql))]})
+        self.calls.append(adql)
+        return self._rows(adql)
+
+    def _rows(self, adql: str) -> pd.DataFrame:
         import re
 
-        self.calls.append(adql)
         ra_iv = [(float(a), float(b)) for a, b in re.findall(r"ra >= ([\d.]+) AND ra <= ([\d.]+)", adql)]
         d0, d1 = (float(v) for v in re.search(r"dec >= (-?[\d.]+) AND dec <= (-?[\d.]+)", adql).groups())
         g0 = float(re.search(r"phot_g_mean_mag > (-?[\d.]+)", adql).group(1))
@@ -208,6 +213,8 @@ def test_read_only_db_is_not_extended_and_build_continues(tmp_path: Path, monkey
     real_connect = sqlite3.connect
 
     def _ro(path, *a, **k):
+        if k.get("uri"):  # already a read-only URI (catalog_db.connect_ro)
+            return real_connect(path, *a, **k)
         return real_connect(f"file:{path}?mode=ro", uri=True)
 
     monkeypatch.setattr(gc.sqlite3, "connect", _ro)
@@ -248,8 +255,8 @@ def test_builder_depth_is_the_smallest_strip_limit(tmp_path: Path) -> None:
     db = _old_db(tmp_path / "gaia.db", g_max=15.0)
     con = sqlite3.connect(db)
     gc.init_gaia_tables(con)
-    b._ensure_strip_mag_column(con)
-    b.mark_strip_done(con, (0.0, 180.0, 30.0, 70.0), 10, 17.0)
+    gc.ensure_strip_columns(con)  # T19 G05-03: mag_limit, n_expected, verified
+    b.mark_strip_done(con, (0.0, 180.0, 30.0, 70.0), 10, 17.0, n_expected=10)
     con.execute(  # strip of an older build: no limit stored -> its faintest star (15.0)
         "INSERT INTO strip_progress (strip_key, ra_min, ra_max, dec_min, dec_max, n_stars) VALUES (?,?,?,?,?,?)",
         (b.strip_key((180.0, 360.0, 30.0, 70.0)), 180.0, 360.0, 30.0, 70.0, 10),

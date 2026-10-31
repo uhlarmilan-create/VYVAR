@@ -7,10 +7,10 @@ from pathlib import Path
 
 from infolog import (
     end_infolog_session,
-    ensure_infolog_logging,
     log_event,
     log_milestone,
     log_phase_boundary,
+    setup_run_logging,
     start_infolog_session,
 )
 
@@ -19,7 +19,7 @@ SRC = Path(__file__).resolve().parents[2] / "src_py"
 
 def test_one_file_each_line_once(tmp_path: Path) -> None:
     draft = tmp_path / "draft"
-    ensure_infolog_logging()
+    teardown = setup_run_logging()
     log_milestone("[SITE] observer location id=2 source=config")  # before the draft log opens
     start_infolog_session(draft)
     log_phase_boundary("calibration", status="start")
@@ -28,6 +28,7 @@ def test_one_file_each_line_once(tmp_path: Path) -> None:
     logging.getLogger("pipeline").info("logger line")
     end_infolog_session()
     log_event("after close")  # outside a run: nowhere
+    teardown()
     files = list(draft.glob("infolog_*.txt"))
     assert len(files) == 1
     text = files[0].read_text(encoding="utf-8")

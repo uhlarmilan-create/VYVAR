@@ -16,9 +16,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import re
+import shutil
 import subprocess
+import threading
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -26,7 +29,7 @@ from typing import Any
 
 from pipeline_constants import GAIA_BUILD_MAG_LIMIT_DEFAULT, VSX_BUILD_MAG_LIMIT_DEFAULT
 
-from run_job import STATUS_FILE, STDOUT_FILE, read_status, stop_job, write_status
+from run_job import STATUS_FILE, STDOUT_FILE, read_status, stop_job, unique_job_dir, write_status
 from run_job import job_state as _run_job_state
 
 JOB_FILE = "job.json"
@@ -86,21 +89,66 @@ def tool_args(tool: str, **opt: Any) -> list[str]:
     raise ValueError(f"unknown catalog tool {tool!r}")
 
 
+def _lock_path(data_root: Path | str, catalog: str) -> Path:
+    return jobs_root(data_root) / f".lock_{catalog}"
+
+
+def _acquire_catalog_lock(data_root: Path | str, catalog: str, job_dir: Path) -> None:
+    """G05-17: one job per catalog. The lock file (O_CREAT | O_EXCL) names the job holding it; the
+    child removes it when it ends. A lock whose job is no longer running is stale and replaced."""
+    lock = _lock_path(data_root, catalog)
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    # The lock appears with its content in one step (hard link of a written temp file): a competing launch never
+    # reads a lock that exists but does not name its job yet (it would look stale and be removed).
+    tmp = lock.with_name(f"{lock.name}.{os.getpid()}.{threading.get_ident()}.tmp")
+    tmp.write_text(job_dir.name, encoding="utf-8")
+    try:
+        for _ in range(2):
+            try:
+                os.link(tmp, lock)
+                return
+            except FileExistsError:
+                holder_name = lock.read_text(encoding="utf-8").strip()
+                holder = jobs_root(data_root) / holder_name
+                if holder_name and holder.is_dir() and job_state(holder) == "running":
+                    raise RuntimeError(f"{(read_status(holder) or {}).get('label')} is still running ({holder.name})")
+                logging.warning("catalog_jobs: stale %s lock of %s (%s) removed", catalog, holder_name,
+                                job_state(holder) if holder_name else "no job named")
+                lock.unlink(missing_ok=True)
+        raise RuntimeError(f"catalog lock {lock} could not be taken")
+    finally:
+        tmp.unlink(missing_ok=True)
+
+
+def _release_catalog_lock(job_dir: Path, catalog: str) -> None:
+    lock = _lock_path(job_dir.parent.parent, catalog)
+    try:
+        if lock.read_text(encoding="utf-8").strip() == job_dir.name:
+            lock.unlink()
+    except FileNotFoundError:
+        pass
+
+
 def launch(tool: str, args: list[str], data_root: Path | str) -> Path:
     """Start ``tool`` as a separate process; returns its job directory."""
     if tool not in TOOLS:
         raise ValueError(f"unknown catalog tool {tool!r}")
-    busy = active_job(data_root, TOOLS[tool][1])
+    script, catalog, label = TOOLS[tool]
+    busy = active_job(data_root, catalog)  # also a running job started without the lock file
     if busy is not None:
         raise RuntimeError(f"{read_status(busy).get('label')} is still running ({busy.name})")
-    script, catalog, label = TOOLS[tool]
-    job_dir = jobs_root(data_root) / f"catalog_{tool}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    job_dir.mkdir(parents=True, exist_ok=False)
+    job_dir = unique_job_dir(jobs_root(data_root), f"catalog_{tool}_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
     job = {"tool": tool, "catalog": catalog, "label": label, "script": str(catalogs_dir() / script),
            "args": [str(a) for a in args]}
     (job_dir / JOB_FILE).write_text(json.dumps(job, indent=2), encoding="utf-8")
+    # the status exists before the lock names this job, so a competing launch sees it "starting"
     write_status(job_dir, state="starting", tool=tool, catalog=catalog, label=label, started_utc=_now(),
                  message="Starting...")
+    try:
+        _acquire_catalog_lock(data_root, catalog, job_dir)
+    except BaseException:
+        shutil.rmtree(job_dir, ignore_errors=True)
+        raise
     # "-c import" instead of "-m": runpy cannot run a compiled (Cython) module as __main__ (release bundle)
     cmd = [sys.executable, "-c", "import sys, catalog_jobs; sys.exit(catalog_jobs.main(sys.argv[1:]))",
            "--run", str(job_dir)]
@@ -109,7 +157,13 @@ def launch(tool: str, args: list[str], data_root: Path | str) -> Path:
         kw["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP | getattr(subprocess, "CREATE_NO_WINDOW", 0)
     else:
         kw["start_new_session"] = True
-    proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, **kw)
+    try:
+        proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, **kw)
+    except BaseException as exc:
+        write_status(job_dir, state="failed", message=f"start failed: {type(exc).__name__}: {exc}",
+                     finished_utc=_now())
+        _release_catalog_lock(job_dir, catalog)
+        raise
     write_status(job_dir, pid=int(proc.pid))
     return job_dir
 
@@ -118,6 +172,13 @@ def run_child(job_dir: Path | str) -> int:
     """Child side: run the script, stream its output to the log, record the return code."""
     job_dir = Path(job_dir)
     job = json.loads((job_dir / JOB_FILE).read_text(encoding="utf-8"))
+    try:
+        return _run_child(job_dir, job)
+    finally:
+        _release_catalog_lock(job_dir, str(job.get("catalog")))
+
+
+def _run_child(job_dir: Path, job: dict[str, Any]) -> int:
     cmd = [sys.executable, "-u", str(job["script"]), *job["args"]]
     write_status(job_dir, state="running", pid=os.getpid(), message="Running...", command=cmd)
     env = dict(os.environ, PYTHONIOENCODING="utf-8")
@@ -147,7 +208,16 @@ def jobs(data_root: Path | str, catalog: str | None = None) -> list[Path]:
         st = read_status(d) or {}
         if d.is_dir() and (catalog is None or st.get("catalog") == catalog):
             out.append(d)
-    return sorted(out, key=lambda d: d.name.split("_")[-2:], reverse=True)
+    return sorted(out, key=_job_sort_key, reverse=True)
+
+
+_P_JOB_TIME = re.compile(r"_(\d{8})_(\d{6})(?:_(\d+))?$")
+
+
+def _job_sort_key(d: Path) -> tuple[str, str, int]:
+    """Start time in the name, then the G12-41 same-second suffix (_2, _3 ...)."""
+    m = _P_JOB_TIME.search(d.name)
+    return (m.group(1), m.group(2), int(m.group(3) or 1)) if m else ("", "", 0)
 
 
 def job_state(job_dir: Path | str) -> str:

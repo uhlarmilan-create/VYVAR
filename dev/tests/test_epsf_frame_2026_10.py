@@ -128,28 +128,21 @@ _COMPS = [("10", "1"), ("11", "1"), ("12", "2"), ("13", "3"), ("14", "5"), ("15"
 
 
 def test_fit_set_all_takes_every_target_with_aperture_photometry(tmp_path: Path) -> None:
-    """EPSF-ALL-TARGETS-2026-10: ALL = every target with an aperture light curve (VSX, exoplanet host,
-    manual), not skipped, not catalog_only."""
+    """EPSF-ALL-TARGETS-2026-10: every target with an aperture light curve (VSX, exoplanet host, manual), not
+    skipped, not catalog_only (no target selection since S6-FIX EPSF-SCOPE-2026-10)."""
     _write(tmp_path, _TARGETS, _COMPS)
-    fs = build_epsf_fit_set(tmp_path, "ALL")
+    fs = build_epsf_fit_set(tmp_path, [])
     assert fs.target_ids == {"1", "2", "3", "6"} and fs.n_candidates == 4
     assert fs.comp_ids == {"10", "11", "12", "13", "15"}
     assert fs.target_types == {"1": "EW", "2": "EA:", "3": "RS|BY", "6": "EXOPLANET"}
-    assert build_epsf_fit_set(tmp_path, "EXOPLANET").target_ids == {"6"}
-    assert build_epsf_fit_set(tmp_path, "").target_ids == fs.target_ids  # empty = ALL
 
 
-def test_fit_set_selection_by_type_name_wildcard(tmp_path: Path) -> None:
+def test_fit_set_excludes_out_of_scope_vsx_types_like_the_aperture_path(tmp_path: Path) -> None:
+    """S6-FIX EPSF-SCOPE-2026-10: vsx_out_of_scope_types excludes a VSX auto target (token match, 'EA:' = EA)
+    even when an aperture light curve of it exists; the exoplanet host is never excluded."""
     _write(tmp_path, _TARGETS, _COMPS)
-    assert build_epsf_fit_set(tmp_path, "EA").target_ids == {"2"}  # 'EA:' matches EA
-    assert build_epsf_fit_set(tmp_path, "e*").target_ids == {"1", "2", "6"}  # EW, EA:, EXOPLANET
-    assert build_epsf_fit_set(tmp_path, "BY").target_ids == {"3"}  # token of 'RS|BY'
-    # G09-42 (Milan 2026-10-29): the wildcard is for variability types only; a name pattern selects nothing
-    assert build_epsf_fit_set(tmp_path, "V1 Cyg; ztf*").target_ids == {"1"}
-    fs = build_epsf_fit_set(tmp_path, "EW, V9 Cyg")
-    assert fs.target_ids == {"1"} and fs.unmatched_tokens == ("V9 Cyg",)
-    none = build_epsf_fit_set(tmp_path, "DSCT")
-    assert not none.catalog_ids and "DSCT" in none.empty_reason
+    assert build_epsf_fit_set(tmp_path, ["EA", "BY"]).target_ids == {"1", "6"}
+    assert build_epsf_fit_set(tmp_path, ["EXOPLANET"]).target_ids == {"1", "2", "3", "6"}
 
 
 def test_faint_star_next_to_a_bright_one_needs_the_joint_fit(tmp_path: Path) -> None:

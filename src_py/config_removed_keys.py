@@ -7,6 +7,10 @@ Moved out of ``config.py`` (code review 2 G13-40) so the loader module holds con
 from __future__ import annotations
 
 KNOWN_REMOVED_KEYS: dict[str, str] = {
+    "epsf_targets": (
+        "epsf_targets removed 2026-10-31 (S6-FIX EPSF-SCOPE-2026-10): ePSF fits every target with an aperture light "
+        "curve; vsx_out_of_scope_types is the one target exclusion of both photometries"
+    ),
     "per_frame_mp_reserve_ram_gb": (
         "per_frame_mp_reserve_ram_gb removed 2026-10-26 (RESOURCES-2026-10): a run uses half of the RAM and "
         "half of the CPUs and sizes every stage by its frame size by itself"

@@ -26,8 +26,8 @@ from plotly.subplots import make_subplots
 
 from config import AppConfig
 from platesolve_ui_paths import setup_label
+from stats_core import coerce_bool_series
 from tess_runner import tess_dir_for
-from ui_session import resolve_draft_dir_path
 from variability_plots import noise_curves
 from variability_store import (
     epoch_of_minimum,
@@ -355,14 +355,10 @@ def _apply_once(key: str, signature: Any) -> bool:
 def render_variability_dashboard(
     cfg: AppConfig,
     *,
-    draft_id: int | None = None,
-    draft_dir_override: Path | None = None,
+    draft_dir: Path | None,
 ) -> None:
+    """Variability tab of the loaded processed field (``draft_dir`` from ``app.main``; G14-12)."""
     st.header("Variability")
-    if draft_id is None and draft_dir_override is None:
-        st.info("Load a processed field first.")
-        return
-    draft_dir = resolve_draft_dir_path(draft_dir_override, draft_id, cfg.archive_root)
     if draft_dir is None:
         st.info("Load a processed field first.")
         return
@@ -376,12 +372,12 @@ def render_variability_dashboard(
     fcsv = phot / "variability_field.csv"
     if _read_json(phot / "variability_meta.json").get("status") != "ok" or not fcsv.is_file():
         st.warning("The variability search has not run for this setup (it runs inside Aperture Photometry).")
-        if st.button("Run the variability search now", key="var_run_now"):
-            from variability_field import run_field_variability  # noqa: PLC0415
+        from ui_session import any_job_running, start_task_job  # noqa: PLC0415
 
-            with st.spinner("Searching the field..."):
-                run_field_variability(Path(draft_dir) / "detrended_aligned" / "lights" / og, phot, cfg, platesolve_dir=ps)
-            st.rerun()
+        if st.button("Run the variability search now", key="var_run_now", disabled=any_job_running(cfg.data_root)):
+            # G14-14: a job process (task_jobs), with the config snapshot of the field
+            start_task_job(cfg.data_root, "variability_search", {"draft_dir": str(draft_dir), "setup": og},
+                           label=f"Variability search {og}")
         return
     data = _group_data(str(phot), _stamp(fcsv, phot / "variability_candidates.csv", phot / "variability_meta.json", ps / "variable_targets.csv"))
     meta, rows = data["meta"], data["rows"]
@@ -456,7 +452,8 @@ def _transient_section(phot: Path, ps: Path, frames_dir: Path, og: str) -> None:
             "Id": cand["label"], "Kind": cand["kind"].map(KIND_TEXT).fillna(cand["kind"]),
             t_label: cand["first_time"], "G (est.)": cand["mag_g_est"], "S/N max": cand["snr_max"],
             "Frames S/N\u22655": cand["n_frames_snr5"], "RA": cand["ra_deg"], "Dec": cand["dec_deg"],
-            "In galaxy": cand.get("galaxy", pd.Series("", index=cand.index)).fillna("").where(cand.get("in_galaxy", False).astype(bool), ""),
+            "In galaxy": cand.get("galaxy", pd.Series("", index=cand.index)).fillna("").where(
+                coerce_bool_series(cand.get("in_galaxy", pd.Series(False, index=cand.index))), ""),  # G14-31
             "Shape": [shape_text(e, f) for e, f in zip(cand.get("extended", pd.Series(False, index=cand.index)),
                                                        cand.get("fwhm_ratio", pd.Series(float("nan"), index=cand.index)),
                                                        strict=False)],
@@ -677,15 +674,14 @@ def _star_section(rows: pd.DataFrame, cid: str, og: str, sel_key: str, phot: Pat
     b2.button("\u203a", key=f"var_next_{og}", help="Next star", on_click=_step_star, args=(og, sel_key, 1), width="stretch")
     if r["kind"] == "NEW":
         c1, c2 = st.columns([3, 2])
-        if c1.button("Check catalogues again (VSX, SIMBAD, ASAS-SN, ZTF, ATLAS, Gaia vari)", key=f"var_xm_{cid}"):
-            from catalog_crossmatch import _catalog_check  # noqa: PLC0415
+        from ui_session import any_job_running, start_task_job  # noqa: PLC0415
 
-            from variability_field import load_variability_candidates, write_candidate_catalogs  # noqa: PLC0415
-
-            cand = load_variability_candidates(phot)
-            with st.spinner("Querying the catalogues..."):
-                write_candidate_catalogs(phot, {str(x["catalog_id"]): _catalog_check(x, cfg) for _, x in cand.iterrows()})
-            st.rerun()
+        if c1.button("Check catalogues again (VSX, SIMBAD, ASAS-SN, ZTF, ATLAS, Gaia vari)", key=f"var_xm_{cid}",
+                     disabled=any_job_running(cfg.data_root)):
+            # G14-14: a job process (task_jobs)
+            start_task_job(cfg.data_root, "variability_catalog_check",
+                           {"draft_dir": str(phot.parent.parent.parent), "setup": og},
+                           label=f"Catalogue check {og}")
         # the file is the state: the box shows it and a click writes it
         st.session_state[f"var_inc_{cid}"] = cid in load_report_include(phot)
         c2.checkbox("Include the TESS result in the SUMMARY MEASURE REPORT", key=f"var_inc_{cid}",
@@ -718,17 +714,14 @@ def _tess_section(cid: str, r: pd.Series, phot: Path, night: pd.DataFrame | None
     if not tr:
         st.info("TESS data are not downloaded for this star yet. The button downloads every TESS sector into the folder "
                 "above and runs the period search (works whether tess_enabled is on or off).")
-    if st.button(label, key=f"var_tess_{cid}", type="secondary" if tr else "primary"):
-        from tess_runner import run_tess_for_star  # noqa: PLC0415
+    from ui_session import any_job_running, start_task_job  # noqa: PLC0415
 
-        bar = st.progress(0.0, text="TESS")
-        try:
-            run_tess_for_star(phot, cid, cfg, progress=lambda m, v: bar.progress(min(max(v, 0.0), 1.0), text=m))
-        except Exception as exc:  # noqa: BLE001
-            st.error(f"TESS failed: {exc}")
-        for k in ("pstate", "pin", "scan", "t0"):
-            st.session_state.pop(f"var_{k}_{cid}", None)
-        st.rerun()
+    if st.button(label, key=f"var_tess_{cid}", type="secondary" if tr else "primary",
+                 disabled=any_job_running(cfg.data_root)):
+        # G14-14: a job process (task_jobs); the period controls restart from the new result
+        start_task_job(cfg.data_root, "tess",
+                       {"draft_dir": str(phot.parent.parent.parent), "setup": phot.parent.name, "catalog_id": cid},
+                       label=f"TESS {cid}", on_done_pop=tuple(f"var_{k}_{cid}" for k in ("pstate", "pin", "scan", "t0")))
     if not tr:
         return
     verdict = str(tr.get("verdict"))
@@ -819,12 +812,12 @@ def _tess_section(cid: str, r: pd.Series, phot: Path, night: pd.DataFrame | None
     with g1:
         st.caption("Periodogram (Lomb-Scargle) - click a peak to take its period")
         if pg is not None and not pg.empty:
-            ev = st.plotly_chart(periodogram_figure(pg, period, vsx_p), width="stretch", config=_PLOT_CFG,
-                                 on_select="rerun", selection_mode="points", key=f"var_pg_{cid}")
-            pts = _selected_points(ev)
-            if pts and _apply_once(f"var_pg_pick_{cid}", round(float(pts[0]["x"]), 9)):
-                _set_period(cid, _refine_peak(pg, float(pts[0]["x"])), rebase=True, t_lc=t, m_lc=m)
-                st.rerun()
+            # G14-05: the pick is applied in the selection callback, which runs before the period widgets
+            # of the rerun exist (setting their keys in the script body raised
+            # StreamlitWidgetAlreadyInstantiatedError)
+            st.plotly_chart(periodogram_figure(pg, period, vsx_p), width="stretch", config=_PLOT_CFG,
+                            on_select=functools.partial(_on_periodogram_pick, cid, pg, t, m),
+                            selection_mode="points", key=f"var_pg_{cid}")
         else:
             st.caption("No periodogram data in the folder - download TESS again to get it.")
     with g2:
@@ -837,6 +830,13 @@ def _tess_section(cid: str, r: pd.Series, phot: Path, night: pd.DataFrame | None
             st.plotly_chart(pixel_figure(pix, cid), width="stretch", config=_PLOT_CFG, key=f"var_pix_{cid}")
             if pix.get("target_likelihood") is not None:
                 st.caption(f"Target likelihood {float(pix['target_likelihood']):.2f}")
+
+
+def _on_periodogram_pick(cid: str, pg: pd.DataFrame, t: np.ndarray, m: np.ndarray) -> None:
+    """Periodogram selection callback: the refined peak becomes the period (once per new pick)."""
+    pts = _selected_points(st.session_state.get(f"var_pg_{cid}"))
+    if pts and _apply_once(f"var_pg_pick_{cid}", round(float(pts[0]["x"]), 9)):
+        _set_period(cid, _refine_peak(pg, float(pts[0]["x"])), rebase=True, t_lc=t, m_lc=m)
 
 
 def _refine_peak(pg: pd.DataFrame, period: float) -> float:

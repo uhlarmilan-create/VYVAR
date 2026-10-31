@@ -160,9 +160,12 @@ def measure_from_files(
     flat_files: list[Path],
     dark_files: list[Path],
     *,
-    saturation_adu: float = 65535.0,
+    saturation_adu: float,
 ) -> PtcResult:
     """Photon transfer from raw flats (pairs of equal exposure) and darks (pairs of equal exposure).
+
+    ``saturation_adu`` is required (NEW-4: no assumed 16-bit level; the GUI takes the camera's SATURATE_ADU
+    or asks for it).
 
     Every flat exposure needs darks of the same exposure (dark level and amp glow); the shortest dark
     pair gives the read noise. All frames must share binning and gain setting."""

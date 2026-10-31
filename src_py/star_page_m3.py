@@ -535,9 +535,6 @@ def epsf_page_data(lc_dir: Path, platesolve_dir: Path, cid: str, *, min_epochs: 
         grid = "x".join(str(v) for v in ((man.get("spatial") or {}).get("grid") or [1, 1]))
         facts.append(("ePSF models", f"{len(frames)} frames, FWHM {np.nanmedian(fw):.2f} px ({np.nanmin(fw):.2f}-"
                                      f"{np.nanmax(fw):.2f}), grid {grid}, {man.get('n_build_stars', '?')} build stars"))
-    sel = (man.get("fit_set") or {}).get("selection")
-    if sel:
-        facts.append(("Targets of the run", str(sel)))
     return {"df": df, "stats": st, "facts": facts, "psf_csv": psf_csv}
 
 

@@ -443,7 +443,10 @@ def _run(conn: sqlite3.Connection, args: argparse.Namespace) -> int:
             print(f"ERROR: {exc}\n[exoplanet_data] unchanged.")
             failed.append("exoplanet_data")
     print("VACUUM ...")
-    conn.execute("VACUUM")
+    try:
+        conn.execute("VACUUM")
+    except sqlite3.OperationalError as exc:  # G05-16: a reader (VYVAR) holds the DB; tables are already replaced
+        print(f"VACUUM skipped ({exc}); the tables are updated, the file is compacted on a later run.")
     for t in ("vsx_data", "exoplanet_data"):
         print(f"{t}: {_count(conn, t)} rows")
     if failed:

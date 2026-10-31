@@ -48,7 +48,7 @@ def _night(tmp_path: Path, *, g_native: float, rn_e: float, adc_bits: int, level
 
 def test_ptc_recovers_gain_and_read_noise_16bit(tmp_path: Path) -> None:
     flats, darks = _night(tmp_path, g_native=0.78, rn_e=3.5, adc_bits=16, levels_e=[2e3, 6e3, 12e3, 20e3, 30e3])
-    r = measure_from_files(flats, darks)
+    r = measure_from_files(flats, darks, saturation_adu=65535.0)
     assert r.ok and r.n_levels == 5
     assert r.gain == pytest.approx(0.78, rel=0.03)
     assert r.read_noise_e == pytest.approx(3.5, rel=0.08)
@@ -57,7 +57,7 @@ def test_ptc_recovers_gain_and_read_noise_16bit(tmp_path: Path) -> None:
 
 def test_ptc_14bit_camera_in_16bit_files(tmp_path: Path) -> None:
     flats, darks = _night(tmp_path, g_native=3.17, rn_e=7.6, adc_bits=14, levels_e=[5e3, 1.5e4, 3e4])
-    r = measure_from_files(flats, darks)
+    r = measure_from_files(flats, darks, saturation_adu=65535.0)
     assert r.ok
     assert r.gain == pytest.approx(3.17 / 4, rel=0.03)  # gain of the files (container ADU)
     assert native_gain(r.gain, 14) == pytest.approx(3.17, rel=0.03)
@@ -66,15 +66,15 @@ def test_ptc_14bit_camera_in_16bit_files(tmp_path: Path) -> None:
 
 def test_ptc_rejects_saturated_and_mixed_settings(tmp_path: Path) -> None:
     flats, darks = _night(tmp_path, g_native=0.78, rn_e=3.5, adc_bits=16, levels_e=[5e3, 1e4, 4.5e4])
-    r = measure_from_files(flats, darks)
+    r = measure_from_files(flats, darks, saturation_adu=65535.0)
     assert r.ok and r.n_levels == 2
     assert any("saturation" in p.note for p in r.points if not p.used)
     other = _write(tmp_path / "flat_x.fits", np.full(SHAPE, 1000), 0.5, "Flat Field", gain_setting=100)
-    r = measure_from_files(flats + [other], darks)
+    r = measure_from_files(flats + [other], darks, saturation_adu=65535.0)
     assert not r.ok and "gain setting" in r.messages[0]
 
 
 def test_ptc_needs_two_flats(tmp_path: Path) -> None:
     flats, darks = _night(tmp_path, g_native=0.78, rn_e=3.5, adc_bits=16, levels_e=[5e3])
-    r = measure_from_files(flats[:1], darks)
+    r = measure_from_files(flats[:1], darks, saturation_adu=65535.0)
     assert not r.ok and "two raw flats" in r.messages[0]

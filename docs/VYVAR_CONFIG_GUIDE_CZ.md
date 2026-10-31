@@ -1,7 +1,7 @@
 # Pruvodce konfiguraci VYVAR (config.json) - CZ
 
 _Sesterky dokument: `VYVAR_CONFIG_GUIDE_EN.md` (anglicky). Vychazi z registru
-parametru (`dev/validation/params_registry.json`, 57 polozek) a z auditu
+parametru (`dev/validation/params_registry.json`, 55 polozek) a z auditu
 zdroju parametru (`dev/results/PARAM_SOURCE_AUDIT.md`), stav k 22. 10. 2026
 (CODE-REVIEW-2026-10 krok 7: 58 klicu se stalo pevnymi konstantami). Pri zmene parametru aktualizujte tohoto
 pruvodce spolu s registrem._
@@ -38,8 +38,8 @@ jsou tri druhu a tento pruvodce kazdy z nich oznacuje:
   FITS souboru nebo je odvodi (napr. z astrometrickeho reseni). Po WAVE-B
   uz nemaji zalohu v config.json.
 - **Nastaveni (config.json)** - skutecne uzivatelske ladeni chovani
-  pipeline. To je vetsina z 57 registrovanych parametru (config.json jich
-  uklada 50; zbytek jsou fakta z databaze, hodnoty z FITS/za behu nebo
+  pipeline. To je vetsina z 55 registrovanych parametru (config.json jich
+  uklada 49; zbytek jsou fakta z databaze, hodnoty z FITS/za behu nebo
   interni zazemi).
   WAVE-B take zafixovala 20 internich parametru slepeho/astrometrickeho
   resice, ktere se v praxi nikdy neladily, a slucila 14 skalaru urovni a
@@ -205,8 +205,7 @@ Mereni jasnosti hvezd: velikost apertury, oblozne mezikruzi (annulus), model chy
 | `annulus_inner_fwhm` | 2.7; rozsah 1 .. 10 | Nastaveni | config.json | PSF fotometrie (`psf_photometry.py:1940`) | Vnitrni polomer obloznich mezikruzi v nasobcich FWHM (APERTURE-01d; AIJ Sky_Inner 14 px na draftu 516). |
 | `annulus_outer_fwhm` | 5.2; rozsah 1.5 .. 12 | Nastaveni | config.json | PSF fotometrie (`psf_photometry.py:1941`) | Vnejsi polomer obloznich mezikruzi v nasobcich FWHM (APERTURE-01d; AIJ Sky_Outer 27 px na draftu 516). |
 | `aperture_fwhm_factor` | 1.35; rozsah 0.5 .. 6 | Nastaveni | config.json | per-frame katalogy (`photometry_shared.enhance_catalog_dataframe_aperture`) | Polomer apertury per-frame katalogu: r = f x QC FWHM snimku (APERTURE-01). Svetelne krivky pouzivaji k* na cil z pevne mrizky 1.0-2.0 x FWHM (APERTURE-K-2026-10). |
-| `epsf_auto_run` | False | Nastaveni (config.json) | config.json | orchetrace night-run (`night_run.py`) | Kdyz true, RUN VYVAR / night_run automaticky spusti ePSF stupen (**beta**) po aperturni fotometrii. Vychozi VYPNUTO. Aperturni fotometrie je end-to-end validovana (AstroImageJ 4.86 mmag RMS, 134 epoch, BO CVn). ePSF je interni konzistentni s aperturou na referencni noci (era06); nezavisla externi a multi-rig validace jeste ceka. Tlacitka ePSF ve UI stupen vynuti. |
-| `epsf_targets` | ALL | Nastaveni (config.json) | config.json | ePSF stupen (`epsf_stage.py`, `epsf_science_set.py`) | Ktere cile RUN ePSF meri: `ALL` = vsechny VSX cile s aperturni fotometrii (po `vsx_out_of_scope_types`; hostitele exoplanet a kandidati z hledani promennych nejsou katalogove promenne), nebo carkou oddelene VSX typy / jmena hvezd / catalog id; zastupny `*` plati jen pro typy promennosti (`E*` = EA, EB, EW, ...), jmena a id se porovnavaji presne. Pouziva night run pri zapnutem `epsf_auto_run`; zalozka ePSF ho muze pro jeden beh prepsat (EPSF-TARGETS-2026-10). |
+| `epsf_auto_run` | False | Nastaveni (config.json) | config.json | orchetrace night-run (`night_run.py`) | Kdyz true, RUN VYVAR / night_run automaticky spusti ePSF stupen (**beta**) po aperturni fotometrii. Vychozi VYPNUTO. Aperturni fotometrie je end-to-end validovana (AstroImageJ 4.86 mmag RMS, 134 epoch, BO CVn). ePSF je interni konzistentni s aperturou na referencni noci (era06); nezavisla externi a multi-rig validace jeste ceka. RUN VYVAR z GUI je night run (stejne pravidlo); jinak zalozka ePSF spusti stupen jen tlacitkem RUN ePSF. ePSF fituje kazdy cil s aperturni svetelnou krivkou (`vsx_out_of_scope_types` vylouci cil z obou fotometrii; `epsf_targets` odstranen 2026-10-31, S6-FIX EPSF-SCOPE-2026-10). |
 | `epsf_export_auto` | true | Nastaveni (config.json) | config.json | ePSF stupen (`epsf_stage.py`, `epsf_export.py`) | Soubory ePSF svetelnych krivek pro uzivatele (`photometry/lightcurves_reports/epsf/<hvezda>_<datum>_<setup>_epsf.txt`: bjd_tdb, delta_mag, err s popisnou hlavickou) se zapisi automaticky po dobehnuti RUN ePSF. false: zapise je tlacitko "Generate ePSF light-curve files" v zalozce ePSF. Neni to soubor pro AAVSO / VarAstro (EPSF-EXPORT-2026-10). |
 | `gs11_dilution_enabled` | False | Nastaveni (config.json) | config.json | tvorba svetelne krivky (`method_lc_output.py:144`) | Zapina odhad dilution z katalogu (kolik svetla sousedu protece do apertur). |
 | `save_lightcurve_png` | False | Nastaveni (config.json) | config.json | aperturni fotometrie (`photometry_core.py:7386`) | Behem behu uklada i PNG nahledy svetelnych krivek jednotlivych cilu. |

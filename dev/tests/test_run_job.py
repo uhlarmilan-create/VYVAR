@@ -18,12 +18,7 @@ def _params(tmp_path: Path) -> night_run.NightRunParams:
         equipment_id=3,
         telescope_id=4,
         location_id=5,
-        masterdark_validity_days=30,
-        manual_flat_map={"a": "b"},
-        flat_fallback_choices={"g": "o"},
         masters_from="library",
-        existing_pipeline=object(),
-        optics=object(),
         progress_cb=lambda m: None,
     )
 
@@ -32,12 +27,12 @@ def test_job_round_trip_keeps_every_plain_field(tmp_path):
     p = _params(tmp_path)
     job = run_job.params_to_job(p)
     json.dumps(job)  # must be JSON-safe
-    assert "existing_pipeline" not in job and "progress_cb" not in job and "optics" not in job
+    assert "progress_cb" not in job
     back = run_job.job_to_params(json.loads(json.dumps(job)))
     for k, v in job.items():
         got = getattr(back, k)
         assert (str(got) if isinstance(got, Path) else got) == v, k
-    assert back.existing_pipeline is None and back.progress_cb is None
+    assert back.progress_cb is None
 
 
 def test_unknown_job_field_rejected(tmp_path):

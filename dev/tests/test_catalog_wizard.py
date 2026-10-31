@@ -189,7 +189,7 @@ def test_settings_page_catalog_builder(tmp_path: Path, monkeypatch) -> None:
     app.write_text("import sys\nfrom pathlib import Path\n"
                    f"sys.path.insert(0, {str(_REPO / 'src_py')!r})\n"
                    "from config import AppConfig\nimport ui_settings\n"
-                   f"ui_settings.render_settings_dashboard(AppConfig(project_root=Path({str(root)!r})), None)\n")
+                   f"ui_settings.render_settings_dashboard(AppConfig(project_root=Path({str(root)!r})))\n")
     at = AppTest.from_file(str(app), default_timeout=60)
     at.run()
     at.radio(key="vyvar_set_group").set_value("paths").run()

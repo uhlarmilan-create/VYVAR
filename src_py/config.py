@@ -542,10 +542,6 @@ class AppConfig:
     #: Default OFF.
     #: ``NightRunParams.epsf`` True/False overrides; None reads this key.
     epsf_auto_run: bool = False
-    #: EPSF-TARGETS-2026-10: targets RUN ePSF measures - ``ALL`` (every VSX target with aperture photometry,
-    #: after ``vsx_out_of_scope_types``) or comma-separated VSX types / star names / catalog ids, ``*`` wildcard
-    #: (e.g. ``EA, EB, EW`` or ``E*``). The ePSF tab can override it per run.
-    epsf_targets: str = "ALL"
     #: EPSF-EXPORT-2026-10: write the ePSF light-curve files for the user (lightcurves_reports/epsf: bjd_tdb,
     #: delta_mag, err + header) automatically when RUN ePSF finishes. Off: the ePSF tab's button writes them.
     epsf_export_auto: bool = True
@@ -741,7 +737,6 @@ class AppConfig:
             }
         else:
             self.aavso_filter_map = {}
-        self.epsf_targets = str(data.get("epsf_targets", self.epsf_targets) or "ALL").strip() or "ALL"
         _act = str(data.get("apply_color_term", self.apply_color_term) or "auto").strip().lower()
         if parse_bool(_act) is True:
             self.apply_color_term = "on"
@@ -851,7 +846,6 @@ class AppConfig:
                 "observer_name": str(self.observer_name),
                 "observer_code": str(self.observer_code),
                 "aavso_filter_map": dict(self.aavso_filter_map),
-                "epsf_targets": str(self.epsf_targets),
                 "apply_color_term": str(self.apply_color_term),
                 "k2_mode": str(self.k2_mode),
                 "k2_defaults_bprp": dict(self.k2_defaults_bprp),

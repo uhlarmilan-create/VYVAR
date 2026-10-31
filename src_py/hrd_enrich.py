@@ -283,8 +283,11 @@ def enrich_candidates(
     enabled: bool = True,
     simbad_enabled: bool = True,
     timeout_s: float = 20.0,
+    fetch: bool = True,
 ) -> pd.DataFrame:
-    """Merge online teff/logg/DSC (Gaia TAP) and SIMBAD id/otype/sp_type into candidates (fail-open)."""
+    """Merge online teff/logg/DSC (Gaia TAP) and SIMBAD id/otype/sp_type into candidates (fail-open).
+
+    ``fetch=False`` (NEW-1, the GUI's HRD tab): the cache file only - no network query, nothing written."""
     if candidates_df is None or candidates_df.empty:
         return candidates_df if candidates_df is not None else pd.DataFrame()
 
@@ -301,8 +304,8 @@ def enrich_candidates(
     cache_file = Path(cache_path) if cache_path is not None else None
     cache: dict[str, dict[str, Any]] = _load_cache(cache_file) if cache_file is not None else {}
 
-    need_gaia = [sid for sid in ids if _needs_gaia_fetch(cache, sid)]
-    need_simbad = [sid for sid in ids if simbad_enabled and _needs_simbad_fetch(cache, sid)]
+    need_gaia = [sid for sid in ids if _needs_gaia_fetch(cache, sid)] if fetch else []
+    need_simbad = [sid for sid in ids if simbad_enabled and _needs_simbad_fetch(cache, sid)] if fetch else []
 
     skip_reason: str | None = None
     tap_attempts = 0
@@ -341,7 +344,7 @@ def enrich_candidates(
     if skip_reason:
         log_event(f"HRD enrichment skipped: {skip_reason}")
 
-    if cache_file is not None:
+    if cache_file is not None and fetch:
         _save_cache(
             cache_file,
             cache,

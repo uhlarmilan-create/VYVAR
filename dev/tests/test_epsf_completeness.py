@@ -94,14 +94,16 @@ def test_mixed_n_full_passes(tmp_path: Path) -> None:
 
 
 def test_app_and_dashboard_call_run_epsf_stage() -> None:
+    """G14-04: RUN ePSF is the ``run_epsf`` task job (task_jobs), not an in-thread dispatcher in app.py."""
     root = Path(__file__).resolve().parents[2]
-    app = (root / "src_py" / "app.py").read_text(encoding="utf-8")
-    i = app.index('pending.get("kind") == "run_epsf"')
-    j = app.index("else:", i)
-    body = app[i:j]
+    tj = (root / "src_py" / "task_jobs.py").read_text(encoding="utf-8")
+    i = tj.index("def task_run_epsf(")
+    j = tj.index("\ndef ", i + 10)
+    body = tj[i:j]
     assert "run_epsf_stage" in body
     assert "run_epsf_psf_merge_job" not in body
-    assert 'pending.get("epsf_targets")' in body and "targets=_targets_epsf" in body  # selection reaches the stage
-    assert 'for _k_epsf, _su in enumerate(_setups_epsf' in body  # every setup of the draft is run
+    assert "targets" not in body.split("run_epsf_stage(", 1)[1].split(")\n", 1)[0]  # no selection (S6-FIX)
+    assert "for k, name in enumerate(names" in body  # every setup of the draft is run
+    assert "run_epsf_stage" not in (root / "src_py" / "app.py").read_text(encoding="utf-8")
     dash = (root / "src_py" / "ui_epsf_dashboard.py").read_text(encoding="utf-8")
-    assert '"kind": "run_epsf"' in dash and '"setups": [r.pending_entry() for r in runnable]' in dash
+    assert 'start_task_job(cfg.data_root, "run_epsf"' in dash and '"setups": [r.setup for r in runnable]' in dash

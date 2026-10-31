@@ -17,7 +17,7 @@ SRC = REPO / "src_py"
 DOCS = REPO / "docs"
 sys.path.insert(0, str(SRC))
 
-from invariants_runtime import WIRED_INV_IDS, InvariantViolation, check_flat_mean_near_one, check_preprocess_large_small_ratio, check_wcs_identity_p95, dao_only_fraction_from_masterstars, stamp_pipeline_stage, validate_provenance_schema
+from invariants_runtime import WIRED_INV_IDS, check_flat_mean_near_one, check_preprocess_large_small_ratio, check_wcs_identity_p95, dao_only_fraction_from_masterstars, stamp_pipeline_stage, validate_provenance_schema
 
 
 def _registry_wired_ids() -> set[str]:
@@ -87,11 +87,18 @@ def test_dag01_upstream_and_cold_start() -> None:
     assert meta["stages"][-1]["cold_start"] is True
     meta2: dict = {}
     stamp_pipeline_stage(meta2, "masterstar", enforce_upstream=True)
-    stamp_pipeline_stage(meta2, "target_comp_selection", enforce_upstream=True)  # gap OK
-    assert meta2["stages"][-1].get("gap") is True
+    # G12-27: STAGE_ORDER holds only the stamped stages; masterstar -> target_comp_selection is contiguous
+    stamp_pipeline_stage(meta2, "target_comp_selection", enforce_upstream=True)
+    assert meta2["stages"][-1].get("gap") is False
+    meta3: dict = {}
+    stamp_pipeline_stage(meta3, "masterstar", enforce_upstream=True)
+    stamp_pipeline_stage(meta3, "aperture_photometry", enforce_upstream=True)  # gap OK
+    assert meta3["stages"][-1].get("gap") is True
     stamp_pipeline_stage(meta2, "aperture_photometry", enforce_upstream=True)  # contiguous
-    with pytest.raises(InvariantViolation):
-        stamp_pipeline_stage(meta2, "target_comp_selection", enforce_upstream=True)  # backwards
+    # G12-27 (Milan 2026-10-31): a stage run again is legal and clears the later stamps
+    rec = stamp_pipeline_stage(meta2, "target_comp_selection", enforce_upstream=True)
+    assert rec["rerun_cleared"] == ["target_comp_selection", "aperture_photometry"]
+    assert [s["name"] for s in meta2["stages"]] == ["masterstar", "target_comp_selection"]
 
 
 def test_prov01_round_trip_minimal() -> None:

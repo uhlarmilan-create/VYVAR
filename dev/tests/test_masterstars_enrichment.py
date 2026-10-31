@@ -43,7 +43,7 @@ def test_missing_enrichment_columns_detected() -> None:
 
 def test_no_fetch_master_sources_in_plan_or_ui() -> None:
     root = Path(__file__).resolve().parents[2] / "src_py"
-    for rel in ("pipeline.py", "ui_components.py"):
+    for rel in ("pipeline.py",):
         src = (root / rel).read_text(encoding="utf-8")
         assert "fetch_master_sources_for_draft" not in src
 

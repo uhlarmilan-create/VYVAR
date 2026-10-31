@@ -1470,17 +1470,10 @@ def _ms_write_catalog_and_meta(
             _cfg_ms,
             entry_point="generate_masterstar_and_catalog",
         )
-        # INV-DAG-01: masterstar stage stamp (cold-start OK if earlier stages absent).
-        try:
-            from invariants_runtime import stamp_stage_on_disk  # noqa: PLC0415
+        # INV-DAG-01: masterstar stage stamp (first stage; a re-run clears the later stamps, G12-27).
+        from invariants_runtime import stamp_stage_on_disk  # noqa: PLC0415
 
-            stamp_stage_on_disk(
-                Path(platesolve_dir) / "photometry",
-                "masterstar",
-                enforce_upstream=True,
-            )
-        except Exception as _dag_exc:  # noqa: BLE001
-            logging.debug("[INV-DAG-01] masterstar stamp skipped: %s", _dag_exc)
+        stamp_stage_on_disk(Path(platesolve_dir) / "photometry", "masterstar", enforce_upstream=True)
     log_event(
         f"MASTERSTAR catalog: {Path(csv_path).name} - {len(df_final)} rows "
         f"(DAO + catalog over the full field; no cut by distance from the frame centre)."

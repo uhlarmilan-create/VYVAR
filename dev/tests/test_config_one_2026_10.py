@@ -22,7 +22,9 @@ sys.path.insert(0, str(SRC))
 import config  # noqa: E402
 from config import AppConfig  # noqa: E402
 
-ENTRY_MODULES = {"app", "night_run", "run_job", "config"}
+# task_jobs: G14-04 job child; vyvar_runtime: the entry points' data-dir bootstrap (G12-29: it reads the
+# configured database_path)
+ENTRY_MODULES = {"app", "night_run", "run_job", "task_jobs", "config", "vyvar_runtime"}
 
 
 def _defaults() -> dict[str, object]:

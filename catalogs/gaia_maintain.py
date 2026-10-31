@@ -1,11 +1,14 @@
 """gaia_maintain.py - maintenance of the local Gaia DR3 catalog (CATALOG-DB-2026-10, Milan 2026-10-20).
 
-Standard library only. Close VYVAR before running it (the DB must not be in use).
+Close VYVAR before running it (the DB must not be in use). --report and --register also use
+src_py/gaia_coverage (strip completeness, coverage registration).
 
-  --report        indexes, file size, catalog_meta, coverage (read-only)
+  --report        indexes, file size, catalog_meta, coverage, strips not verified complete
+                  (G05-03; repair: build_gaia_catalog.py --repair) - read-only
   --drop-unused   drop the indexes no VYVAR query uses: idx_ra (covered by idx_ra_dec),
                   idx_teff and idx_parallax_snr (both columns are read by source_id only)
-  --register      write the catalog_meta row of gaia_dr3 (source, build date, depth, sky, rows)
+  --register      store the coverage registration of an older DB (G04-45) and write the
+                  catalog_meta row of gaia_dr3 (source, build date, depth, sky, rows)
   --vacuum-into P write a compact copy of the DB to P (VACUUM INTO). The original stays as it is
                   until you delete it; the copy is checked (integrity, row count, tables).
 
@@ -43,6 +46,16 @@ CREATE TABLE IF NOT EXISTS catalog_meta (
     builder        TEXT
 );
 """
+
+
+def _gaia_coverage():
+    """src_py/gaia_coverage of this install (strip completeness, coverage registration)."""
+    src = ROOT / "src_py"
+    if str(src) not in sys.path:
+        sys.path.insert(0, str(src))
+    import gaia_coverage  # noqa: PLC0415
+
+    return gaia_coverage
 
 
 def default_db() -> Path:
@@ -102,6 +115,15 @@ def report(db: Path) -> None:
                 print(f"catalog_meta:  {r}")
         else:
             print("catalog_meta:  none (run --register)")
+        bad = _gaia_coverage().strips_needing_repair(con)
+        at_cap = [s for s in bad if s["at_anonymous_cap"] or s["state"] == "truncated"]
+        print(f"strips:        {len(bad)} not verified complete (COUNT check), "
+              f"{len(at_cap)} truncated or at the anonymous TAP row cap")
+        for s in at_cap:
+            print(f"  {s['strip_key']:40s} {s['state']:14s} rows={s['n_stars']}")
+        if at_cap:
+            keys = " ".join(f"--strip {s['strip_key']}" for s in at_cap)
+            print(f"repair:        python catalogs/build_gaia_catalog.py --out {db} --repair {keys}")
         free = shutil.disk_usage(db.parent).free
         print(f"free disk:     {gb(free)} on the drive of the DB")
     finally:
@@ -131,6 +153,10 @@ def drop_unused(db: Path) -> None:
 
 
 def register(db: Path) -> None:
+    connect(db, write=True).close()  # refuses while the DB is in use
+    rec = _gaia_coverage().register_existing_db(db.resolve())
+    if rec is not None:
+        log(f"coverage registered: Dec {rec['dec_min']:g}..{rec['dec_max']:g}, G <= {rec['g_max']:g}")
     con = connect(db, write=True)
     try:
         cov = []

@@ -22,13 +22,9 @@ LOGGER = logging.getLogger(__name__)
 
 PROV_SCHEMA_VERSION = 1
 
-# Minimal stage DAG (INV-DAG-01).
+# Stage DAG (INV-DAG-01): the stages that stamp pipeline_meta (G12-27, Milan 2026-10-31).
 STAGE_ORDER: tuple[str, ...] = (
-    "calibrate",
-    "preprocess",
-    "align",
     "masterstar",
-    "perframe",
     "target_comp_selection",
     "aperture_photometry",
     "postprocess",
@@ -444,40 +440,40 @@ def stamp_pipeline_stage(
     enforce_upstream: bool = True,
     head_inputs_present: bool = True,
 ) -> dict[str, Any]:
-    """INV-DAG-01: append a stage stamp; optionally require the previous stage.
+    """INV-DAG-01: append a stage stamp in ``STAGE_ORDER``.
 
-    Cold start (empty ``stages`` and ``name`` not first): allowed - stamps with
-    ``cold_start=true`` so mid-pipeline entry points do not fail-closed.
+    Cold start (empty ``stages`` and ``name`` not first): allowed - stamped with ``cold_start=true`` so
+    mid-pipeline entry points do not fail-closed. G12-27 (Milan 2026-10-31): running a stage again is
+    legal; its old stamp and the stamps of every later stage are removed (the re-run invalidates them)
+    and listed in ``rerun_cleared``, so a photometry re-run on an existing field passes.
     """
     name_s = str(name).strip()
     if name_s not in STAGE_ORDER:
         raise ValueError(f"unknown stage {name_s!r}; expected one of {STAGE_ORDER}")
-    stages = meta.setdefault("stages", [])
+    stages = meta.get("stages")
     if not isinstance(stages, list):
         stages = []
-        meta["stages"] = stages
-    stamped = {_stage_name(s) for s in stages if isinstance(s, dict)}
     idx = STAGE_ORDER.index(name_s)
     cold_start = False
     gap = False
+    cleared: list[str] = []
     if enforce_upstream:
-        seqs = [STAGE_ORDER.index(n) for n in stamped if n in STAGE_ORDER]
+        kept: list[Any] = []
+        for s in stages:
+            n = _stage_name(s) if isinstance(s, dict) else ""
+            if n in STAGE_ORDER and STAGE_ORDER.index(n) >= idx:
+                cleared.append(n)
+            else:
+                kept.append(s)
+        stages = kept
+        seqs = [STAGE_ORDER.index(n) for n in (_stage_name(s) for s in stages if isinstance(s, dict)) if n in STAGE_ORDER]
         max_seq = max(seqs) if seqs else -1
-        if not stamped:
-            if idx > 0:
-                cold_start = True
-        elif idx < max_seq:
-            inv_check(
-                meta,
-                "INV-DAG-01",
-                False,
-                policy="FAIL",
-                detail=f"stage {name_s!r} seq={idx} goes backwards (max stamped seq={max_seq})",
-            )
+        if max_seq < 0:
+            cold_start = idx > 0
         elif idx > max_seq + 1:
-            # Sparse wiring (early stages not yet stamped) - allow with gap flag.
+            # Sparse wiring (an earlier stage not stamped) - allowed with the gap flag.
             gap = True
-        # idx == max_seq or idx == max_seq+1: re-stamp or contiguous - ok
+    meta["stages"] = stages
     rec = {
         "name": name_s,
         "seq": int(idx),
@@ -486,12 +482,16 @@ def stamp_pipeline_stage(
         "cold_start": bool(cold_start),
         "gap": bool(gap),
     }
+    if cleared:
+        rec["rerun_cleared"] = cleared
     stages.append(rec)
     detail = f"stamped {name_s} seq={idx}"
     if cold_start:
         detail += " (cold_start)"
     if gap:
         detail += " (gap)"
+    if cleared:
+        detail += f" (re-run: cleared {', '.join(cleared)})"
     inv_check(meta, "INV-DAG-01", True, policy="FAIL", detail=detail)
     return rec
 
@@ -588,13 +588,9 @@ def validate_config_behavior(meta: dict[str, Any], photometry_dir: Path | str | 
         return
 
     if _voos_list:
-        from vsx_type_scope import is_vsx_auto_selected_target, vsx_type_is_out_of_scope  # noqa: PLC0415
+        from vsx_type_scope import target_is_out_of_scope  # noqa: PLC0415
 
-        expect_mask = any(
-            is_vsx_auto_selected_target(vrow)
-            and vsx_type_is_out_of_scope(str(vrow.get("vsx_type", "") or ""), _voos_list)
-            for _, vrow in vt_df.iterrows()
-        )
+        expect_mask = any(target_is_out_of_scope(vrow, _voos_list) for _, vrow in vt_df.iterrows())
         if expect_mask and "skip_reason" in at_df.columns:
             masked = (at_df["skip_reason"].astype(str).str.strip() == "vsx_type_out_of_scope").sum()
             if int(masked) <= 0:
@@ -803,15 +799,10 @@ def validate_provenance_schema(
 def check_cal_diag(meta: dict[str, Any], *, photometry_dir: Path | str | None = None) -> None:
     """INV-CAL-01: CAL-DIAG v2 provenance when dark calibration ran."""
     block = meta.get("cal_diag")
-    cd_path_ok = False
-    if photometry_dir is not None:
-        for candidate in (
-            Path(photometry_dir).resolve().parent.parent / "cal_diag.json",
-            Path(photometry_dir).resolve().parent / "cal_diag.json",
-        ):
-            if candidate.is_file():
-                cd_path_ok = True
-                break
+    # G12-02: cal_diag.json is written at the field root (cal_diag.write_cal_diag_json); the one
+    # field-root rule finds it from the photometry folder.
+    field_root = processed_field_root(photometry_dir)
+    cd_path_ok = field_root is not None and (field_root / "cal_diag.json").is_file()
     cal_mode = str(meta.get("calibration_mode") or "")
     # pre_calibrated: dark calibration was skipped (CALIBRATION_MODE_PRE).
     # PASSTHROUGH/RAW: no VYVAR dark step. None of these require cal_diag.json.
@@ -910,12 +901,7 @@ def run_end_of_run_invariants(
     """Load meta, stamp postprocess, run PROV/CFG validation, save."""
     meta = load_pipeline_meta(photometry_dir)
     if stamp_postprocess:
-        try:
-            stamp_pipeline_stage(meta, "postprocess", enforce_upstream=True)
-        except InvariantViolation:
-            raise
-        except Exception as exc:  # noqa: BLE001
-            LOGGER.debug("[INV] postprocess stamp skipped: %s", exc)
+        stamp_pipeline_stage(meta, "postprocess", enforce_upstream=True)
     validate_provenance_schema(meta, photometry_dir=photometry_dir)
     save_pipeline_meta(photometry_dir, meta)
     return meta

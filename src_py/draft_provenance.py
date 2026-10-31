@@ -10,6 +10,7 @@ import re
 import hashlib
 import logging
 import math
+import threading
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -191,7 +192,18 @@ def light_rows_from_manifest(
     root = resolve_draft_dir_for_id(db, int(draft_id))
     if root is None:
         return None
-    manifest = load_draft_manifest(root)
+    return light_rows_from_manifest_dir(root, int(draft_id), imagetyp=imagetyp)
+
+
+def light_rows_from_manifest_dir(
+    root: Path | str,
+    draft_id: int,
+    *,
+    imagetyp: str = "light",
+) -> list[dict[str, Any]] | None:
+    """:func:`light_rows_from_manifest` of the processed field in folder ``root`` (G14-11: the GUI
+    reads the loaded folder, not the archive folder with the same id)."""
+    manifest = load_draft_manifest(Path(root))
     files = manifest.get("files") if manifest else None
     if not isinstance(files, list):
         return None
@@ -344,7 +356,7 @@ def record_calibration_outcome(
     and ``reason``. A group with any frame that is not fully calibrated (VY_CFLAG other than DF: no flat
     field) is a relative product: its light curves are not for AAVSO/VarAstro submission (trust hard
     reason, see :func:`calibration_trust_reasons`). ``calibration_mode`` becomes PASSTHROUGH when no frame
-    got a dark (G12-01). Returns the group block.
+    got a dark (G12-01, N1), else VYVAR (N2). Returns the group block.
     """
     subs = {str(k): str(v) for k, v in (flat_substitute_by_group or {}).items() if v}
     groups: dict[str, Any] = {}
@@ -365,7 +377,11 @@ def record_calibration_outcome(
             "reason": reason,
         }
     root = draft_archive_root(archive_path)
-    mode = CALIBRATION_MODE_PASSTHROUGH if all_flags and all_flags <= {"P"} else None
+    # N1: PASSTHROUGH when no frame got a dark (no flag contains D: P and FS frames are raw);
+    # N2: the mode is always written, so a field calibrated again with darks is VYVAR again.
+    mode: str | None = None
+    if all_flags:
+        mode = CALIBRATION_MODE_PASSTHROUGH if not any("D" in f for f in all_flags) else CALIBRATION_MODE_VYVAR
     patch_draft_manifest(root, int(draft_id), calibration_mode=mode, extra={"calibration_groups": groups})
     return groups
 
@@ -396,7 +412,7 @@ def write_draft_manifest(
     status: str | None = None,
     final_observation_id: str | None = None,
     is_calibrated: int | None = None,
-    center: dict[str, Any] | None = None,
+    center_by_setup: dict[str, Any] | None = None,
     observation_start_jd: float | None = None,
     schema_version: int = MANIFEST_SCHEMA_VERSION,
     files: list[dict[str, Any]] | None = None,
@@ -419,15 +435,15 @@ def write_draft_manifest(
         )
         if is_calibrated is not None:
             payload["is_calibrated"] = int(is_calibrated)
-        payload["center"] = dict(center or {"ra_deg": None, "de_deg": None})
+        if center_by_setup is not None:
+            payload["center_by_setup"] = dict(center_by_setup)  # S6-FIX: one centre per setup, no field centre
         payload["observation_start_jd"] = observation_start_jd
     if files is not None:
         payload["files"] = list(files)
     if extra:
         payload.update(extra)
     path = root / _MANIFEST_NAME
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    _write_manifest_file(path, payload)  # G12-21: the one atomic manifest writer
     return path
 
 
@@ -512,13 +528,21 @@ def processed_field_night_date(jd_utc: float | None, lon_deg: float | None) -> s
     return (t + timedelta(hours=lon / 15.0 - 12.0)).strftime("%Y%m%d")
 
 
-def processed_field_folder_name(archive_root: Path | str, target: str, night: str) -> str:
-    """``<target>_<night>_<NNN>`` with the first free counter under ``Archive/Drafts``."""
+def make_processed_field_folder(archive_root: Path | str, target: str, night: str) -> Path:
+    """Create ``Archive/Drafts/<target>_<night>_<NNN>`` with the first free counter and return it.
+
+    G12-45: each candidate is claimed by ``mkdir(exist_ok=False)``, so two concurrent imports never
+    share a folder (the former ``exists()`` probe and a later mkdir could race)."""
     drafts = Path(archive_root).expanduser().resolve() / "Drafts"
+    drafts.mkdir(parents=True, exist_ok=True)
     n = 1
-    while (drafts / f"{target}_{night}_{n:03d}").exists():
-        n += 1
-    return f"{target}_{night}_{n:03d}"
+    while True:
+        cand = drafts / f"{target}_{night}_{n:03d}"
+        try:
+            cand.mkdir(exist_ok=False)
+            return cand
+        except FileExistsError:
+            n += 1
 
 
 def _ingest_item_to_manifest_entry(item: dict[str, Any], *, obs_file_id: int) -> dict[str, Any]:
@@ -568,16 +592,22 @@ _MANIFEST_REPLACE_WAIT_S = 0.05
 def _write_manifest_file(path: Path, payload: dict[str, Any]) -> None:
     """Write ``payload`` to ``path`` atomically (temp file in the same folder + ``os.replace``)."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
-    tmp.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-    for attempt in range(_MANIFEST_REPLACE_RETRIES):
-        try:
-            os.replace(tmp, path)
-            return
-        except PermissionError:
-            if attempt == _MANIFEST_REPLACE_RETRIES - 1:
-                raise
-            time.sleep(_MANIFEST_REPLACE_WAIT_S)
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
+    try:
+        with open(tmp, "w", encoding="utf-8") as fh:
+            fh.write(json.dumps(payload, indent=2) + "\n")
+            fh.flush()
+            os.fsync(fh.fileno())  # G12-21: the renamed file is complete after a crash
+        for attempt in range(_MANIFEST_REPLACE_RETRIES):
+            try:
+                os.replace(tmp, path)
+                return
+            except PermissionError:
+                if attempt == _MANIFEST_REPLACE_RETRIES - 1:
+                    raise
+                time.sleep(_MANIFEST_REPLACE_WAIT_S)
+    finally:
+        tmp.unlink(missing_ok=True)  # G12-21: no temp file left behind when the write fails
 
 
 class _ManifestBatch:
@@ -701,7 +731,7 @@ def patch_draft_manifest(
     rig: dict[str, Any] | None = None,
     paths: dict[str, Any] | None = None,
     status: str | None = None,
-    center: dict[str, Any] | None = None,
+    center_by_setup: dict[str, Any] | None = None,
     files: list[dict[str, Any]] | None = None,
     final_observation_id: str | None = None,
     is_calibrated: int | None = None,
@@ -717,8 +747,8 @@ def patch_draft_manifest(
         manifest["paths"] = dict(paths)
     if status is not None:
         manifest["status"] = str(status)
-    if center is not None:
-        manifest["center"] = dict(center)
+    if center_by_setup is not None:
+        manifest["center_by_setup"] = dict(center_by_setup)
     if files is not None:
         manifest["files"] = list(files)
     if final_observation_id is not None:
@@ -751,16 +781,18 @@ def create_draft_manifest(
     archive_root: Path | str,
     data: dict[str, Any],
 ) -> int:
-    """Allocate draft id and write initial manifest (no draft manifest SQL)."""
+    """Allocate draft id and write initial manifest (no draft manifest SQL).
+
+    The id is above ``min_id_floor`` and every field folder. Concurrent imports must go through
+    ``VyvarDatabase.create_draft``, which runs this inside one DB write transaction (NEW-3)."""
     did = allocate_next_draft_id(archive_root, floor=int(data.get("min_id_floor") or 0))
     mode = str(data.get("calibration_mode") or CALIBRATION_MODE_VYVAR)
     jd = _optional_float(data.get("observation_start_jd"))
     target = processed_field_target_name(data.get("object_name"), data.get("source_folder_name"))
-    name = processed_field_folder_name(
+    draft_dir = make_processed_field_folder(
         archive_root, target, processed_field_night_date(jd, _optional_float(data.get("site_lon_deg")))
     )
-    draft_dir = Path(archive_root).expanduser().resolve() / "Drafts" / name
-    draft_dir.mkdir(parents=True, exist_ok=False)
+    name = draft_dir.name
     is_cal = 1 if bool(data.get("is_calibrated", False)) else 0
     patch_draft_manifest(
         draft_dir,
@@ -1109,7 +1141,7 @@ def obs_draft_row_from_manifest(manifest: dict[str, Any], draft_id: int) -> dict
     """Build an draft manifest-shaped row dict from ``draft_manifest.json`` (UI display source)."""
     rig = manifest.get("rig") if isinstance(manifest.get("rig"), dict) else {}
     paths = manifest.get("paths") if isinstance(manifest.get("paths"), dict) else {}
-    center = manifest.get("center") if isinstance(manifest.get("center"), dict) else {}
+    centres = manifest.get("center_by_setup") if isinstance(manifest.get("center_by_setup"), dict) else {}
     row: dict[str, Any] = {
         "ID": int(draft_id),
         "ID_EQUIPMENTS": _optional_int(rig.get("equipment_id")),
@@ -1117,8 +1149,8 @@ def obs_draft_row_from_manifest(manifest: dict[str, Any], draft_id: int) -> dict
         "ID_LOCATION": _optional_int(rig.get("location_id")),
         "ID_SCANNING": _optional_int(rig.get("scanning_id")),
         "OBSERVATIONSTARTJD": _optional_float(manifest.get("observation_start_jd")),
-        "CENTEROFFIELDRA": center.get("ra_deg"),
-        "CENTEROFFIELDDE": center.get("de_deg"),
+        # S6-FIX CENTRE-PER-SETUP: {setup: {ra_deg, de_deg, source}}; a legacy field-level ``center`` is ignored
+        "CENTER_BY_SETUP": dict(centres),
         "STATUS": _optional_str(manifest.get("status")),
         "FINAL_OBSERVATION_ID": _optional_str(manifest.get("final_observation_id")),
         "LIGHTS_PATH": _optional_str(paths.get("lights")),

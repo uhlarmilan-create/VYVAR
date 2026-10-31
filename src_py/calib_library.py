@@ -37,6 +37,8 @@ OFFSET_CONSTANT = "constant"
 OFFSET_NONE = "none"
 OFFSET_ALREADY = "already_removed"  # imported flat, user states offset was removed
 OFFSET_UNKNOWN = "unknown"  # legacy VYVAR flat or import without statement
+#: plan / report value (G01-22): the measured offset of an OFFSET_UNKNOWN flat is removed at use
+OFFSET_REMOVED_AT_USE = "removed-at-use"
 
 #: Lower edge of the validity window: flats/darks are often taken the morning after.
 VALIDITY_LEAD_DAYS = 1.0
@@ -58,19 +60,50 @@ _NEW_COLUMNS: dict[str, str] = {
 # ---------------------------------------------------------------------------
 # schema
 # ---------------------------------------------------------------------------
+_TABLE_DDL = """
+    CREATE TABLE IF NOT EXISTS CALIBRATION_LIBRARY (
+        ID INTEGER PRIMARY KEY AUTOINCREMENT,
+        KIND TEXT NOT NULL,
+        FILE_PATH TEXT NOT NULL UNIQUE,
+        XBINNING INTEGER NOT NULL,
+        EXPTIME REAL NOT NULL,
+        CCD_TEMP REAL,
+        FILTER_NAME TEXT NOT NULL DEFAULT '',
+        GAIN REAL NOT NULL DEFAULT 0,
+        NCOMBINE INTEGER,
+        REGISTERED_AT TEXT NOT NULL
+    );
+"""
+
+#: Columns added after the base table (camera / telescope scope first, then the CAL-2026-10 set).
+_SCOPE_COLUMNS: dict[str, str] = {"ID_EQUIPMENTS": "INTEGER", "ID_TELESCOPE": "INTEGER"}
+
+
+def create_table(conn: Any) -> None:
+    """G13-45: the one owner of the CALIBRATION_LIBRARY schema (table, lookup index, added columns).
+    Idempotent; ``VyvarDatabase`` calls it when it opens the database. GAIN is REAL (G01-10 exact
+    gain); a table created earlier with ``GAIN INTEGER`` keeps REAL values unchanged (SQLite
+    affinity), so it is not rebuilt."""
+    conn.execute(_TABLE_DDL)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS IDX_CAL_LIB_LOOKUP ON CALIBRATION_LIBRARY "
+        "(KIND, XBINNING, EXPTIME, FILTER_NAME, GAIN);"
+    )
+    cols = {str(r[1]).upper() for r in conn.execute("PRAGMA table_info('CALIBRATION_LIBRARY');").fetchall()}
+    for name, typ in {**_SCOPE_COLUMNS, **_NEW_COLUMNS}.items():
+        if name not in cols:
+            conn.execute(f"ALTER TABLE CALIBRATION_LIBRARY ADD COLUMN {name} {typ};")
+    conn.commit()
+
+
 def ensure_schema(db: Any) -> None:
     """Create/migrate CALIBRATION_LIBRARY (idempotent). Legacy rows keep NULLs.
 
-    G01-38: runs once per database connection (``db`` object); the listing / lookup calls used to
-    repeat the DDL, a commit and the migrations on every call."""
+    G01-38: runs once per database connection (``db`` object). S6-FIX CLIB-READONLY-2026-10: called only when
+    ``VyvarDatabase`` opens the database, so listing / lookup (the Calibration Library view) never writes."""
     if getattr(db, "_calib_library_schema_ok", False):
         return
     db._ensure_calibration_library_table()
-    cols = {str(r[1]).upper() for r in db.conn.execute("PRAGMA table_info('CALIBRATION_LIBRARY');")}
-    for name, typ in _NEW_COLUMNS.items():
-        if name not in cols:
-            db.conn.execute(f"ALTER TABLE CALIBRATION_LIBRARY ADD COLUMN {name} {typ};")
-    db.conn.commit()
     _migrate_exact_gain(db)
     _backfill_capture_date(db)
     try:
@@ -345,7 +378,6 @@ def _row_to_master(row: Any) -> LibraryMaster:
 
 def list_masters(db: Any, *, kind: str | None = None, camera_id: int | None = None) -> list[LibraryMaster]:
     """All registered masters with camera/telescope names (GUI table)."""
-    ensure_schema(db)
     q = (
         "SELECT c.*, e.CAMERANAME AS CAMERA_NAME, t.TELESCOPENAME AS TELESCOPE_NAME "
         "FROM CALIBRATION_LIBRARY c "
@@ -387,7 +419,6 @@ def register_master(
         raise ValueError("a master must be linked to a camera")
     if k == KIND_FLAT and telescope_id is None:
         raise ValueError("a FLAT master must be linked to a telescope")
-    ensure_schema(db)
     p = Path(path).resolve()
     with fits.open(p, memmap=True) as h:
         hdr = h[0].header
@@ -452,7 +483,6 @@ def register_master(
 
 
 def update_flat_offset(db: Any, path: str | Path, *, handling: str, offset_adu: float | None) -> None:
-    ensure_schema(db)
     db.conn.execute(
         "UPDATE CALIBRATION_LIBRARY SET OFFSET_HANDLING = ?, OFFSET_ADU = ? WHERE FILE_PATH = ?",
         (str(handling), float(offset_adu) if offset_adu is not None else None, str(Path(path).resolve())),
@@ -461,7 +491,6 @@ def update_flat_offset(db: Any, path: str | Path, *, handling: str, offset_adu: 
 
 
 def get_master_by_path(db: Any, path: str | Path) -> LibraryMaster | None:
-    ensure_schema(db)
     try:
         key = str(Path(path).resolve())
     except OSError:

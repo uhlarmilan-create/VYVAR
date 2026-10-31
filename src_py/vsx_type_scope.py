@@ -78,3 +78,11 @@ def is_vsx_auto_selected_target(row: dict | object) -> bool:
     if cat:
         return False
     return bool(str(get("vsx_name", "") or "").strip())
+
+
+def target_is_out_of_scope(row: dict | object, configured: Iterable[str] | None) -> bool:
+    """THE ``vsx_out_of_scope_types`` exclusion, shared by the aperture and the ePSF photometry (S6-FIX
+    EPSF-SCOPE-2026-10): a VSX auto-selected target (``is_vsx_auto_selected_target``) whose VSX type matches a
+    configured entry (``vsx_type_is_out_of_scope``). Manual / exoplanet / user targets are never excluded."""
+    get = row.get if hasattr(row, "get") else lambda k, d=None: getattr(row, k, d)
+    return is_vsx_auto_selected_target(row) and vsx_type_is_out_of_scope(str(get("vsx_type", "") or ""), configured)

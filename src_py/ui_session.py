@@ -8,6 +8,7 @@ telescope, the processed field of the last job - is read and written only here a
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 import streamlit as st
@@ -45,81 +46,86 @@ def optics_from_session() -> VyvarOpticsSelection | None:
         return None
 
 
-def resolve_draft_dir(
-    draft_dir_override: str | Path | None = None,
-    draft_id: int | None = None,
-    archive_root: str | Path | None = None,
-    *,
-    drafts_before_session: bool = False,
-) -> str | None:
-    """
-    Draft directory of a GUI page (the pipeline itself uses ``draft_provenance.resolve_draft_dir``).
+DRAFT_OVERRIDE_KEY = "vyvar_draft_dir_override"
+DRAFT_ID_KEY = "vyvar_last_draft_id"
 
-    Priority chain (default, ``drafts_before_session=False``):
-    1. explicit ``draft_dir_override`` (only if existing directory)
-    2. ``vyvar_last_job_output["archive_path"]`` from session state
-    3. ``vyvar_post_cal_archive_path`` from session state
-    4. the folder of processed field ``draft_id`` under ``archive_root/Drafts`` (any name, by manifest)
-    5. None
 
-    When ``drafts_before_session=True`` (MASTERSTAR QA): steps 2-3 move after step 4
-    (Drafts folder is tried before session archive paths).
-    """
-    if draft_dir_override is not None:
-        p = Path(draft_dir_override).expanduser()
+@dataclass(frozen=True)
+class ActiveDraft:
+    """The processed field every Pipeline view shows (G14-12: one resolver, computed once in ``main``)."""
+
+    draft_id: int | None
+    draft_dir: Path | None
+
+
+def set_active_draft(draft_dir: Path | str | None, draft_id: int | None) -> None:
+    """Load a processed field (Load button, finished RUN): folder and id are set together."""
+    if draft_dir is None:
+        st.session_state.pop(DRAFT_OVERRIDE_KEY, None)
+    else:
+        st.session_state[DRAFT_OVERRIDE_KEY] = str(Path(draft_dir).expanduser().resolve())
+    if draft_id is None:
+        st.session_state.pop(DRAFT_ID_KEY, None)
+    else:
+        st.session_state[DRAFT_ID_KEY] = int(draft_id)
+
+
+def clear_active_draft() -> None:
+    """Load with an empty field: no processed field (folder and id both cleared)."""
+    set_active_draft(None, None)
+
+
+def active_draft(archive_root: str | Path) -> ActiveDraft:
+    """The loaded processed field: the loaded folder (with its manifest id), else ``Drafts/<id>``.
+
+    The GUI's job outputs (last job, post-calibration path, import result) are never used: a finished
+    RUN loads its field with :func:`set_active_draft`. An id whose folder is missing gives
+    ``draft_dir=None`` (the views say so)."""
+    from draft_provenance import draft_dir_for_id  # noqa: PLC0415
+    from processed_field import processed_field_id  # noqa: PLC0415
+
+    raw = st.session_state.get(DRAFT_OVERRIDE_KEY)
+    if raw:
+        p = Path(str(raw)).expanduser()
         if p.is_dir():
-            return str(p.resolve())
-
-    def _drafts_path() -> str | None:
-        if draft_id is None or not archive_root:
-            return None
-        try:
-            from draft_provenance import draft_dir_for_id  # noqa: PLC0415
-            return str(draft_dir_for_id(archive_root, int(draft_id)).resolve())
-        except (TypeError, ValueError):
-            return None
-
-    def _session_archive_paths() -> str | None:
-        last_job = st.session_state.get("vyvar_last_job_output") or {}
-        if isinstance(last_job, dict):
-            jap = last_job.get("archive_path")
-            if jap:
-                s = str(jap).strip()
-                if s:
-                    return s
-        post_cal = st.session_state.get("vyvar_post_cal_archive_path")
-        if post_cal:
-            s = str(post_cal).strip()
-            if s:
-                return s
-        return None
-
-    if drafts_before_session:
-        p = _drafts_path()
-        if p:
-            return p
-        return _session_archive_paths()
-
-    s = _session_archive_paths()
-    if s:
-        return s
-    return _drafts_path()
+            return ActiveDraft(processed_field_id(p), p.resolve())
+    did = st.session_state.get(DRAFT_ID_KEY)
+    if did is None:
+        return ActiveDraft(None, None)
+    d = draft_dir_for_id(archive_root, int(did))
+    return ActiveDraft(int(did), d.resolve() if d.is_dir() else None)
 
 
-def resolve_draft_dir_path(
-    draft_dir_override: str | Path | None = None,
-    draft_id: int | None = None,
-    archive_root: str | Path | None = None,
+ACTIVE_JOB_KEY = "vyvar_active_job"
+
+
+def any_job_running(data_root: str | Path) -> bool:
+    """G14-37: a job of this data directory runs (any browser session); every start button is off."""
+    from run_job import running_job  # noqa: PLC0415
+
+    return running_job(data_root) is not None
+
+
+def start_task_job(
+    data_root: str | Path,
+    task: str,
+    args: dict,
     *,
-    drafts_before_session: bool = False,
-) -> Path | None:
-    """``resolve_draft_dir`` returning a ``Path`` (or ``None``)."""
-    s = resolve_draft_dir(
-        draft_dir_override,
-        draft_id,
-        archive_root,
-        drafts_before_session=drafts_before_session,
-    )
-    if not s:
-        return None
-    return Path(s).expanduser().resolve()
+    label: str,
+    on_done_pop: tuple[str, ...] = (),
+) -> None:
+    """Start a ``task_jobs`` task as a job process and follow it with the app's job monitor (G14-04 /
+    G14-14). ``on_done_pop``: session keys dropped when the job ends. Shows the error when another
+    job of the data directory runs."""
+    from run_job import JobBusyError  # noqa: PLC0415
+    from task_jobs import launch_task  # noqa: PLC0415
+
+    try:
+        jd = launch_task(task, args, data_root, label=label)
+    except JobBusyError as exc:
+        st.error(str(exc))
+        return
+    st.session_state[ACTIVE_JOB_KEY] = {
+        "job_dir": str(jd), "label": label, "kind": task, "applied": False, "on_done_pop": list(on_done_pop),
+    }
+    st.rerun()

@@ -382,7 +382,7 @@ def test_epsf_stage_writes_invariants_and_locus_to_pipeline_meta(tmp_path: Path,
     (phot / "lightcurves" / "lightcurve_111.csv").write_text("bjd,delta_mag\n", encoding="ascii")
     (phot / "pipeline_meta.json").write_text(json.dumps({"observer_location": {"name": "x"}}), encoding="utf-8")
     run_epsf_stage(EpsfStagePaths(platesolve_dir=tmp_path, frames_root=tmp_path, photometry_dir=phot),
-                   cfg=SimpleNamespace(), do_build=False, do_lc=False, draft_id=1, targets="ALL")
+                   cfg=SimpleNamespace(vsx_out_of_scope_types=[]), do_build=False, do_lc=False, draft_id=1)
     meta = json.loads((phot / "pipeline_meta.json").read_text(encoding="utf-8"))
     assert meta["psf_chi2_locus_night"]["n_rewritten"] == 4 and meta["observer_location"]["name"] == "x"
     assert meta["epsf_invariants"]["INV-PSF-ADDITIVE-01"]["n_checked"] == 1
@@ -390,13 +390,14 @@ def test_epsf_stage_writes_invariants_and_locus_to_pipeline_meta(tmp_path: Path,
 
 
 def test_gui_and_night_run_call_the_epsf_stage_alike() -> None:
-    """NEW-5: both callers pass the photometry dir and the target selection explicitly."""
-    app = (SRC / "app.py").read_text(encoding="utf-8")
+    """NEW-5: both callers pass the photometry dir explicitly (the GUI's RUN ePSF is the
+    ``task_jobs.task_run_epsf`` job since G14-04); no target selection (S6-FIX EPSF-SCOPE-2026-10)."""
+    gui = (SRC / "task_jobs.py").read_text(encoding="utf-8")
     nr = (SRC / "night_run.py").read_text(encoding="utf-8")
-    a = app[app.index("stage_out = run_epsf_stage("):][:700]
+    a = gui[gui.index("out = run_epsf_stage("):][:700]
     n = nr[nr.index("epsf_out = run_epsf_stage("):][:900]
     for body in (a, n):
-        assert "photometry_dir=" in body and "targets=" in body and "pipeline_meta" not in body
+        assert "photometry_dir=" in body and "targets=" not in body and "pipeline_meta" not in body
 
 
 # ---------------------------------------------------------------- names (G11-22, G11-25)

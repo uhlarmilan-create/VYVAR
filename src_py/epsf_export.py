@@ -159,7 +159,6 @@ def epsf_export_lines(cid: str, info: dict[str, Any], psf_csv: Path, rows: pd.Da
         f"# epochs_dropped={'; '.join(drops) if drops else 'none'}",
         "# p2p_scatter_mmag=" + (f"{p2p:.1f} (robust epoch-to-epoch scatter, includes the star's own variation)"
                                  if math.isfinite(p2p) else ""),
-        f"# epsf_targets_selection={(manifest.get('fit_set') or {}).get('selection', '')}",
         f"# software={VYVAR_SOFTWARE_VERSION}",
         ",".join(COLUMNS),
     ]

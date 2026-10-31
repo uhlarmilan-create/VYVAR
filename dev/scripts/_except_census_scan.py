@@ -44,7 +44,6 @@ INTEGRITY_MODULES = {
 UI_PREFIXES = ("ui_", "vyvar_ui")
 UI_MODULES = {
     "app.py",
-    "ui_components.py",
     "ui_calibration_library.py",
     "ui_database_explorer.py",
     "ui_photometry_quality.py",

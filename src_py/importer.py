@@ -71,7 +71,7 @@ def _calibration_light_temp_c(
             st = None
         if st is not None:
             row = db.fits_header_cache_get_if_fresh(
-                p, file_size=int(st.st_size), mtime=float(st.st_mtime)
+                p, file_size=int(st.st_size), mtime_ns=int(st.st_mtime_ns)
             )
             if row is not None:
                 ct = row["CCD_TEMP"]
@@ -186,7 +186,7 @@ def _collect_fits_by_type(
         row = None
         if db is not None:
             row = db.fits_header_cache_get_if_fresh(
-                fp, file_size=int(st.st_size), mtime=float(st.st_mtime)
+                fp, file_size=int(st.st_size), mtime_ns=int(st.st_mtime_ns)
             )
         if row is not None:
             imagetyp = str(row["IMAGETYP"] or "")
@@ -204,7 +204,7 @@ def _collect_fits_by_type(
                     do = hdr.get("DATE-OBS") or hdr.get("DATEOBS")
                     date_obs = None if do in (None, "") else str(do)
                     pending_cache.append(
-                        (fp, int(st.st_size), float(st.st_mtime), meta, imagetyp_raw, date_obs)
+                        (fp, int(st.st_size), int(st.st_mtime_ns), meta, imagetyp_raw, date_obs)
                     )
             except Exception:  # noqa: BLE001
                 cls = "unknown"
@@ -594,6 +594,7 @@ def smart_scan_source(
         warnings=list(warnings),
         source_masters=src_masters,
         masters_from=str(masters_from or "lights"),
+        persist_offsets=bool(import_source_masters),  # G01-22: RUN stores the measured flat offset, a scan does not
     )
     if import_source_masters and not precalibrated and db is not None:
         for _m in _cp.import_planned_source_masters(

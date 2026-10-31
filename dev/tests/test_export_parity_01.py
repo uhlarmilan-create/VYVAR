@@ -22,14 +22,9 @@ from night_run import (
 
 def test_nightrunparams_new_fields_default_preserve_w2() -> None:
     p = NightRunParams(source_dir=Path("."), equipment_id=1, telescope_id=1)
-    assert p.optics is None
+    # G12-10 / G12-11: the dead fields (optics, existing_pipeline, flat fallbacks, validity days,
+    # post_platesolve_hook) were removed
     assert p.location_source_hint is None
-    assert p.masterdark_validity_days is None
-    assert p.masterflat_validity_days is None
-    assert p.apply_smart_plan_flat_fallbacks is False
-    assert p.flat_fallback_choices is None
-    assert p.post_platesolve_hook is None
-    assert p.existing_pipeline is None
     assert p.epsf is None
 
 

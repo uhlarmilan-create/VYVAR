@@ -75,9 +75,13 @@ def _stamp(*paths: Path) -> tuple:
 
 
 @st.cache_resource(show_spinner=False, max_entries=4)
-def _hrd_data(photometry_s: str, gaia_db_s: str, pmin: float, psnr: float, stamp_key: tuple, _cfg: Any) -> dict[str, Any]:
+def _hrd_data(photometry_s: str, gaia_db_s: str, pmin: float, psnr: float, stamp_key: tuple, cfg_key: str,
+              _cfg: Any) -> dict[str, Any]:
     """HRD table, notable stars, VSX names and measured targets of one setup (loaded once per file state:
-    ``stamp_key`` is hashed, G14-27) and the hover texts of every star (built once, not per rerun)."""
+    ``stamp_key`` is hashed, G14-27; ``cfg_key`` = ``ui_cache.config_fingerprint``, NEW-3) and the hover
+    texts of every star (built once, not per rerun). Read-only (NEW-1): the online enrichment is read
+    from ``_hrd_cache/hrd_enrich.json`` (written by the night run's report or the lookup job)."""
+    _ = cfg_key
     from hrd_analysis import build_hrd_dataframe, get_top_interesting_stars  # noqa: PLC0415
 
     phot = Path(photometry_s)
@@ -100,7 +104,7 @@ def _hrd_data(photometry_s: str, gaia_db_s: str, pmin: float, psnr: float, stamp
     measured = set(pd.read_csv(sm, dtype={"catalog_id": str})["catalog_id"]) if sm.is_file() else set()
     df["measured"] = df["catalog_id"].isin(measured)
     df["reliable"] = df["hrd_reliable"].astype(bool)
-    top = get_top_interesting_stars(df, cfg=_cfg, cache_path=ps / "_hrd_cache" / "hrd_enrich.json")
+    top = get_top_interesting_stars(df, cfg=_cfg, cache_path=ps / "_hrd_cache" / "hrd_enrich.json", fetch_online=False)
     if not top.empty and "_empty_field" in top:
         top = top[~top["_empty_field"].astype(bool)]
     if not top.empty:
@@ -308,9 +312,12 @@ def render_hrd_tab(photometry_dir: Path, cfg: "AppConfig | None") -> None:
         st.warning("Set **Gaia DB path** in Settings (`gaia_db_path`): without it there is no parallax, Teff or log g.")
         return
     pmin, psnr = HRD_PARALLAX_MIN_MAS, HRD_PARALLAX_SNR_MIN
+    from ui_cache import config_fingerprint  # noqa: PLC0415
+
     with st.spinner("Loading the HR diagram..."):
         data = _hrd_data(str(phot), str(gdb), float(pmin), float(psnr),
-                         _stamp(ms_csv, gdb, ps / "_hrd_cache" / "hrd_enrich.json", ps / "variable_targets.csv", phot / "photometry_summary.csv"), cfg)
+                         _stamp(ms_csv, gdb, ps / "_hrd_cache" / "hrd_enrich.json", ps / "variable_targets.csv", phot / "photometry_summary.csv"),
+                         config_fingerprint(cfg), cfg)
     df, top = data["df"], data["top"]
     if df.empty:
         st.info("Empty star catalogue.")
@@ -348,6 +355,17 @@ def render_hrd_tab(photometry_dir: Path, cfg: "AppConfig | None") -> None:
                "colour field image. Hover any star; click a notable star (or a table row) to highlight it everywhere.")
 
     st.subheader("Notable stars")
+    if cfg is not None and bool(getattr(cfg, "hrd_online_enrich_enabled", True)):
+        from ui_session import any_job_running, start_task_job  # noqa: PLC0415
+
+        _have = (ps / "_hrd_cache" / "hrd_enrich.json").is_file()
+        st.caption("SIMBAD / Gaia lookups of the notable stars: " + ("from the last lookup." if _have else
+                   "none yet - the tab never queries online by itself."))
+        if st.button("Look up the notable stars online (Gaia TAP, SIMBAD)", key=f"hrd_enrich_{og}",
+                     disabled=any_job_running(cfg.data_root)):
+            # NEW-1: an explicit job (task_jobs.task_hrd_enrich), never on render
+            start_task_job(cfg.data_root, "hrd_enrich", {"draft_dir": str(ps.parent.parent), "setup": og},
+                           label=f"HRD lookup {og}")
     if top.empty:
         st.info(HRD_EMPTY_FIELD_MSG)
     else:
@@ -381,7 +399,8 @@ def render_hrd_tab(photometry_dir: Path, cfg: "AppConfig | None") -> None:
     if fits_path is None:
         st.info("MASTERSTAR.fits not found: no field image.")
         return
-    jpg = _field_jpeg(str(fits_path), str(phot / "_hrd_cache"), mode, _stamp(fits_path, ms_csv), data, masterstar_fwhm_px(fits_path))
+    jpg = _field_jpeg(str(fits_path), str(_render_cache_dir(ps)), mode, _stamp(fits_path, ms_csv), data,
+                      masterstar_fwhm_px(fits_path))
     from PIL import Image  # noqa: PLC0415
 
     with Image.open(jpg) as im:
@@ -391,6 +410,15 @@ def render_hrd_tab(photometry_dir: Path, cfg: "AppConfig | None") -> None:
     _select(f"hrd_pick_img_{og}_{mode}", _pick_from(iev), sel_key)
     st.caption("Hover any star of the frame for its Gaia data; zoom with the mouse wheel. Catalogue colours are Gaia BP\u2212RP, "
                "not measured by this camera, and include interstellar reddening.")
+
+
+def _render_cache_dir(platesolve_dir: Path) -> Path:
+    """NEW-1: the field images are a render cache of this computer (temp folder), never written into the
+    processed field."""
+    import tempfile  # noqa: PLC0415
+
+    tag = hashlib.md5(str(Path(platesolve_dir).resolve()).encode()).hexdigest()[:12]
+    return Path(tempfile.gettempdir()) / "vyvar_hrd_render" / tag
 
 
 def _field_jpeg(fits_s: str, cache_s: str, mode: str, stamp: tuple, data: dict[str, Any], fwhm_px: float) -> Path:

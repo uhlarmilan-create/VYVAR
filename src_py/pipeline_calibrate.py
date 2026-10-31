@@ -2524,6 +2524,7 @@ def _qc_enrich_calibrated_in_place(
     app_config: AppConfig,
     target_ra: float | None = None,
     target_dec: float | None = None,
+    target_by_setup: Mapping[str, Any] | None = None,
     inject_pointing_only_if_missing: bool = True,
     only_paths: Sequence[Path | str] | None = None,
     prefilter_rejected: Mapping[Path | str, str] | None = None,
@@ -2536,6 +2537,10 @@ def _qc_enrich_calibrated_in_place(
     In-place preprocess QC for ``preprocess_calibrated_to_processed`` (skip-only; no ``processed/`` copy tree).
     Does NOT copy files. Does NOT do temporal sigma clipping.
     Writes: VY_FWHM, VY_ELONG, VY_QC, VY_NSTAR, VYVARPR (and optional VYTARG*) to each FITS.
+
+    Plate-solve hint (VYTARG*): ``target_ra`` / ``target_dec`` for every frame; without them the manifest centre
+    of the frame's own setup (``target_by_setup`` = ``center_by_setup``, setup = the frame's light folder under
+    ``calibrated_root``; ``fits_meta.setup_centre``).
 
     Skip-mode frame **selection authority** is the DB DAO-FWHM prefilter passed via
     ``prefilter_rejected`` (status ``rejected_prefilter_*``). Segmentation FWHM /
@@ -2568,8 +2573,18 @@ def _qc_enrich_calibrated_in_place(
 
     _det_sigma = float(resolve_detection_threshold_sigma(cfg))
     _frame_qc = _manifest_frame_qc_by_calibrated_path(fits_paths, db=db, draft_id=draft_id)
+
+    def _hint(fp: Path) -> tuple[float | None, float | None]:
+        if (target_ra is not None and target_dec is not None) or not target_by_setup:
+            return target_ra, target_dec
+        from fits_meta import setup_centre  # noqa: PLC0415
+
+        rel = Path(fp).resolve().relative_to(calibrated_root.resolve()).parts
+        c = setup_centre(target_by_setup, rel[0] if len(rel) > 1 else None)
+        return c if c is not None else (None, None)
+
     tasks = [
-        (str(fp), _prefilter.get(norm_fits_path_key(fp)), sky_order, target_ra, target_dec,
+        (str(fp), _prefilter.get(norm_fits_path_key(fp)), sky_order, *_hint(fp),
          bool(inject_pointing_only_if_missing), _det_sigma, _frame_qc.get(norm_fits_path_key(fp)))
         for fp in fits_paths
     ]

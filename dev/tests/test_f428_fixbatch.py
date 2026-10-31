@@ -130,9 +130,11 @@ def test_infolog_formatter_uses_utc() -> None:
     import logging
     import time
 
-    from infolog import ensure_infolog_logging
+    from infolog import InfologHandler, setup_run_logging
 
-    ensure_infolog_logging()
-    lg = logging.getLogger("pipeline")
-    handler = next(h for h in lg.handlers if getattr(h, "formatter", None) is not None)
-    assert handler.formatter.converter is time.gmtime
+    teardown = setup_run_logging()
+    try:
+        handler = next(h for h in logging.getLogger().handlers if isinstance(h, InfologHandler))
+        assert handler.formatter.converter is time.gmtime
+    finally:
+        teardown()

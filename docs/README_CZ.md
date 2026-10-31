@@ -208,6 +208,42 @@ Rychly zkusebni build (maly kousek oblohy):
 python GAIA_DR3/build_gaia_catalog.py --dec-min 89 --dec-max 90 --mag-limit 10 --skip-vacuum --out tmp/smoke_gaia.db
 ```
 
+#### Gaia DB neuplna -> jak ji zkontrolovat a opravit
+
+Starsi buildy Gaia mohly ulozit husty pas oblohy (Mlecna draha, bulge) oriznuty: anonymni archiv ESA
+vrati na jeden dotaz jen pevny pocet radku. VYVAR nyni kazdy pas overuje proti poctu hvezd, ktery hlasi
+archiv, a upozorni, kdyz pole zasahuje do pasu, ktery neni overen jako uplny:
+
+- **Pri behu** (infolog zpracovaneho pole):
+  `WARNING: GAIA DB strip 258.3495_270.0926_-34.0319_-26.0365 (3000000 rows, truncated, at the anonymous TAP row cap) overlaps this field: the local Gaia DB may miss stars here; run catalogs/build_gaia_catalog.py --repair`
+- **V Nastaveni -> Paths and catalogs -> Gaia DR3 -> Report**: log ukaze
+  `strips: N not verified complete (COUNT check), M truncated or at the anonymous TAP row cap`
+  a pri M > 0 i hotovy prikaz pro opravu (`repair: python catalogs/build_gaia_catalog.py --out ... --repair --strip ...`).
+
+Kontrola a oprava ze slozky VYVAR (Windows, PowerShell; skripty pouziji cestu ke Gaia DB ulozenou
+v Nastaveni, `gaia_db_path`; pro jiny soubor pridejte `--out <cesta>` / `--db <cesta>`). Nejdriv ukoncete
+bezici behy VYVAR.
+
+```
+cd C:\path\to\VYVAR
+.\.venv\Scripts\python.exe catalogs\gaia_maintain.py --report --db <cesta-k-vyvar_gaia_dr3.db>
+.\.venv\Scripts\python.exe catalogs\build_gaia_catalog.py --check
+.\.venv\Scripts\python.exe catalogs\build_gaia_catalog.py --repair --strip <strip_key> --strip <strip_key>
+.\.venv\Scripts\python.exe catalogs\build_gaia_catalog.py --repair
+```
+
+- `--check` jen vypise pasy, ktere nejsou overene jako uplne (nic nemeni).
+- `--repair --strip KLIC` opravi uvedene pasy (klice tak, jak je vypise `--check` / Report);
+  samotne `--repair` opravi vsechny neoverene pasy - u DB postavene pred 2026-10-31 jsou to vsechny pasy,
+  proto radeji pouzijte tvar se `--strip` pro pasy, ktere Report oznaci jako truncated / at the row cap.
+- Pro kazdy pas se archivu zepta na pocet hvezd; kdyz je DB uz ma vsechny, pas se jen oznaci jako overeny
+  (sekundy), jinak se stahne znovu a deli se na mensi oblasti, dokud neni kazda cast uplna. Pocitejte
+  s minutami na pas, u hustych pasu Mlecne drahy dele (sest pasu bulge dohromady nekolik hodin).
+- Je **navazatelna**: jeden pas = jedna transakce; zastavte ji Ctrl+C a spustte stejny prikaz znovu -
+  uz opravene pasy se preskoci.
+- Potrebuje **pripojeni k internetu do archivu ESA Gaia** (gea.esac.esa.int, TAP). Volitelne prihlaseni
+  do archivu: promenne prostredi `GAIA_USER` / `GAIA_PASS`.
+
 Spust?ni test? (nastaveno p?es `pyproject.toml`: `testpaths = dev/tests`,
 `pythonpath = [".", "src_py", "dev"]`):
 

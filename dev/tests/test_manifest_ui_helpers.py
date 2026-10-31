@@ -23,7 +23,7 @@ def test_obs_draft_row_from_manifest_maps_core_fields(tmp_path: Path) -> None:
         },
         paths={"archive": str(root), "lights": str(root / "lights")},
         status="INGESTED",
-        center={"ra_deg": 12.5, "de_deg": 45.0},
+        center_by_setup={"V_60_1": {"ra_deg": 12.5, "de_deg": 45.0}},
         observation_start_jd=2450000.5,
         is_calibrated=1,
         files=[],
@@ -32,7 +32,7 @@ def test_obs_draft_row_from_manifest_maps_core_fields(tmp_path: Path) -> None:
     row = obs_draft_row_from_manifest(manifest, 1)
     assert row["ID"] == 1
     assert row["ID_EQUIPMENTS"] == 2
-    assert row["CENTEROFFIELDRA"] == 12.5
+    assert row["CENTER_BY_SETUP"] == {"V_60_1": {"ra_deg": 12.5, "de_deg": 45.0}}  # S6-FIX: per setup
     assert row["STATUS"] == "INGESTED"
 
 

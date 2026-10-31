@@ -96,13 +96,12 @@ def test_epsf_page_data_and_figure(tmp_path: Path) -> None:
     man = ps / "epsf_frames" / "epsf_frames_manifest.json"
     m = json.loads(man.read_text())
     m["fit_sources"] = {"merged_neighbours": [{"catalog_id": "1", "neighbour_id": "9", "sep_px": 2.0, "dmag": 3.75}]}
-    m["fit_set"] = {"selection": "EA, EW"}
     man.write_text(json.dumps(m))
     d = m3.epsf_page_data(lc, ps, "1")
     facts = dict(d["facts"])
     assert facts["ePSF epochs"].startswith("119 of 120") and "dropped: 2 with the target saturated" in facts["ePSF epochs"]
     assert facts["Comparison stars"].startswith("6")
     assert "3.2 % of the light" in facts["Unresolved neighbour"]
-    assert facts["Targets of the run"] == "EA, EW"
+    assert "Targets of the run" not in facts  # S6-FIX EPSF-SCOPE-2026-10: no target selection
     assert m3.plot_lc_epsf(d["df"], tmp_path / "e.png").is_file()
     assert m3.epsf_page_data(lc, ps, "2") is None  # no ePSF curve -> no page

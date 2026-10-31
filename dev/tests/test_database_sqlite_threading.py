@@ -355,7 +355,7 @@ def test_qc_run_orphan_old_table_heals_on_open(tmp_path) -> None:
 
 
 def test_qc_file_fk_to_run_old_heals_on_open(tmp_path) -> None:
-    """Half-finished QC migration: FILE FK to RUN_OLD must rebuild on open."""
+    """Half-finished QC migration (FILE FK to RUN_OLD) opens; the FILE table is dropped (NEW-5)."""
     db_path = tmp_path / "vyvar.sqlite3"
     conn = __import__("sqlite3").connect(db_path)
     conn.executescript(
@@ -389,32 +389,13 @@ def test_qc_file_fk_to_run_old_heals_on_open(tmp_path) -> None:
     conn.close()
 
     db = VyvarDatabase(db_path)
-    parent = None
-    for row in db.conn.execute("PRAGMA foreign_key_list('OBS_QC_PROCESSING_FILE');"):
-        if str(row[3]).upper() == "RUN_ID":
-            parent = str(row[2])
-    assert parent == "OBS_QC_PROCESSING_RUN"
+    # NEW-5 (T19, 2026-10-31): the write-only per-file QC snapshot is dropped on open
     tables = {r[0] for r in db.conn.execute("SELECT name FROM sqlite_master WHERE type='table';")}
+    assert "OBS_QC_PROCESSING_FILE" not in tables
     assert "OBS_QC_PROCESSING_FILE_OLD" not in tables
     assert "OBS_QC_PROCESSING_RUN_OLD" not in tables
-    n = db.conn.execute("SELECT COUNT(*) AS n FROM OBS_QC_PROCESSING_FILE;").fetchone()["n"]
-    assert int(n) == 1
-    # FK enforceable: insert with missing RUN_ID must fail under foreign_keys=ON
-    db.conn.execute("PRAGMA foreign_keys = ON;")
-    failed = False
-    try:
-        db.conn.execute(
-            """
-            INSERT INTO OBS_QC_PROCESSING_FILE (
-                RUN_ID, SOURCE_OBS_FILE_ID, FILE_PATH
-            ) VALUES (999999, 1, 'x');
-            """
-        )
-        db.conn.commit()
-    except Exception:  # noqa: BLE001
-        failed = True
-        db.conn.rollback()
-    assert failed
+    run = db.conn.execute("SELECT DRAFT_ID FROM OBS_QC_PROCESSING_RUN WHERE ID = 1;").fetchone()
+    assert int(run["DRAFT_ID"]) == 513
     db.close()
 
 
@@ -466,13 +447,7 @@ def test_qc_run_obs_draft_fk_migration_uses_safe_rebuild(tmp_path) -> None:
     assert run is not None
     assert run["PROCESSING_HASH"] == "legacy-hash"
     assert int(run["DRAFT_ID"]) == 504
-    frow = db.conn.execute(
-        "SELECT RUN_ID, SOURCE_OBS_FILE_ID, FILE_PATH FROM OBS_QC_PROCESSING_FILE WHERE ID = 1;"
-    ).fetchone()
-    assert frow is not None
-    assert int(frow["RUN_ID"]) == 1
-    assert int(frow["SOURCE_OBS_FILE_ID"]) == 99
-    assert frow["FILE_PATH"] == "lights/frame001.fits"
+    assert "OBS_QC_PROCESSING_FILE" not in tables  # NEW-5: write-only snapshot dropped
     db.conn.execute(
         """
         INSERT INTO OBS_QC_PROCESSING_RUN (PROCESSING_HASH, DRAFT_ID, CREATED_AT)

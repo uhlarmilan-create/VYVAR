@@ -227,6 +227,42 @@ Quick smoke build (small sky patch):
 python catalogs/build_gaia_catalog.py --dec-min 89 --dec-max 90 --mag-limit 10 --skip-vacuum --out tmp/smoke_gaia.db
 ```
 
+#### Gaia DB incomplete -> how to check and repair
+
+Older Gaia builds could store a dense sky strip (Milky Way, bulge) cut short: the anonymous ESA
+archive caps one query at a fixed number of rows. VYVAR now verifies each strip against the archive's
+own star count, and tells you when a field touches a strip that is not verified complete:
+
+- **In a run** (infolog of the processed field):
+  `WARNING: GAIA DB strip 258.3495_270.0926_-34.0319_-26.0365 (3000000 rows, truncated, at the anonymous TAP row cap) overlaps this field: the local Gaia DB may miss stars here; run catalogs/build_gaia_catalog.py --repair`
+- **In Settings -> Paths and catalogs -> Gaia DR3 -> Report**: the log shows
+  `strips: N not verified complete (COUNT check), M truncated or at the anonymous TAP row cap`
+  and, when M > 0, the ready repair command (`repair: python catalogs/build_gaia_catalog.py --out ... --repair --strip ...`).
+
+Check and repair from the VYVAR folder (Windows, PowerShell; the scripts use the Gaia DB path saved
+in Settings, `gaia_db_path`; add `--out <path>` / `--db <path>` for another file). Close VYVAR runs first.
+
+```
+cd C:\path\to\VYVAR
+.\.venv\Scripts\python.exe catalogs\gaia_maintain.py --report --db <path-to-vyvar_gaia_dr3.db>
+.\.venv\Scripts\python.exe catalogs\build_gaia_catalog.py --check
+.\.venv\Scripts\python.exe catalogs\build_gaia_catalog.py --repair --strip <strip_key> --strip <strip_key>
+.\.venv\Scripts\python.exe catalogs\build_gaia_catalog.py --repair
+```
+
+- `--check` only lists the strips that are not verified complete (nothing is changed).
+- `--repair --strip KEY` repairs the listed strips (keys as `--check` / the Report print them);
+  `--repair` alone repairs every unverified strip - for a DB built before 2026-10-31 that is every
+  strip, so prefer the `--strip` form for the strips the Report marks truncated / at the row cap.
+- For each strip the archive is asked for its star count; when the DB already has all of them the strip
+  is only marked verified (seconds), otherwise it is downloaded again, split into smaller boxes until each
+  part is complete. Plan minutes per strip, longer for dense Milky Way strips (a few hours for the six bulge
+  strips together).
+- It is **resumable**: one strip per transaction; stop it with Ctrl+C and run the same command again - the
+  strips already repaired are skipped.
+- It needs **internet access to the ESA Gaia archive** (gea.esac.esa.int, TAP). Optional archive login:
+  environment variables `GAIA_USER` / `GAIA_PASS`.
+
 Run the tests (configured via `pyproject.toml`: `testpaths = dev/tests`,
 `pythonpath = [".", "src_py", "dev"]`):
 

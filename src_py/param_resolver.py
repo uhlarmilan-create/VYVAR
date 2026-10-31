@@ -445,7 +445,7 @@ class DraftSiteFacts:
             try:
                 row = db.fetch_obs_draft_by_id(did)
                 if row:
-                    centre_row = {k: row.get(k) for k in ("CENTEROFFIELDRA", "CENTEROFFIELDDE")}
+                    centre_row = {"CENTER_BY_SETUP": row.get("CENTER_BY_SETUP")}
             except Exception as exc:  # noqa: BLE001  (re-raised per frame, as the per-frame lookup did)
                 centre_error = str(exc)
         return cls(did, _draft_location(db, did), _draft_id_location(db, did), centre_row, centre_error)

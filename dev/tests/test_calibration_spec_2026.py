@@ -197,7 +197,8 @@ def test_legacy_flat_offset_removed_at_use(env, tmp_path):
     plan = cp.build_calibration_plan({"V|60|1": {"filter": "V", "exposure_s": 60.0, "binning": 1, "gain": 0,
                                                  "temp": -10.0, "light_paths": [str(x) for x in lp]}},
                                      db=db, camera_id=cam, telescope_id=tel, dark_validity_days=90,
-                                     flat_validity_days=200, temp_tol=0.5)
+                                     flat_validity_days=200, temp_tol=0.5,
+                                     persist_offsets=True)  # the RUN plan (G01-22: a scan stores nothing)
     g = plan.groups["V|60|1"]
     assert g.flat_offset_handling == "removed-at-use" and g.flat_offset_adu == pytest.approx(P, abs=0.5)
     pm = get_processed_master(legacy, 1, kind="flat", master_binning=None, db=db)

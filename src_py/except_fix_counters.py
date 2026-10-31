@@ -1,8 +1,12 @@
-"""Run-level counters for EXCEPT-FIX terminal failure surfacing."""
+"""Run-level counters for EXCEPT-FIX terminal failure surfacing.
+
+G12-30 (Milan 2026-10-31): the counters are reset once per run (``run_night_pipeline``), the
+counts of spawn workers are added to the run process (``parallel_frames.map_frames``), and only
+counters that some code increments exist (N3: 15 counters without an increment site removed)."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 
 
 @dataclass
@@ -10,81 +14,30 @@ class ExceptFixCounters:
     sky_annulus_mask_fail: int = 0
     sky_annulus_invalid: int = 0
     aperture_csv_cache_skip: int = 0
-    comp_selection_csv_cache_skip: int = 0
-    comp_frame_accumulation_skip: int = 0
     vt_wcs_refresh_fail: int = 0
-    psf_local_sky_fail: int = 0
-    psf_grouped_fit_fail: int = 0
     aperture_empty_comp_drop: int = 0
     catalog_aperture_enhance_fail: int = 0
     plate_solve_bundle_fail: int = 0
-    masterstars_rescale_coords_fail: int = 0
-    vytarg_header_write_fail: int = 0
     vsx_frame_bbox_wcs_fail: int = 0
-    vsx_variable_coord_drop: int = 0
-    stress_sidecar_skip: int = 0
     calibrate_db_sync_fail: int = 0
     # EXCEPT-FIX-3 (tranche 3: importer / platesolver / alignment / astrometry_optimizer)
     importer_filter_read_fail: int = 0
-    calib_scope_conflict_check_fail: int = 0
-    calib_library_register_fail: int = 0
-    importer_capture_date_fallback: int = 0
-    importer_imagetyp_read_fail: int = 0
     importer_obs_group_meta_skip: int = 0
-    wcs_header_key_copy_fail: int = 0
     align_unique_sample_fail: int = 0
-    platesolve_match_rate_meta_fail: int = 0
     # EXCEPT-FIX-4 (tranche 4: time/trust/export/optics/check-star)
     timeobs_parse_fallback: int = 0
     jd_mid_compute_fail: int = 0
     date_obs_parse_fail: int = 0
     hjd_bjd_compute_fail: int = 0
     trust_kmag_sidecar_read_fail: int = 0
-    variability_gaia_id_norm_skip: int = 0
     k2_airmass_read_fail: int = 0
     export_observer_location_read_fail: int = 0
     optics_draft_override_read_fail: int = 0
     check_star_ensemble_filter_skip: int = 0
 
     def snapshot(self) -> dict[str, int]:
-        return {
-            "sky_annulus_mask_fail": self.sky_annulus_mask_fail,
-            "sky_annulus_invalid": self.sky_annulus_invalid,
-            "aperture_csv_cache_skip": self.aperture_csv_cache_skip,
-            "comp_selection_csv_cache_skip": self.comp_selection_csv_cache_skip,
-            "comp_frame_accumulation_skip": self.comp_frame_accumulation_skip,
-            "vt_wcs_refresh_fail": self.vt_wcs_refresh_fail,
-            "psf_local_sky_fail": self.psf_local_sky_fail,
-            "psf_grouped_fit_fail": self.psf_grouped_fit_fail,
-            "aperture_empty_comp_drop": self.aperture_empty_comp_drop,
-            "catalog_aperture_enhance_fail": self.catalog_aperture_enhance_fail,
-            "plate_solve_bundle_fail": self.plate_solve_bundle_fail,
-            "masterstars_rescale_coords_fail": self.masterstars_rescale_coords_fail,
-            "vytarg_header_write_fail": self.vytarg_header_write_fail,
-            "vsx_frame_bbox_wcs_fail": self.vsx_frame_bbox_wcs_fail,
-            "vsx_variable_coord_drop": self.vsx_variable_coord_drop,
-            "stress_sidecar_skip": self.stress_sidecar_skip,
-            "calibrate_db_sync_fail": self.calibrate_db_sync_fail,
-            "importer_filter_read_fail": self.importer_filter_read_fail,
-            "calib_scope_conflict_check_fail": self.calib_scope_conflict_check_fail,
-            "calib_library_register_fail": self.calib_library_register_fail,
-            "importer_capture_date_fallback": self.importer_capture_date_fallback,
-            "importer_imagetyp_read_fail": self.importer_imagetyp_read_fail,
-            "importer_obs_group_meta_skip": self.importer_obs_group_meta_skip,
-            "wcs_header_key_copy_fail": self.wcs_header_key_copy_fail,
-            "align_unique_sample_fail": self.align_unique_sample_fail,
-            "platesolve_match_rate_meta_fail": self.platesolve_match_rate_meta_fail,
-            "timeobs_parse_fallback": self.timeobs_parse_fallback,
-            "jd_mid_compute_fail": self.jd_mid_compute_fail,
-            "date_obs_parse_fail": self.date_obs_parse_fail,
-            "hjd_bjd_compute_fail": self.hjd_bjd_compute_fail,
-            "trust_kmag_sidecar_read_fail": self.trust_kmag_sidecar_read_fail,
-            "variability_gaia_id_norm_skip": self.variability_gaia_id_norm_skip,
-            "k2_airmass_read_fail": self.k2_airmass_read_fail,
-            "export_observer_location_read_fail": self.export_observer_location_read_fail,
-            "optics_draft_override_read_fail": self.optics_draft_override_read_fail,
-            "check_star_ensemble_filter_skip": self.check_star_ensemble_filter_skip,
-        }
+        """Every counter by name (G12-48: ``dataclasses.asdict``, no hand-written list)."""
+        return asdict(self)
 
 
 _COUNTERS = ExceptFixCounters()
@@ -99,3 +52,13 @@ def get_except_fix_counters() -> ExceptFixCounters:
     return _COUNTERS
 
 
+def counter_deltas(before: dict[str, int]) -> dict[str, int]:
+    """Counts added since ``before`` (a ``snapshot``); only the non-zero ones."""
+    now = _COUNTERS.snapshot()
+    return {k: int(v) - int(before.get(k, 0)) for k, v in now.items() if int(v) != int(before.get(k, 0))}
+
+
+def add_except_fix_counts(deltas: dict[str, int] | None) -> None:
+    """Add the counts a worker process collected (``counter_deltas``) to this process's counters."""
+    for k, v in (deltas or {}).items():
+        setattr(_COUNTERS, k, int(getattr(_COUNTERS, k)) + int(v))

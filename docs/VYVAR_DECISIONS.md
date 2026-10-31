@@ -7249,3 +7249,182 @@ real targets plus 300 constant pool stars per set as targets. Variants against t
 Decision (Milan): the comparison selection stays as it is (COMP-ASSIGN-03 + COMP-CEIL-NOISEMODEL). The field plane is
 not adopted now (light curves shown, Milan 2026-10-31: close step 5 without it). Scripts and results:
 container /root/scr/s6 (eval.py, stab.py, fmvar.py, loc.py, plane.py, lcplot.py, survey_comp_selection.md).
+
+## S6-DB-T19-2026-10-31 - database, id allocation, job protocol and Gaia builder robustness (Milan 2026-10-31)
+
+One entry per decision of step 6 task s6_db (T19; status /root/scr/s6t/T19_status.md). Science numbers of a normal
+night run are unchanged; the exceptions are named.
+
+- G05-03 / NEW-2 (Gaia completeness): a builder strip, and an online top-up, is complete only when the rows received
+  equal the TAP COUNT(*) of the same query (same WHERE, same G limit); otherwise the box is split in four and fetched
+  again, recursively (gaia_coverage.fetch_region_complete). No row cap is a decision threshold (ESA_ANON_ASYNC_ROW_CAP
+  only labels strips of older builds; MAX_SPLIT_DEPTH = 6 only stops a server whose COUNT and rows never agree).
+  strip_progress.verified: 1 complete, 0 truncated (no coverage claim for boxes touching it), NULL never checked.
+  Detection + repair: build_gaia_catalog.py --check / --repair [--strip KEY] (resumable, one strip per transaction);
+  gaia_maintain --report lists flagged strips. A top-up that cannot be made complete keeps its rows, records no
+  coverage. Numbers change only for fields in strips that the repair completes (the 6 bulge strips, run by Milan).
+- G13-09 / G13-10: EQUIPMENTS.FOCAL is dropped with ALTER TABLE DROP COLUMN; table rebuilds commit first and rename
+  with legacy_alter_table=ON; a curve FK left on EQUIPMENTS_OLD is healed on open.
+- G14-15 / NEW-1: one measured gain point per camera / readout mode / gain setting / binning
+  (save_measured_curve_point, partial unique index); the profile reads the newest first. A one-off cleanup on open
+  deletes older duplicate measured points and logs each one (pristine copy: 0 duplicates). Gain changes only for a
+  camera measured twice at one setting (the newest measurement now wins).
+- NEW-5 / G13-14: OBS_QC_PROCESSING_FILE (written, never read) is dropped; the QC apply run row is one transaction.
+- G12-22 / G12-21 / NEW-3 / NEW-4 / G12-45 / G13-43: draft ids come from create_draft inside one BEGIN IMMEDIATE
+  (ID_COUNTER high-water mark, QC run ids, folder scan); folders are claimed by mkdir(exist_ok=False); the floor
+  query fails loud; rig ids are required; write_draft_manifest goes through the one atomic manifest writer (kept for
+  its test callers instead of deleted).
+- G13-16: the shared DB connection fetches every result under its lock (no cursor holds it).
+- G12-39 / G12-40 / G12-41 / G05-17: status writes locked and per-process temp files; a stopped job stays stopped;
+  job dirs get _2, _3 suffixes; one catalog job per catalog via an O_EXCL lock file; "starting" counts as running for
+  SPAWN_TIMEOUT_S = 60 s.
+- G04-45 / G05-55: reading coverage and provenance never write the Gaia DB (register_existing_db is explicit).
+- G13-46 / G05-47: header cache on exact st_mtime_ns; frames.csv cache on (mtime_ns, size).
+- G01-22 / G01-37: a scan writes nothing to CALIBRATION_LIBRARY (the RUN stores the flat offset, same value);
+  an imported master never overwrites a different one (_2 suffix).
+- G13-45 / G14-23 / G14-34 / G05-16: CALIBRATION_LIBRARY DDL owned by calib_library (GAIN REAL); autodetect SQL in
+  database.py; library delete removes the row before the file; a VACUUM blocked by a reader is skipped (rc 0).
+## S6-UI-CENTRE-2026-10 - manifest field centre: written by the night run from the MASTERSTAR WCS (Milan 2026-10-31)
+
+G14-03 / NEW-5. The GUI never writes the manifest, config or a DB row on render (amends CORE-NO-UI-2026-10 "the GUI
+sets it from the night-run result"). The night run writes ``center`` right after the plate solve from the solved
+MASTERSTAR WCS centre (``manifest_centre.record_manifest_centre_from_masterstar``; several setups -> the first in
+name order, ``center.source = MASTERSTAR_WCS``, ``center.setup``). Every consumer uses solved WCS > FITS header
+pointing > manifest centre (fits_meta.field_centre_radec already did; the preprocess plate-solve hint had the
+manifest centre first and now has it last). Old drafts: ``dev/tools/check_manifest_centres.py`` (read-only, mismatch
+> 10 % of the field radius, distance in arcmin) on Milan's PC.
+
+## S6-UI-JOBS-2026-10 - long GUI actions that write science products run as job processes (Milan 2026-10-31)
+
+G14-04 / G09-43 / G14-14. RUN ePSF, variability search, catalogue check, TESS download + analysis, HRD online lookup
+and Build masters run as ``python -m task_jobs`` children (``run_job.spawn_job``), followed by the RUN monitor in
+``main`` from any page and view; never in the Streamlit thread. A task on a processed field uses the field's
+config snapshot exactly as a night re-run (``resolve_cfg_for_photometry(existing_draft=True)``). Kept inline (they
+write no science product): Scan Source (reads headers), PTC Measure (result in session only; Save is explicit),
+Import a master (copy + DB row), Generate ePSF light-curve files (rewrites user export files from existing LCs).
+
+## S6-UI-LOCK-2026-10 - one job at a time per data directory (Milan 2026-10-31)
+
+G14-37. ``run_job.spawn_job`` refuses (``JobBusyError``) while any ``jobs/*`` job of the data directory runs, under an
+O_EXCL launch mutex; every start button in every browser session is off meanwhile and a foreign job is shown.
+Headless night runs (orchestrator / CLI) are not covered (not started through spawn_job).
+
+## S6-UI-RENDER-2026-10 - view state and caches (Milan 2026-10-31)
+
+G14-12: one resolver ``ui_session.active_draft`` (loaded folder + its manifest id, else Drafts/<id>), passed to
+every view; MASTERSTAR QA lost its manual path input. G14-19: FITS QA on a field without frame_qc.json says that the
+run's star lists are missing (no recompute). G04-34: Settings suggestions use the MASTERSTAR of the setup selected
+in that view. G03-03: autodetect ranks by raw score; equal top scores -> no auto-fill. NEW-1: the HRD tab reads
+``hrd_enrich.json`` only; the online lookup is a button / job. NEW-4: PTC never assumes 65535 ADU; it asks for the
+saturation level when the camera has no SATURATE_ADU (``measure_from_files(saturation_adu=)`` is required).
+## ORCH-LOG-2026-10 - one logging setup per run (Milan 2026-10-31, G12-07 / G12-08 / G12-09)
+
+`infolog.setup_run_logging` is the only logging setup of a run (CLI `night_run.main` and the GUI's job child through
+`run_night_pipeline`): INFO and above of every VYVAR module (logger named after a `src_py` module, or logged from a
+`src_py` file) and WARNING and above of the libraries go to the run infolog and to stdout. Every line logged before
+the infolog opens (logger records, `log_event`, `log_milestone`) is kept and written first when it opens; the kept
+lines are cleared when a run starts and ends. The FATAL record carries its traceback into the infolog. The optics
+line is logged by the run, not by the Streamlit process. One stage / timer helper (`_RunStages`, G12-34).
+
+## INV-DAG-RERUN-2026-10 - INV-DAG-01 kept, a re-run clears later stamps (Milan 2026-10-31, G12-27)
+
+STAGE_ORDER holds the four stamped stages (masterstar, target_comp_selection, aperture_photometry, postprocess).
+Stamping a stage removes its old stamp and the stamps of every later stage (`rerun_cleared`), so a photometry re-run on
+an existing field passes. The stamp calls in photometry_core, masterstar_build and run_end_of_run_invariants no longer
+swallow errors at DEBUG.
+
+## INV-CAL-PASSTHROUGH-2026-10 - cal_diag path and PASSTHROUGH rule (Milan 2026-10-31, G12-02 / N1 / N2)
+
+INV-CAL-01 looks for `cal_diag.json` at the field root (`processed_field_root`, where it is written). The manifest
+`calibration_mode` is PASSTHROUGH when no frame got a dark (no VY_CFLAG contains D), else vyvar_calibrated; it is
+always written, so a field calibrated again with darks is no longer PASSTHROUGH.
+
+## ORCH-COUNTERS-2026-10 - EXCEPT-FIX counters per run (Milan 2026-10-31, G12-30 / N3 / G12-48)
+
+The counters are reset once in `run_night_pipeline` (not at each aperture photometry), the counts of spawn workers are
+returned with each item by `parallel_frames.map_frames` and added in the run process, `snapshot` is
+`dataclasses.asdict`, and the 15 counters nothing incremented were removed. `except_fix_summary` therefore covers the
+whole run (import, calibration, alignment, photometry; all setups of the run).
+
+## ORCH-PARAMS-2026-10 - GUI and CLI build the same run (Milan 2026-10-31, G12-10 / G12-11 / G14-07 / G12-15 / G12-16 / N4 / N5 / G12-29)
+
+NightRunParams holds only the inputs both entry points give (source, camera, telescope, site, mode, config path,
+ePSF override); validity windows, DAO threshold and optics come from the run's config and DB. For the same inputs the
+GUI and the CLI produce the same job dict except `location_source_hint` (ui_selection / cli_arg).
+`night_run.check_run_preconditions` (source folder, camera and telescope rows, site, Gaia DR3 schema for a real run)
+runs in the GUI before the job starts and in `run_night_pipeline` before the scan (CLI exit code 2, nothing imported);
+the site it resolves is the run's site (resolved once), the GUI's cached cfg is not changed. The CLI builds its
+AppConfig once and passes it to the run. A run that fails before its field infolog opens writes
+`logs/run_preflight_error_<ts>.log` (CLI prints the path; the job child puts it in run_status.json `preflight_log`).
+`vyvar_runtime.ensure_data_dir_for_entry` is the data-dir bootstrap of the GUI and the CLI; it creates the database at
+`AppConfig.database_path`.
+
+## S6-FIX-EPSF-SCOPE-2026-10 - ePSF has no target selection; vsx_out_of_scope_types is THE exclusion (Milan 2026-10-31, G12-04)
+
+`epsf_targets` is removed (config field, loader, to_json, registry, settings check, ePSF tab text input, stage /
+job / night-run argument, docs; in KNOWN_REMOVED_KEYS, so an old config.json loads with an INFO line). ePSF fits
+every target with an aperture light curve. `vsx_type_scope.target_is_out_of_scope` (VSX auto-selected target whose
+VSX type token matches `vsx_out_of_scope_types`) is the one predicate of the aperture target selection, its
+INV-CFG-01R check and the ePSF candidates; an out-of-scope target is never fitted by ePSF, also when an aperture
+light curve of it exists. The ePSF tab's plan uses the field's config snapshot (as the job). The night run runs
+ePSF when `epsf_auto_run` is true; RUN VYVAR from the GUI is that night run (no override is passed); otherwise the
+GUI runs ePSF only from the RUN ePSF button. The completeness gate is unchanged: every aperture LC needs a PSF LC
+with n_full > 0 or a drop reason (no selection exception exists any more). Output changes for ePSF runs only: the
+ePSF export header loses `epsf_targets_selection`, the manifest `fit_set` loses `selection` / `unmatched_tokens`,
+the ePSF PDF page loses "Targets of the run". A normal night run (epsf_auto_run false) is unchanged.
+
+## S6-FIX-RUN-LOCK-2026-10 - the CLI night run takes the GUI's run lock (Milan 2026-10-31)
+
+Amends S6-UI-LOCK-2026-10 ("headless night runs not covered"). `night_run.main` registers itself through
+`run_job.register_external_job` (same launch mutex and `running_job` check as `spawn_job`): while any job of the
+data directory runs it exits with code 2 and "not started - <label> is running (job <dir>)"; otherwise it writes
+`jobs/cli_<ts>/run_status.json` (state running, its own pid, label "Night run (CLI)"), so the GUI shows it and
+disables RUN and every job button; the end state comes from the same `finish_job` / `fail_job` as the GUI child.
+A registration whose pid is dead is `lost`, never running, so a crashed run does not block.
+
+## S6-FIX-CENTRE-PER-SETUP-2026-10 - the manifest keeps one field centre per setup (Milan 2026-10-31)
+
+Amends S6-UI-CENTRE-2026-10 ("several setups -> the first in name order"). Every setup of a field is an
+independent instrument, so the night run writes `center_by_setup = {setup: {ra_deg, de_deg, source:
+MASTERSTAR_WCS}}` from each setup's solved MASTERSTAR (`manifest_centre.record_manifest_centres_from_masterstars`);
+no field-level centre is written or read (a legacy `center` is ignored; the dead
+`update_obs_draft_status_panel_values` writer is removed). Consumers resolve the frame's own setup
+(`manifest_centre.frame_setup_name`: VY_OBSG, else FILTER / EXPTIME / XBINNING) and use only its centre
+(`manifest_centre.setup_centre`; the OSC channel setups of one light folder count as that one instrument):
+`fits_meta.field_centre_radec` (BJD / airmass fallback, also through `param_resolver.DraftSiteFacts`) and the
+preprocess plate-solve hint, which is the run's pointing for every frame or else the centre of each frame's light
+folder. `dev/tools/check_manifest_centres.py` compares each setup's centre with its own MASTERSTAR. Science numbers
+of a normal run: unchanged (frames with a WCS or header pointing never reach the manifest fallback).
+
+## S6-FIX-SITE-MANUAL-2026-10 - the GUI never selects the observing site automatically (Milan 2026-10-31)
+
+Amends Phase 3 autodetect. "Auto-detect optics from FITS" fills camera and telescope only; `detect_location`,
+`AutodetectReport.location` and the site auto-fill are removed. The user picks the site in the Location selector
+(preselected: the site chosen in this session, else the default site the user marked in the site table). The run's
+header-based site handling (SITELAT / SITELONG, `param_resolver.resolve_site`) is unchanged; the poor-FITS notice
+still says when the headers carry no site.
+
+## S6-FIX-CLIB-READONLY-2026-10 - the Calibration Library view only reads (Milan 2026-10-31)
+
+The library folder is created at app start / data-dir bootstrap (`AppConfig.ensure_base_dirs` in `app.main`) and by
+the explicit actions that write into it; the CALIBRATION_LIBRARY table and its migrations (`calib_library.
+ensure_schema`: DDL, exact-gain migration, capture-date backfill) run once when `VyvarDatabase` opens the database.
+The view's render, `list_masters`, `get_master_by_path`, `update_flat_offset`, `register_master` and the
+calibration plan no longer run DDL or migrations. A missing library folder is a warning in the view.
+
+## S6-FIX-RUN-GATE-2026-10 - the RUN button is gated by the run's own precondition check (Milan 2026-10-31)
+
+RUN VYVAR / RUN VYVAR (non-cal) are disabled by `app._run_button_blockers`: one
+`night_run.check_run_preconditions` call per render on the UI selection (source folder, camera and telescope rows,
+site, Gaia DR3), plus the UI-only reasons (no source typed, no site picked, a job of the data directory runs). The
+reasons are listed next to the buttons ("RUN VYVAR is off: ..."). The GUI's separate Gaia check
+(`_gaia_db_ok_for_masterstar`) is removed; params come from one builder (`_ui_run_params`) for the gate and the run.
+No log tab is added (Milan: unchanged).
+
+## S6-FIX-GAIA-REPAIR-DOC-2026-10 - user documentation of the Gaia DB check and repair (Milan 2026-10-31)
+
+docs/INSTALL.md, docs/README_FULL.md (EN) and docs/README_CZ.md (CZ, where the catalogue builder is described) have
+a section "Gaia DB incomplete -> how to check and repair": the run's infolog WARNING and the Settings Report
+lines, the Windows commands from the VYVAR folder (`gaia_maintain.py --report`, `build_gaia_catalog.py --check`,
+`--repair --strip KEY`, `--repair`), resumable (one strip per transaction), rough duration, and that it needs
+internet access to the ESA Gaia archive. Item 8 of the same round: no log tab in the GUI (no change).

@@ -6,26 +6,27 @@ second snapshot file (Milan: the log is read outside VYVAR)."""
 from __future__ import annotations
 
 import logging
+import sys
 import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 _lock = threading.Lock()
 _session_log_file: Any = None
-# milestones logged before the run's draft directory exists; written when the file opens
-_milestones: list[str] = []
+# G12-08: every line (log_event, log_milestone, logger records) written before the run's draft
+# directory exists; written when the file opens, cleared when a run starts or ends (G12-09).
+_pending: list[str] = []
+_PENDING_MAX = 50000
+_pending_dropped = 0
 # SPEED-2026-10: a worker process has no infolog file; its messages are collected here and the
 # run process writes them (``capture_events`` / ``replay_events``)
 _captured: list[str] | None = None
 
-VYVAR_LOGGERS = ("pipeline", "importer")
-
-
-def _handler_already_attached() -> bool:
-    lg = logging.getLogger("pipeline")
-    return any(isinstance(h, InfologHandler) for h in lg.handlers)
+#: the folder of the VYVAR modules: records logged there go to the run log from INFO, the rest
+#: (libraries) from WARNING (G12-07, Milan 2026-10-31)
+_SRC_DIR = Path(__file__).resolve().parent
 
 
 def safe_progress(progress_cb: Any) -> Any:
@@ -45,8 +46,32 @@ def safe_progress(progress_cb: Any) -> Any:
     return _p
 
 
+def _write_line(line: str) -> None:
+    """Write one line into the open run infolog, else keep it until the file opens (call with _lock)."""
+    global _pending_dropped
+    if _session_log_file is None:
+        if len(_pending) < _PENDING_MAX:
+            _pending.append(line)
+        else:
+            _pending_dropped += 1
+        return
+    try:
+        _session_log_file.write(f"{line}\n")
+        _session_log_file.flush()
+    except Exception as exc:  # noqa: BLE001
+        logging.getLogger(__name__).debug("session infolog append failed: %s", exc)
+
+
+def _clear_pending() -> None:
+    global _pending_dropped
+    with _lock:
+        _pending.clear()
+        _pending_dropped = 0
+
+
 def log_event(message: str) -> None:
-    """Append one line to the run infolog (no-op outside a run; collected inside ``capture_events``)."""
+    """Append one line to the run infolog; before the file opens the line is kept and written when it
+    opens (G12-08). Collected inside ``capture_events`` (worker processes)."""
     try:
         if _captured is not None:
             _captured.append(str(message))
@@ -54,7 +79,7 @@ def log_event(message: str) -> None:
         ts = datetime.now(timezone.utc).strftime("%H:%M:%S")
         line = f"{ts}  {message}"
         with _lock:
-            _append_session_line(line)
+            _write_line(line)
     except Exception as exc:  # noqa: BLE001 - Infolog must never crash the pipeline
         logging.getLogger(__name__).debug("log_event append failed: %s", exc)
 
@@ -80,31 +105,14 @@ def replay_events(messages: list[str] | None) -> None:
 
 
 def log_milestone(message: str) -> None:
-    """Milestone line; kept until the run infolog opens if logged before it."""
-    try:
-        ts = datetime.now(timezone.utc).strftime("%H:%M:%S")
-        line = f"{ts}  {message}"
-        with _lock:
-            if _session_log_file is None:
-                _milestones.append(line)
-            _append_session_line(line)
-    except Exception as exc:  # noqa: BLE001
-        logging.getLogger(__name__).debug("log_milestone append failed: %s", exc)
-
-
-def _append_session_line(line: str) -> None:
-    if _session_log_file is None:
-        return
-    try:
-        _session_log_file.write(f"{line}\n")
-        _session_log_file.flush()
-    except Exception as exc:  # noqa: BLE001
-        logging.getLogger(__name__).debug("session infolog append failed: %s", exc)
+    """Milestone line (same path as ``log_event``, G12-08: one buffer for every line)."""
+    log_event(message)
 
 
 def start_infolog_session(draft_dir: str | Path) -> str | None:
-    """Open the run infolog ``draft_dir/infolog_<ts>.txt`` (append, flushed per line)."""
-    global _session_log_file
+    """Open the run infolog ``draft_dir/infolog_<ts>.txt`` (append, flushed per line); the lines
+    logged before it opened are written first."""
+    global _session_log_file, _pending_dropped
     try:
         root = Path(str(draft_dir)).expanduser().resolve()
         root.mkdir(parents=True, exist_ok=True)
@@ -116,19 +124,28 @@ def start_infolog_session(draft_dir: str | Path) -> str | None:
         fh.write("# timestamps: UTC\n")
         fh.write("#" + "=" * 60 + "\n\n")
         with _lock:
-            for m in _milestones:
+            if _pending_dropped:
+                fh.write(f"[INFOLOG] {_pending_dropped} line(s) logged before this file opened were not kept "
+                         f"(limit {_PENDING_MAX})\n")
+            for m in _pending:
                 fh.write(f"{m}\n")
-            _milestones.clear()
-        fh.flush()
-        _session_log_file = fh
+            _pending.clear()
+            _pending_dropped = 0
+            fh.flush()
+            _session_log_file = fh
         return str(path)
     except Exception as exc:  # noqa: BLE001
         logging.getLogger(__name__).warning("[INFOLOG] start_infolog_session failed: %s", exc)
         return None
 
 
+def infolog_session_open() -> bool:
+    """True while a run infolog file is open."""
+    return _session_log_file is not None
+
+
 def end_infolog_session() -> None:
-    """Close the run infolog (best-effort)."""
+    """Close the run infolog (best-effort); lines kept for a file that never opened are dropped (G12-09)."""
     global _session_log_file
     try:
         if _session_log_file is not None:
@@ -136,6 +153,7 @@ def end_infolog_session() -> None:
     except Exception:  # noqa: BLE001
         pass
     _session_log_file = None
+    _clear_pending()
 
 
 def log_phase_boundary(phase: str, *, status: str = "start") -> None:
@@ -144,38 +162,91 @@ def log_phase_boundary(phase: str, *, status: str = "start") -> None:
 
 
 class InfologHandler(logging.Handler):
-    """Writes VYVAR logger records into the run infolog."""
+    """Writes logger records into the run infolog (kept until the file opens)."""
 
     def emit(self, record: logging.LogRecord) -> None:
         try:
             msg = self.format(record)
             with _lock:
-                _append_session_line(msg)
+                _write_line(msg)
         except Exception:  # noqa: BLE001
             self.handleError(record)
 
 
-def ensure_infolog_logging() -> None:
-    """Attach InfologHandler to VYVAR module loggers once (safe across Streamlit reruns)."""
-    if _handler_already_attached():
-        for name in VYVAR_LOGGERS:
-            logging.getLogger(name).propagate = False
-        return
+class _StdoutHandler(logging.StreamHandler):
+    """Console handler bound to the current ``sys.stdout`` (never to a stream that was replaced)."""
 
+    @property
+    def stream(self) -> Any:  # type: ignore[override]
+        return sys.stdout
+
+    @stream.setter
+    def stream(self, _value: Any) -> None:
+        pass
+
+
+class VyvarRecordFilter(logging.Filter):
+    """G12-07: INFO and above of every VYVAR module, WARNING and above of the libraries. A record is a
+    VYVAR record when its logger is named after a ``src_py`` module (``getLogger(__name__)``,
+    ``"pipeline"``) or it was logged from a ``src_py`` file (``logging.info``)."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._modules = frozenset(p.stem for p in _SRC_DIR.glob("*.py"))
+        self._is_vyvar: dict[tuple[str, str], bool] = {}
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if record.levelno >= logging.WARNING:
+            return True
+        if record.levelno < logging.INFO:
+            return False
+        key = (str(record.name), str(record.pathname or ""))
+        hit = self._is_vyvar.get(key)
+        if hit is None:
+            hit = key[0].split(".", 1)[0] in self._modules
+            if not hit:
+                try:
+                    hit = Path(key[1]).resolve().parent == _SRC_DIR
+                except (OSError, ValueError):
+                    hit = False
+            self._is_vyvar[key] = hit
+        return hit
+
+
+def _run_log_formatter() -> logging.Formatter:
     fmt = logging.Formatter("%(asctime)s  %(levelname)s  [%(name)s]  %(message)s", datefmt="%H:%M:%S")
     fmt.converter = time.gmtime
-    h = InfologHandler()
-    h.setLevel(logging.INFO)
-    h.setFormatter(fmt)
+    return fmt
 
-    for name in VYVAR_LOGGERS:
-        lg = logging.getLogger(name)
-        lg.addHandler(h)
-        lg.setLevel(logging.INFO)
-        # Avoid propagating to the root logger: hosted Streamlit / runners sometimes
-        # attach a StreamHandler to stdout that is later closed; LOGGER.info would then
-        # raise ValueError("I/O operation on closed file.").
-        lg.propagate = False
+
+def setup_run_logging() -> Callable[[], None]:
+    """G12-07 (Milan 2026-10-31): the one logging setup of a run, the same for the CLI and the GUI's job
+    child. INFO and above of every VYVAR module and WARNING and above of the libraries go to the run
+    infolog (kept until it opens, G12-08) and to stdout; library loggers keep their own levels (the
+    run adds the LOG-NOISE repeat filter, ``quiet_repeated_library_warnings``). Also clears lines kept from before this run. Returns the teardown
+    (a no-op when the setup was already active)."""
+    root = logging.getLogger()
+    if any(isinstance(h, InfologHandler) for h in root.handlers):
+        return lambda: None
+    _clear_pending()
+    flt = VyvarRecordFilter()
+    fmt = _run_log_formatter()
+    handlers: list[logging.Handler] = [InfologHandler(), _StdoutHandler()]
+    for h in handlers:
+        h.setLevel(logging.INFO)
+        h.setFormatter(fmt)
+        h.addFilter(flt)
+        root.addHandler(h)
+    old_level = root.level
+    if root.getEffectiveLevel() > logging.INFO:
+        root.setLevel(logging.INFO)
+
+    def _teardown() -> None:
+        for h in handlers:
+            root.removeHandler(h)
+        root.setLevel(old_level)
+
+    return _teardown
 
 
 # LOG-NOISE-2026-10: library warnings that repeat for every frame or star (astropy FITSFixedWarning

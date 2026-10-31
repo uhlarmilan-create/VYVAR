@@ -154,8 +154,6 @@ def check_value(key: str, value: Any, entry: dict[str, Any]) -> str | None:
     if rng and isinstance(value, (int, float)) and not isinstance(value, bool):
         if not (float(rng[0]) <= float(value) <= float(rng[1])):
             return f"must be within {rng[0]} .. {rng[1]}"
-    if key == "epsf_targets" and not str(value or "").strip():
-        return "empty: use ALL or a list"
     return None
 
 

@@ -134,13 +134,11 @@ def run_full_photometry_pipeline(
             "error": "Target and comparison-star selection did not produce active_targets/comparison_stars CSV.",
         }
 
-    # INV-DAG-01: target_comp_selection stamp after successful target and comparison-star selection.
-    try:
-        from invariants_runtime import stamp_stage_on_disk  # noqa: PLC0415
+    # INV-DAG-01: target_comp_selection stamp after successful target and comparison-star selection
+    # (G12-27: never hidden; a re-run clears the later stamps).
+    from invariants_runtime import stamp_stage_on_disk  # noqa: PLC0415
 
-        stamp_stage_on_disk(Path(output_dir), "target_comp_selection", enforce_upstream=True)
-    except Exception as _dag_p01_exc:  # noqa: BLE001
-        logging.debug("[INV-DAG-01] target_comp_selection stamp skipped: %s", _dag_p01_exc)
+    stamp_stage_on_disk(Path(output_dir), "target_comp_selection", enforce_upstream=True)
 
     # -- aperture photometry --
     _p("Aperture photometry + light curves...")

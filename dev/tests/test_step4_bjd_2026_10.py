@@ -152,10 +152,10 @@ def test_draft_centre_is_last_and_zero_is_unset() -> None:
             return self.row
 
     h = fits.Header()
-    assert field_centre_radec(h, db=_Db({"CENTEROFFIELDRA": 12.5, "CENTEROFFIELDDE": -3.0}), draft_id=7) == (
-        12.5, -3.0, "DRAFT_CENTRE")
-    assert field_centre_radec(h, db=_Db({"CENTEROFFIELDRA": 0.0, "CENTEROFFIELDDE": 0.0}), draft_id=7) == (
-        None, None, "none")
+    own = {"NoFilter_0_1": {"ra_deg": 12.5, "de_deg": -3.0}}  # S6-FIX: the centre of the frame's setup
+    assert field_centre_radec(h, db=_Db({"CENTER_BY_SETUP": own}), draft_id=7) == (12.5, -3.0, "DRAFT_CENTRE")
+    zero = {"NoFilter_0_1": {"ra_deg": 0.0, "de_deg": 0.0}}
+    assert field_centre_radec(h, db=_Db({"CENTER_BY_SETUP": zero}), draft_id=7) == (None, None, "none")
 
 
 # ------------------------------------------------------------------ G02-18 per-star BJD

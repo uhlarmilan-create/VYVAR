@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -42,12 +43,14 @@ def fingerprint_gaia_db(path: str | Path) -> dict[str, Any] | None:
     p = Path(str(path or "")).expanduser()
     if not p.is_file():
         return None
-    # Coverage first: an older DB is registered on first use (a write), before the file is fingerprinted.
+    # G05-55: read-only - provenance never writes the Gaia DB; an older DB without its coverage
+    # record (registered by the first top-up or gaia_maintain.py --register) is "unregistered".
     try:
-        from gaia_coverage import coverage_summary  # noqa: PLC0415
+        from gaia_coverage import coverage_is_stored, coverage_summary  # noqa: PLC0415
 
-        coverage = coverage_summary(p)
-    except Exception:  # noqa: BLE001
+        coverage = coverage_summary(p) if coverage_is_stored(p) else "unregistered"
+    except Exception as exc:  # noqa: BLE001
+        logging.warning("[PROVENANCE] Gaia coverage of %s not read: %s", p, exc)
         coverage = None
     # Row count from catalog_meta (written by the builder / gaia_maintain.py --register, kept
     # current by the online top-up); COUNT(*) over 200 million rows took ~25 s per call.

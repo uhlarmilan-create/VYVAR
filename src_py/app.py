@@ -2,19 +2,15 @@
 
 from __future__ import annotations
 
-import contextlib
 import html
 import logging
-import math
-import re
 from pathlib import Path
 from typing import Any
 
 import streamlit as st
 
-from config import AppConfig, resolve_detection_threshold_sigma
+from config import AppConfig
 from database import (
-    DraftTechnicalMetadataError,
     get_observer_location_by_id,
     get_observer_locations,
 )
@@ -26,31 +22,18 @@ from optics_selection import (
     parse_ui_optics_from_labels,
     resolve_working_optics,
 )
-from ui_session import optics_from_session, sync_optics_session
+from ui_session import active_draft, clear_active_draft, optics_from_session, set_active_draft, sync_optics_session
 from pipeline import AstroPipeline
 import ui_calibration as ui_calibration
 import ui_database_explorer as ui_database_explorer
 import ui_masterstar_qa as ui_masterstar_qa
 import ui_quality_dashboard as ui_quality_dashboard
-import ui_components as ui_components
 from platesolve_ui_paths import resolve_draft_directory
 from ui_aperture_photometry import render_aperture_photometry
 from ui_variability import render_variability_dashboard
 
 LOGGER = logging.getLogger(__name__)
 
-
-
-def _vyvar_effective_draft_dir_override() -> Path | None:
-    """Explicit user-loaded draft path (``vyvar_draft_dir_override``); not the full session chain.
-
-    Tab modules also call ``ui_session.resolve_draft_dir`` for job/post-cal/Drafts fallbacks.
-    """
-    raw = st.session_state.get("vyvar_draft_dir_override")
-    if not raw:
-        return None
-    p = Path(str(raw)).expanduser()
-    return p.resolve() if p.is_dir() else None
 
 
 def _vyvar_format_run_failure_message(*, default: str) -> str:
@@ -71,19 +54,13 @@ def _run_vyvar_full_pipeline(
     import_equipment_id: int,
     import_telescope_id: int,
     import_location_id: int,
-    dark_validity_days: int,
-    flat_validity_days: int,
-    dao_sigma_default: float,
     footer_placeholder: Any | None = None,
     pre_calibrated_mode: bool = False,
     masters_from: str = "lights",
 ) -> bool:
-    """RUN VYVAR - UI resolution then night_run.run_night_pipeline (INV-ONE-ENTRY-01)."""
-    from night_run import NightRunParams
-    from observer_location import (  # noqa: PLC0415
-        apply_resolved_observer_location_to_config,
-        resolve_observer_location_for_run,
-    )
+    """RUN VYVAR - the CLI's params from the UI selection, the run's preconditions, then the job
+    (night_run.run_night_pipeline in a child process, INV-ONE-ENTRY-01)."""
+    from night_run import check_run_preconditions
 
     _run_label = "RUN VYVAR (non-cal)" if pre_calibrated_mode else "RUN VYVAR"
 
@@ -126,8 +103,6 @@ def _run_vyvar_full_pipeline(
         st.session_state.pop("vyvar_last_preflight_error_log", None)
         st.session_state.pop("vyvar_last_preflight_error_message", None)
         _root = Path(str(source_root).strip())
-        if not _root.is_dir():
-            return _fail("Scan Source + Import", RuntimeError(f"Invalid Source Directory: {_root}"))
 
         _run_optics = resolve_working_optics(
             pipeline.db,
@@ -138,45 +113,24 @@ def _run_vyvar_full_pipeline(
             context=_run_label,
         )
         sync_optics_session(_run_optics)
-        log_active_optics(pipeline.db, _run_optics, context=f"{_run_label} (UI selection)")
-
-        manual_flat_map = st.session_state.get("vyvar_manual_flat_map") or {}
-        choices: dict[str, str] = {}
-        for k, v in list(st.session_state.items()):
-            ks = str(k)
-            if ks.startswith("vyvar_flatfb_"):
-                choices[ks[len("vyvar_flatfb_") :]] = v
 
         loc_id = int(import_location_id)
         if loc_id <= 0:
             raise ValueError("No observing site selected; select an observatory site before RUN.")
-        # The site of this run (SETTINGS-2026-10: not written to config.json; the default site
-        # is LOCATION.IS_DEFAULT in Database Explorer).
-        _resolved_ui = resolve_observer_location_for_run(
-            cfg.database_path,
-            explicit_location_id=loc_id,
-            cfg=cfg,
-            source_hint="ui_selection",
-        )
-        apply_resolved_observer_location_to_config(cfg, _resolved_ui)
-
-        params = NightRunParams(
-            source_dir=_root,
+        # G12-10 / G12-11: the same params as the CLI for the same inputs (validity windows, DAO
+        # threshold and optics come from the run's config and DB in the job).
+        params = _ui_run_params(
+            source_root=str(_root),
             equipment_id=int(_run_optics.equipment_id),
             telescope_id=int(_run_optics.telescope_id),
-            existing_pipeline=pipeline,
-            optics=_run_optics,
             location_id=int(loc_id),
-            location_source_hint="ui_selection",
-            masterdark_validity_days=int(dark_validity_days),
-            masterflat_validity_days=int(flat_validity_days),
-            manual_flat_map=dict(manual_flat_map) if manual_flat_map else None,
-            flat_fallback_choices=choices or None,
-            apply_smart_plan_flat_fallbacks=not bool(pre_calibrated_mode),
-            dao_threshold_sigma=float(dao_sigma_default),
             pre_calibrated_mode=bool(pre_calibrated_mode),
             masters_from=str(masters_from or "lights"),
         )
+        # G12-15 / G12-16: the run's own precondition check; the site is validated, cfg is not changed
+        _pre = check_run_preconditions(cfg, params, pipeline.db)
+        if _pre.problems:
+            return _fail("Preconditions", RuntimeError("; ".join(_pre.problems)))
         _update("Night pipeline")
         from run_job import launch_job  # noqa: PLC0415
 
@@ -184,6 +138,7 @@ def _run_vyvar_full_pipeline(
         st.session_state["vyvar_active_job"] = {
             "job_dir": str(_job_dir),
             "label": _run_label,
+            "kind": "night",
             "equipment_id": int(_run_optics.equipment_id),
             "applied": False,
         }
@@ -214,33 +169,10 @@ def _vyvar_apply_run_result(nr: Any, cfg: AppConfig, footer_placeholder: Any | N
     st.session_state["vyvar_last_import_equipment_id"] = int(
         (st.session_state.get("vyvar_active_job") or {}).get("equipment_id") or 0
     )
-    if nr.import_result is not None:
-        st.session_state["vyvar_last_import_result"] = nr.import_result
     if nr.draft_id is not None:
-        st.session_state["vyvar_last_draft_id"] = int(nr.draft_id)
-    if nr.archive_path is not None:
-        st.session_state["vyvar_post_cal_archive_path"] = str(nr.archive_path)
-    if nr.ra_ui is not None:
-        st.session_state["vyvar_pending_center_ra"] = float(nr.ra_ui)
-    if nr.de_ui is not None:
-        st.session_state["vyvar_pending_center_de"] = float(nr.de_ui)
-    qsum = dict(nr.ram_qc_summary or {})
-    analyze_token = f"ram_qc:{nr.draft_id}:{qsum.get('n_lights')}:{qsum.get('median_fwhm')}"
-    st.session_state["vyvar_last_job_output"] = {
-        "job_kind": "analyze",
-        "analyze_token": analyze_token,
-        "archive_path": str(nr.draft_dir or ""),
-        "draft_id": nr.draft_id,
-        "ram_qc_summary": qsum,
-        "qc_suggestions": {},
-        "pointing_scan": nr.pointing,
-        "prefill_ra_text": "",
-        "prefill_dec_text": "",
-        "suggested_reject_fwhm_px": None,
-    }
-    if nr.platesolve_job_output is not None:
-        st.session_state["vyvar_last_job_output"] = nr.platesolve_job_output
-
+        # G14-12: the finished run's field becomes the loaded processed field of every view
+        _dd = Path(str(nr.draft_dir)) if nr.draft_dir else None
+        set_active_draft(_dd if _dd is not None and _dd.is_dir() else None, int(nr.draft_id))
     if not nr.success:
         err = " ; ".join(nr.errors) if nr.errors else "night run failed"
         return _fail("Night pipeline", RuntimeError(err))
@@ -299,25 +231,50 @@ def _vyvar_record_run_failure(cfg: AppConfig, label: str, step: str, detail: str
         LOGGER.debug("run failure log write failed: %s", exc)
 
 
-def _vyvar_job_running() -> bool:
-    job = st.session_state.get("vyvar_active_job")
-    if not job or job.get("applied"):
-        return False
-    from run_job import job_state  # noqa: PLC0415
+def _vyvar_job_running(cfg: AppConfig) -> bool:
+    """G14-37: any job of this data directory, from any browser session (``run_job.running_job``)."""
+    from ui_session import any_job_running  # noqa: PLC0415
 
-    return job_state(job["job_dir"]) == "running"
+    return any_job_running(cfg.data_root)
+
+
+def _vyvar_finish_task_job(job: dict[str, Any], state: str, info: dict[str, Any]) -> bool:
+    """A finished task job (``task_jobs``): the result message replaces the in-thread output."""
+    from task_jobs import load_task_result  # noqa: PLC0415
+
+    for k in job.get("on_done_pop") or []:
+        st.session_state.pop(str(k), None)
+    res = load_task_result(job["job_dir"]) if state == "done" else None
+    if res is not None:
+        job["message"] = str(res.get("message") or "Done")
+        for line in res.get("messages") or []:
+            LOGGER.info(f"[{job.get('label')}] {line}")
+        return True
+    msg = str(info.get("message") or f"job ended with state {state}")
+    if state == "lost":
+        msg = f"process ended without a result - see {job['job_dir']}/run_stdout.log"
+    job["message"] = msg
+    return False
 
 
 def _vyvar_render_run_job_monitor(cfg: AppConfig, footer_placeholder: Any | None) -> None:
-    """Follow a RUN VYVAR job running in its own process (JOB-2026-10).
+    """Follow the job of this session in its own process (JOB-2026-10; G14-04: any view, any page).
 
-    Polls ``run_status.json`` every 2 s inside a fragment, so clicks elsewhere in
-    the UI never interrupt the run. When the job ends the result is applied to
-    the session state once and the whole app reruns.
+    RUN VYVAR (``kind == "night"``) and the task jobs (``task_jobs``: RUN ePSF, variability search,
+    TESS, catalogue check, HRD lookup, Build masters). Polls ``run_status.json`` every 2 s inside a
+    fragment, so clicks elsewhere never interrupt the job. When it ends the result is applied to the
+    session once and the whole app reruns. A job started by another browser session is shown too
+    (G14-37: it blocks every start button of this data directory).
     """
+    from run_job import job_state, load_result, read_status, running_job, stop_job  # noqa: PLC0415
+
     if not st.session_state.get("vyvar_active_job"):
+        other = running_job(cfg.data_root)
+        if other is not None:
+            _lbl = (read_status(other) or {}).get("label") or other.name
+            st.info(f"{_lbl} is running (job `{other.name}`, started in another browser session or tab, or from the command line). "
+                    "New runs and jobs start when it has finished.")
         return
-    from run_job import job_state, load_result, read_status, stop_job  # noqa: PLC0415
 
     @st.fragment(run_every=2.0)
     def _monitor() -> None:
@@ -337,24 +294,29 @@ def _vyvar_render_run_job_monitor(cfg: AppConfig, footer_placeholder: Any | None
             _vyvar_render_fixed_footer_into(st.empty())
             c1, c2 = st.columns([5, 1])
             c1.info(f"{label} is running in its own process - {msg}")
-            if c2.button("Stop run", key="vyvar_stop_active_job"):
+            if c2.button("Stop", key="vyvar_stop_active_job"):
                 stop_job(jd)
                 LOGGER.info(f"[{label}] stopped by user")
             return
         if job.get("applied"):
             return
         ok = False
-        nr = load_result(jd)
-        if nr is not None:
-            ok = _vyvar_apply_run_result(nr, cfg, footer_placeholder, label)
+        if str(job.get("kind") or "night") != "night":
+            ok = _vyvar_finish_task_job(job, state, info)
+            _vyvar_footer_set(None, running=False, process=label, status_detail=str(job.get("message"))[:800],
+                              pct=100 if ok else None)
         else:
-            errs = info.get("errors") or [msg or f"job ended with state {state}"]
-            if state == "lost":
-                errs = [f"process ended without a result - see {jd}/run_stdout.log"]
-            _vyvar_record_run_failure(cfg, label, "Night pipeline", "; ".join(map(str, errs))[:800])
-            _vyvar_footer_set(
-                None, running=False, process=label, status_detail="Error - see the infolog of the processed field", pct=None
-            )
+            nr = load_result(jd)
+            if nr is not None:
+                ok = _vyvar_apply_run_result(nr, cfg, footer_placeholder, label)
+            else:
+                errs = info.get("errors") or [msg or f"job ended with state {state}"]
+                if state == "lost":
+                    errs = [f"process ended without a result - see {jd}/run_stdout.log"]
+                _vyvar_record_run_failure(cfg, label, "Night pipeline", "; ".join(map(str, errs))[:800])
+                _vyvar_footer_set(
+                    None, running=False, process=label, status_detail="Error - see the infolog of the processed field", pct=None
+                )
         job.update({"applied": True, "ok": bool(ok)})
         st.session_state["vyvar_active_job"] = job
         st.rerun(scope="app")
@@ -362,7 +324,9 @@ def _vyvar_render_run_job_monitor(cfg: AppConfig, footer_placeholder: Any | None
     _monitor()
     job = st.session_state.get("vyvar_active_job") or {}
     if job.get("applied"):
-        if job.get("ok"):
+        if str(job.get("kind") or "night") != "night":
+            (st.success if job.get("ok") else st.error)(f"{job.get('label')}: {job.get('message')}")
+        elif job.get("ok"):
             st.success(f"{job.get('label', 'RUN VYVAR')} finished successfully. Review the results.")
         else:
             st.error(
@@ -423,15 +387,6 @@ _VYVAR_FOOTER_CSS = """
 section.main > div.block-container { padding-bottom: 3.5rem !important; }
 </style>
 """
-
-
-def _vyvar_guess_filename_from_progress(msg: str) -> str:
-    if not msg:
-        return ""
-    m = re.search(r"([\w\-+.]+(?:\\[\w\-+.]+)*\.(?:fits|fit|fts))\b", msg, re.I)
-    if m:
-        return Path(m.group(1).replace("\\", "/")).name
-    return ""
 
 
 def vyvar_init_footer_state_if_missing() -> None:
@@ -516,311 +471,61 @@ def _vyvar_render_fixed_footer_into(placeholder: Any) -> None:
     )
 
 
-def _gaia_db_ok_for_masterstar(gaia_db_path: str) -> bool:
-    try:
-        from catalog_db import validate_gaia_db_schema
+def _ui_run_params(
+    *, source_root: str, equipment_id: int, telescope_id: int, location_id: int, pre_calibrated_mode: bool = False,
+    masters_from: str = "lights",
+) -> Any:
+    """The NightRunParams of the UI selection (G12-10: the CLI's params for the same inputs)."""
+    from night_run import NightRunParams  # noqa: PLC0415
 
-        _gdb = str(gaia_db_path or "").strip()
-        ok, msg = validate_gaia_db_schema(_gdb)
-        if not ok:
-            st.error("[X] Gaia DR3 database not found. Please set the path in Settings.")
-            st.caption(f"Detail: {msg}")
-            return False
-    except Exception:  # noqa: BLE001
-        st.error("[X] Gaia DR3 database not found. Please set the path in Settings.")
-        return False
-    return True
-
-
-def _sync_varstrem_session_state(pipeline: AstroPipeline) -> None:
-    """Non-UI session defaults for RUN VYVAR, pending jobs, and Quality Dashboard."""
-    _ra_key = ui_components.DRAFT_CENTER_RA_STATE_KEY
-    _de_key = ui_components.DRAFT_CENTER_DE_STATE_KEY
-    _pending_ra = st.session_state.get("vyvar_pending_center_ra")
-    _pending_de = st.session_state.get("vyvar_pending_center_de")
-    try:
-        if _pending_ra is not None and math.isfinite(float(_pending_ra)):
-            st.session_state[_ra_key] = float(_pending_ra)
-            st.session_state["center_ra"] = float(_pending_ra)
-    except (TypeError, ValueError):
-        pass
-    try:
-        if _pending_de is not None and math.isfinite(float(_pending_de)):
-            st.session_state[_de_key] = float(_pending_de)
-            st.session_state["center_de"] = float(_pending_de)
-    except (TypeError, ValueError):
-        pass
-    st.session_state.pop("vyvar_pending_center_ra", None)
-    st.session_state.pop("vyvar_pending_center_de", None)
-    if _ra_key not in st.session_state or _de_key not in st.session_state:
-        _did_center = st.session_state.get("vyvar_last_draft_id")
-        _db_ra: float | None = None
-        _db_de: float | None = None
-        if _did_center is not None:
-            try:
-                _drow_center = pipeline.db.fetch_obs_draft_by_id(int(_did_center)) or {}
-                _ra_raw = _drow_center.get("CENTEROFFIELDRA")
-                _de_raw = _drow_center.get("CENTEROFFIELDDE")
-                _db_ra = float(_ra_raw) if _ra_raw is not None and math.isfinite(float(_ra_raw)) else None
-                _db_de = float(_de_raw) if _de_raw is not None and math.isfinite(float(_de_raw)) else None
-            except Exception:  # noqa: BLE001
-                _db_ra, _db_de = None, None
-        if _ra_key not in st.session_state:
-            try:
-                _legacy_ra = float(st.session_state.get("center_ra", float("nan")))
-            except (TypeError, ValueError):
-                _legacy_ra = float("nan")
-            st.session_state[_ra_key] = (
-                float(_db_ra)
-                if _db_ra is not None
-                else (float(_legacy_ra) if math.isfinite(_legacy_ra) else 0.0)
-            )
-        if _de_key not in st.session_state:
-            try:
-                _legacy_de = float(st.session_state.get("center_de", float("nan")))
-            except (TypeError, ValueError):
-                _legacy_de = float("nan")
-            st.session_state[_de_key] = (
-                float(_db_de)
-                if _db_de is not None
-                else (float(_legacy_de) if math.isfinite(_legacy_de) else 0.0)
-            )
-    st.session_state["center_ra"] = float(st.session_state.get(_ra_key, 0.0))
-    st.session_state["center_de"] = float(st.session_state.get(_de_key, 0.0))
-
-    _ljo_apply = st.session_state.get("vyvar_last_job_output")
-    if isinstance(_ljo_apply, dict) and _ljo_apply.get("job_kind") == "analyze":
-        _tok_a = str(_ljo_apply.get("analyze_token", ""))
-        if st.session_state.get("vyvar_applied_analyze_token") != _tok_a:
-            st.session_state["vyvar_applied_analyze_token"] = _tok_a
-            _rq = _ljo_apply.get("ram_qc_summary") or {}
-            _mra = _rq.get("median_ra_deg")
-            _mde = _rq.get("median_de_deg")
-            try:
-                if _mra is not None and math.isfinite(float(_mra)):
-                    st.session_state[_ra_key] = float(_mra)
-                    st.session_state["center_ra"] = float(_mra)
-                if _mde is not None and math.isfinite(float(_mde)):
-                    st.session_state[_de_key] = float(_mde)
-                    st.session_state["center_de"] = float(_mde)
-            except (TypeError, ValueError):
-                pass
-
-    _did_persist = st.session_state.get("vyvar_last_draft_id")
-    if _did_persist is not None:
-        try:
-            _cur_ra = float(st.session_state.get(_ra_key, 0.0))
-            _cur_de = float(st.session_state.get(_de_key, 0.0))
-            _sig_now = f"{int(_did_persist)}|{_cur_ra:.9f}|{_cur_de:.9f}"
-            _sig_prev = str(st.session_state.get("vyvar_last_saved_draft_center_sig", ""))
-            if _sig_now != _sig_prev:
-                pipeline.db.update_obs_draft_status_panel_values(
-                    int(_did_persist),
-                    center_ra_deg=_cur_ra,
-                    center_de_deg=_cur_de,
-                )
-                st.session_state["vyvar_last_saved_draft_center_sig"] = _sig_now
-        except Exception as _exc_center:  # noqa: BLE001
-            # EXC-0003: T3 -- UI diagnostic/plot only () / st.session_state['vyvar_last_saved_draft_center_sig'] = _s... (EXCEPT-BULK 2026-07-08)
-            LOGGER.info(f"Field center save skipped: {_exc_center!s}")
-
-
-def _render_pending_job_dispatcher(
-    pipeline: AstroPipeline,
-    cfg: AppConfig,
-    footer_placeholder: Any | None,
-) -> bool:
-    """Run the pending VYVAR job if one is queued in session state.
-
-    Returns True if a job was dispatched (caller should expect st.rerun()).
-    Returns False if no pending job.
-    """
-    pending = st.session_state.get("vyvar_pending_job")
-    if not pending:
-        return False
-
-    vyvar_init_footer_state_if_missing()
-    st.session_state["vyvar_footer_state"] = {
-        "running": True,
-        "process": str(pending.get("label") or pending.get("kind") or "job"),
-        "status_detail": "Starting...",
-        "pct": 0,
-        "current_file": "",
-        "step": "",
-    }
-    if footer_placeholder is not None:
-        _vyvar_render_fixed_footer_into(footer_placeholder)
-
-    ap = Path(pending.get("archive_path", "")) if pending.get("archive_path") else None
-    _hide_inline_job_status = str(pending.get("kind") or "").strip().lower() in {
-        "platesolve",
-        "make_masterstar",
-        "masterstar_catalog_only",
-    }
-    progress_bar = None if _hide_inline_job_status else st.progress(0, text="Starting...")
-    _status_ctx: Any = (
-        contextlib.nullcontext(None)
-        if _hide_inline_job_status
-        else st.status(pending.get("label", "Running..."), expanded=False)
+    return NightRunParams(
+        source_dir=Path(str(source_root).strip()),
+        equipment_id=int(equipment_id),
+        telescope_id=int(telescope_id),
+        location_id=int(location_id),
+        location_source_hint="ui_selection",
+        pre_calibrated_mode=bool(pre_calibrated_mode),
+        masters_from=str(masters_from or "lights"),
     )
-    with _status_ctx as stt:
-        try:
-            if ap is None or not ap.exists():
-                raise FileNotFoundError("Missing/invalid archive path for job.")
-            LOGGER.info(f"- Spustam: {pending.get('kind')} - {ap}")
 
-            def _cb(i: int, total: int, msg: str) -> None:
-                pct = int(round(100 * (i / max(total, 1))))
-                if i > 0 and pct < 1:
-                    pct = 1
-                if progress_bar is not None:
-                    progress_bar.progress(pct, text=msg)
-                LOGGER.info(f"[{i}/{total}] {msg}")
-                fn = _vyvar_guess_filename_from_progress(msg)
-                st.session_state["vyvar_footer_state"] = {
-                    "running": True,
-                    "process": str(pending.get("label") or pending.get("kind") or "job"),
-                    "status_detail": msg[:800],
-                    "pct": pct,
-                    "current_file": fn,
-                    "step": f"{i} / {total}",
-                }
-                if footer_placeholder is not None:
-                    _vyvar_render_fixed_footer_into(footer_placeholder)
 
-            if pending.get("kind") == "run_epsf":
-                from epsf_stage import EpsfStagePaths, run_epsf_stage
+def _run_button_blockers(cfg: AppConfig, db: Any, *, source_root: str, equipment_id: int, telescope_id: int,
+                         location_id: int) -> list[str]:
+    """S6-FIX RUN-GATE-2026-10: why RUN VYVAR cannot start now - the full run precondition check
+    (``night_run.check_run_preconditions``: source folder, camera and telescope rows, site, Gaia DR3), one call
+    per render, plus the UI-only reasons (nothing typed / no site picked / a job of the data directory runs)."""
+    from night_run import check_run_preconditions  # noqa: PLC0415
 
-                _draft_epsf = pending.get("draft_id")
-                if _draft_epsf is None:
-                    _draft_epsf = st.session_state.get("vyvar_last_draft_id")
-                if _draft_epsf is None:
-                    raise FileNotFoundError("Missing processed field id for the RUN ePSF job.")
-                _draft_epsf = int(_draft_epsf)
-                _targets_epsf = str(pending.get("epsf_targets") or "ALL")
-                _setups_epsf = list(pending.get("setups") or [])
-                if not _setups_epsf:
-                    raise ValueError("RUN ePSF job without setups.")
-                # EPSF-MULTISETUP-2026-10: every setup (filter / obs group) of the draft, same selection.
-                _lines_epsf: list[str] = []
-                _n_lc_epsf = 0
-                for _k_epsf, _su in enumerate(_setups_epsf, start=1):
-                    _name_epsf = str(_su.get("setup_name") or "")
-                    _ms_fits = Path(str(_su["masterstar_fits_path"]))
-                    _ms_csv = Path(str(_su["masterstars_csv_path"]))
-                    _frames_root = Path(str(_su["per_frame_csv_dir"]))
-                    _ps_dir = Path(str(_su["platesolve_dir"]))
-                    for _f, _what in ((_ms_fits, "MASTERSTAR.fits"), (_ms_csv, "masterstars_full_match.csv")):
-                        if not _f.is_file():
-                            raise FileNotFoundError(f"{_name_epsf}: {_what} not found: {_f}")
-                    if not _frames_root.is_dir():
-                        raise FileNotFoundError(f"{_name_epsf}: aligned frames dir not found: {_frames_root}")
-                    _tag_epsf = f"setup {_k_epsf}/{len(_setups_epsf)} {_name_epsf}"
+    reasons: list[str] = []
+    if not str(source_root).strip():
+        reasons.append("No source folder selected")
+    if int(location_id) <= 0:
+        reasons.append("No observing site selected")
+    if not reasons:
+        params = _ui_run_params(source_root=source_root, equipment_id=equipment_id, telescope_id=telescope_id,
+                                location_id=location_id)
+        reasons += check_run_preconditions(cfg, params, db).problems
+    if _vyvar_job_running(cfg):
+        reasons.append("A job of this data directory is running")
+    return reasons
 
-                    def _stage_cb(msg: str, _tag: str = _tag_epsf) -> None:
-                        LOGGER.info(f"[ePSF job] {_tag}: {msg}")
-                        parts = str(msg).split()
-                        if len(parts) >= 3 and parts[0] == "ePSF" and parts[1] == "fit" and "/" in parts[2]:
-                            cur, tot = parts[2].split("/", 1)
-                            try:
-                                _cb(int(cur), int(tot), f"{_tag}: {msg}")
-                            except (TypeError, ValueError):
-                                pass
 
-                    LOGGER.info(f"[ePSF job] {_tag_epsf}: run_epsf_stage (build + fit + merge + LCs)")
-                    stage_out = run_epsf_stage(
-                        paths=EpsfStagePaths(
-                            platesolve_dir=_ps_dir,
-                            frames_root=_frames_root,
-                            masterstar_fits=_ms_fits,
-                            masterstars_csv=_ms_csv,
-                            photometry_dir=_ps_dir / "photometry",
-                        ),
-                        cfg=cfg,
-                        progress_cb=_stage_cb,
-                        db=pipeline.db,
-                        draft_id=_draft_epsf,
-                        targets=_targets_epsf,
-                    )
-                    _n_tg = len((stage_out.get("fit_set") or {}).get("target_types") or {})
-                    _n_lc = int((stage_out.get("lc") or {}).get("n_written") or 0)
-                    _written = int((stage_out.get("merge") or {}).get("written") or 0)
-                    _n_lc_epsf += _n_lc
-                    _exp = stage_out.get("export")
-                    _lines_epsf.append(f"{_name_epsf}: {_n_tg} target(s), {_n_lc} PSF light curve(s), "
-                                       f"{_written} frame(s) fitted"
-                                       + (f", {_exp['n_written']} light-curve file(s)" if _exp else ""))
-                _out_epsf = {
-                    "job_kind": "run_epsf",
-                    "status": "ok",
-                    "archive_path": str(pending.get("archive_path") or ""),
-                    "n_lightcurves": _n_lc_epsf,
-                    "message": f"ePSF photometry done ({len(_setups_epsf)} setup(s), targets '{_targets_epsf}'): "
-                    + "; ".join(_lines_epsf),
-                }
-                st.session_state["vyvar_last_job_output"] = _out_epsf
-                LOGGER.info(f"[ePSF job] Done - {_out_epsf['message']}")
+_RIG_EQUIPMENT = "vyvar_rig_equipment"
+_RIG_TELESCOPE = "vyvar_rig_telescope"
+_RIG_LOCATION = "vyvar_rig_location"
+_RIG_SOURCE = "vyvar_rig_source_root"
 
-            else:
-                raise ValueError("Unknown job kind.")
 
-            if stt is not None:
-                stt.update(label="Done.", state="complete")
-            st.session_state["vyvar_footer_state"] = {
-                "running": False,
-                "process": str(pending.get("label") or pending.get("kind") or "job"),
-                "status_detail": "Done.",
-                "pct": 100,
-                "current_file": "",
-                "step": "",
-            }
-            if footer_placeholder is not None:
-                _vyvar_render_fixed_footer_into(footer_placeholder)
-        except DraftTechnicalMetadataError as exc:
-            _err_msg = str(exc).strip()
-            if stt is not None:
-                stt.update(label=f"Failed: {_err_msg}", state="error")
-            st.error(_err_msg)
-            st.session_state["vyvar_last_job_output"] = {
-                "error": _err_msg,
-                "error_type": type(exc).__name__,
-            }
-            LOGGER.info(f"Job failed: {_err_msg} [{type(exc).__name__}]")
-            st.session_state["vyvar_footer_state"] = {
-                "running": False,
-                "process": str(pending.get("label") or pending.get("kind") or "job"),
-                "status_detail": f"Failed: {_err_msg}",
-                "pct": None,
-                "current_file": "",
-                "step": "",
-            }
-            if footer_placeholder is not None:
-                _vyvar_render_fixed_footer_into(footer_placeholder)
-        except Exception as exc:  # noqa: BLE001
-            _em = str(exc).strip()
-            _err_msg = _em if _em else f"{type(exc).__name__} (no message)"
-            if stt is not None:
-                stt.update(label=f"Failed: {_err_msg}", state="error")
-            st.session_state["vyvar_last_job_output"] = {
-                "error": _err_msg,
-                "error_type": type(exc).__name__,
-            }
-            LOGGER.info(f"Job failed: {_err_msg} [{type(exc).__name__}]")
-            st.session_state["vyvar_footer_state"] = {
-                "running": False,
-                "process": str(pending.get("label") or pending.get("kind") or "job"),
-                "status_detail": f"Failed: {_err_msg}",
-                "pct": None,
-                "current_file": "",
-                "step": "",
-            }
-            if footer_placeholder is not None:
-                _vyvar_render_fixed_footer_into(footer_placeholder)
+def _rig_index(options: list[str], store_key: str) -> int:
+    """Index of the stored selection in ``options`` (0 when it is not there)."""
+    v = st.session_state.get(store_key)
+    return options.index(v) if v in options else 0
 
-    # Clear pending job and rerun into the normal UI view.
-    st.session_state.pop("vyvar_pending_job", None)
-    st.rerun()
-    return True
+
+def _rig_set(store_key: str, widget_key: str, value: str) -> None:
+    """Auto-detect: set the stored selection; the widget is rebuilt from it on the rerun."""
+    st.session_state[store_key] = value
+    st.session_state.pop(widget_key, None)
 
 
 def render_live_view(
@@ -859,81 +564,70 @@ def render_live_view(
 
     _def_eq_lbl = _label_for_id(equipment_options, pipeline.db.get_default_id("EQUIPMENTS"))
     _def_tel_lbl = _label_for_id(telescope_options, pipeline.db.get_default_id("TELESCOPE"))
-    if _def_eq_lbl and "vyvar_varstrem_equipment" not in st.session_state:
-        st.session_state["vyvar_varstrem_equipment"] = _def_eq_lbl
-    if _def_tel_lbl and "vyvar_varstrem_telescope" not in st.session_state:
-        st.session_state["vyvar_varstrem_telescope"] = _def_tel_lbl
+    # G14-06: the selection lives in non-widget keys (_RIG_*), so a view switch (which drops the state
+    # of widgets that are not rendered) does not reset it; the widgets take index/value from them.
+    if _def_eq_lbl and _RIG_EQUIPMENT not in st.session_state:
+        st.session_state[_RIG_EQUIPMENT] = _def_eq_lbl
+    if _def_tel_lbl and _RIG_TELESCOPE not in st.session_state:
+        st.session_state[_RIG_TELESCOPE] = _def_tel_lbl
+    st.session_state.setdefault(_RIG_SOURCE, str(cfg.archive_root))
 
     with st.expander("[folder] Define source data", expanded=True):
         source_root = st.text_input(
             "Source Directory",
-            value=str(cfg.archive_root),
+            value=str(st.session_state[_RIG_SOURCE]),
+            key="vyvar_varstrem_source",
             help="Example: USB session root (any structure; will be scanned recursively).",
         )
+        st.session_state[_RIG_SOURCE] = source_root
         st.caption(
             "To find masters in the Calibration Library, choose a **set** (camera + telescope). "
             "Matching or generic (no set) library entries are used per DB rules."
         )
 
-        # Phase 3: fingerprint optics + site from a sample FITS header and auto-fill the
-        # selectors (overriding the IS_DEFAULT baseline). The user can still override.
+        # Phase 3: fingerprint camera + telescope from a sample FITS header and auto-fill the
+        # selectors (overriding the IS_DEFAULT baseline). The user can still override. The site is
+        # never auto-selected (S6-FIX SITE-MANUAL-2026-10): the user picks it below.
         if st.button(
             "[test] Auto-detect optics from FITS",
-            help="Reads a sample light frame and matches camera/telescope/location by "
-            "INSTRUME, sensor dimensions, GAIN, FOCALLEN/APTDIA and SITELAT/LONG.",
+            help="Reads a sample light frame and matches camera / telescope by "
+            "INSTRUME, sensor dimensions, GAIN and FOCALLEN/APTDIA. The site is always your choice below.",
         ):
             from optics_autodetect import autodetect_from_source
 
-            _act = pipeline.db.sql_expr_active_is_true("ACTIVE")
-            _eq_rows = [
-                dict(r)
-                for r in pipeline.db.conn.execute(
-                    f"SELECT ID,CAMERANAME,ALIAS,SENSORTYPE,SENSORSIZE,PIXELSIZE,GAIN_ADU,MODEL_KEY "
-                    f"FROM EQUIPMENTS WHERE {_act};"
-                )
-            ]
-            _tel_rows = [
-                dict(r)
-                for r in pipeline.db.conn.execute(
-                    f"SELECT ID,TELESCOPENAME,ALIAS,DIAMETER,FOCAL FROM TELESCOPE WHERE {_act};"
-                )
-            ]
-            _loc_rows = get_observer_locations(str(cfg.database_path), active_only=True)
-            _rep = autodetect_from_source(
-                source_root,
-                equipments=_eq_rows,
-                telescopes=_tel_rows,
-                locations=_loc_rows,
-            )
+            _eq_rows, _tel_rows = pipeline.db.autodetect_candidates()  # G14-23
+            _rep = autodetect_from_source(source_root, equipments=_eq_rows, telescopes=_tel_rows)
             if _rep.header_path is None:
                 st.warning("Auto-detect: no readable light FITS found under the source directory.")
             else:
                 if _rep.equipment.ok and _rep.equipment.label in equipment_options:
-                    st.session_state["vyvar_varstrem_equipment"] = _rep.equipment.label
+                    _rig_set(_RIG_EQUIPMENT, "vyvar_varstrem_equipment", _rep.equipment.label)
                 if _rep.telescope.ok and _rep.telescope.label in telescope_options:
-                    st.session_state["vyvar_varstrem_telescope"] = _rep.telescope.label
-                if _rep.location.ok:
-                    _loc_lbls = {f"{int(r['id'])}: {r['name']}" for r in _loc_rows}
-                    if _rep.location.label in _loc_lbls:
-                        st.session_state["vyvar_varstrem_location"] = _rep.location.label
+                    _rig_set(_RIG_TELESCOPE, "vyvar_varstrem_telescope", _rep.telescope.label)
                 st.session_state["vyvar_autodetect_report"] = _rep
             st.rerun()
 
         col_scan_eq, col_scan_tel = st.columns(2)
         with col_scan_eq:
             eq_placeholder = "(no camera in DB)" if not eq_labels else eq_labels[0]
+            _eq_opts = eq_labels if eq_labels else [eq_placeholder]
             import_equipment_label = st.selectbox(
                 "Equipment (library)",
-                options=eq_labels if eq_labels else [eq_placeholder],
+                options=_eq_opts,
+                index=_rig_index(_eq_opts, _RIG_EQUIPMENT),
                 key="vyvar_varstrem_equipment",
             )
+            st.session_state[_RIG_EQUIPMENT] = import_equipment_label
         with col_scan_tel:
             tel_placeholder = "(no telescope in DB)" if not tel_labels else tel_labels[0]
+            _tel_opts = tel_labels if tel_labels else [tel_placeholder]
             import_telescope_label = st.selectbox(
                 "Telescope (library)",
-                options=tel_labels if tel_labels else [tel_placeholder],
+                options=_tel_opts,
+                index=_rig_index(_tel_opts, _RIG_TELESCOPE),
                 key="vyvar_varstrem_telescope",
             )
+            st.session_state[_RIG_TELESCOPE] = import_telescope_label
         locations = get_observer_locations(str(cfg.database_path), active_only=True)
         location_options = {
             f"{item['id']}: {item['name']}": int(item["id"]) for item in locations
@@ -954,11 +648,13 @@ def render_live_view(
                     if location_options[_loc_lbl] == _loc_default_id:
                         _loc_default_idx = _loc_i
                         break
-            if "vyvar_varstrem_location" not in st.session_state:
-                st.session_state["vyvar_varstrem_location"] = loc_labels[_loc_default_idx]
+            if _RIG_LOCATION not in st.session_state:
+                st.session_state[_RIG_LOCATION] = loc_labels[_loc_default_idx]
+        _loc_opts = loc_labels if loc_labels else [loc_placeholder]
         import_location_label = st.selectbox(
             "Location (observatory)",
-            options=loc_labels if loc_labels else [loc_placeholder],
+            options=_loc_opts,
+            index=_rig_index(_loc_opts, _RIG_LOCATION),
             key="vyvar_varstrem_location",
             disabled=not loc_labels,
             help=(
@@ -967,6 +663,8 @@ def render_live_view(
                 "(the default site in Database Explorer > Sites)."
             ),
         )
+        if loc_labels:
+            st.session_state[_RIG_LOCATION] = import_location_label
 
         # Phase 3: show the last auto-detect result (match + confidence + evidence).
         _ad_rep = st.session_state.get("vyvar_autodetect_report")
@@ -976,7 +674,8 @@ def render_live_view(
             def _ad_line(_title: str, _det: Any) -> str:
                 _ic = _band_icon.get(_det.band(), "o")
                 if _det.matched_id is None:
-                    return f"{_ic} **{_title}:** no confident match - set manually (poor-FITS prompt)."
+                    _why = f" ({'; '.join(_det.reasons)})" if _det.reasons else ""
+                    return f"{_ic} **{_title}:** no confident match{_why} - set manually (poor-FITS prompt)."
                 _ev = "; ".join(_det.reasons) if _det.reasons else "-"
                 return (
                     f"{_ic} **{_title}:** {_det.label} "
@@ -987,7 +686,6 @@ def render_live_view(
                 st.caption(f"[search] Auto-detect from `{Path(_ad_rep.header_path).name}`")
                 st.markdown(_ad_line("Equipment", _ad_rep.equipment))
                 st.markdown(_ad_line("Telescope", _ad_rep.telescope))
-                st.markdown(_ad_line("Location", _ad_rep.location))
                 st.caption(
                     "**high** confidence -> auto-filled (overrides default); "
                     "**medium** -> pre-filled but **unconfirmed - verify**; "
@@ -1091,13 +789,11 @@ def render_live_view(
                             VyvarOpticsSelection(import_equipment_id, import_telescope_id),
                             context="Scan Source",
                         )
-                        st.session_state.pop("vyvar_post_cal_archive_path", None)
                     except Exception as exc:  # noqa: BLE001
                         st.error(f"Scan failed: {exc}")
                         st.session_state.pop("vyvar_smart_plan", None)
         with col_run:
             _sr_rv = str(source_root).strip()
-            _gaia_ok = _gaia_db_ok_for_masterstar(str(getattr(cfg, "gaia_db_path", "") or ""))
             # SITE-UI-01: caption and gate use the same selectbox value that RUN passes.
             _run_site_row = None
             if import_location_id > 0:
@@ -1111,15 +807,11 @@ def render_live_view(
                 )
             else:
                 st.caption("Site for this run: (none selected - RUN blocked)")
-            run_vyvar_disabled = (
-                not _sr_rv
-                or not Path(_sr_rv).is_dir()
-                or not _gaia_ok
-                or import_equipment_id <= 0
-                or import_telescope_id <= 0
-                or import_location_id <= 0
-                or _vyvar_job_running()
+            _run_blockers = _run_button_blockers(
+                cfg, pipeline.db, source_root=_sr_rv, equipment_id=int(import_equipment_id),
+                telescope_id=int(import_telescope_id), location_id=int(import_location_id),
             )
+            run_vyvar_disabled = bool(_run_blockers)
             btn_cal, btn_nc = st.columns(2)
             with btn_cal:
                 run_vyvar_clicked = st.button(
@@ -1138,9 +830,10 @@ def render_live_view(
                         "Telescope Live exports). Proceeds with alignment -> masterstar -> photometry."
                     ),
                 )
+            if _run_blockers:
+                st.warning("RUN VYVAR is off:\n" + "\n".join(f"- {r}" for r in _run_blockers))
             if run_vyvar_clicked or run_vyvar_nc_clicked:
                 _pre_cal = bool(run_vyvar_nc_clicked)
-                _dao_sigma_default = resolve_detection_threshold_sigma(cfg.detection_threshold_sigma)
                 st.session_state.pop("vyvar_active_job", None)
                 _started = _run_vyvar_full_pipeline(
                     pipeline=pipeline,
@@ -1149,9 +842,6 @@ def render_live_view(
                     import_equipment_id=int(import_equipment_id),
                     import_telescope_id=int(import_telescope_id),
                     import_location_id=int(import_location_id),
-                    dark_validity_days=int(dark_validity_days),
-                    flat_validity_days=int(flat_validity_days),
-                    dao_sigma_default=_dao_sigma_default,
                     footer_placeholder=footer_placeholder,
                     pre_calibrated_mode=_pre_cal,
                     masters_from=_masters_from,
@@ -1162,7 +852,6 @@ def render_live_view(
                             default="RUN VYVAR could not start. See the infolog_*.txt file in the processed field folder."
                         )
                     )
-            _vyvar_render_run_job_monitor(cfg, footer_placeholder)
 
     plan = st.session_state.get("vyvar_smart_plan")
     if plan:
@@ -1193,46 +882,44 @@ def render_live_view(
                         st.write(f"- {_w}")
 
 
-    _sync_varstrem_session_state(pipeline)
-    if _render_pending_job_dispatcher(
-        pipeline=pipeline,
-        cfg=cfg,
-        footer_placeholder=footer_placeholder,
-    ):
-        return
 
 
 def _config_cache_fingerprint(cfg: AppConfig) -> str:
     """Bump Streamlit cache when config.json changes (Settings save)."""
     path = cfg.data_root / "config.json"
     try:
-        st = path.stat()
-        return f"{int(st.st_mtime_ns)}:{st.st_size}"
+        stat = path.stat()
+        return f"{int(stat.st_mtime_ns)}:{stat.st_size}"
     except OSError:
         return "missing"
 
 
-@st.cache_resource
-def _cached_astro_pipeline(database_path: str, config_fingerprint: str) -> AstroPipeline:
+def _release_astro_pipeline(pipeline: AstroPipeline) -> None:
+    """G14-09: the DB connection of a pipeline evicted from the cache is closed (no leak per Settings save)."""
+    pipeline.db.conn.close()
+
+
+@st.cache_resource(max_entries=1, on_release=_release_astro_pipeline)
+def _cached_astro_pipeline(database_path: str, config_fingerprint: str, _cfg: AppConfig) -> AstroPipeline:
     """One DB connection per Streamlit server process (avoids startup migration races).
 
-    ``config_fingerprint`` is ``config.json`` mtime+size so a Settings save rebuilds
-    ``AppConfig`` instead of reusing a stale cached pipeline.
-    """
-    _ = config_fingerprint
-    cfg = AppConfig()
-    return AstroPipeline(config=cfg)
+    The key is the database path and ``config.json`` mtime+size, so a Settings save rebuilds the pipeline
+    from the ``AppConfig`` of this run (``_cfg``, G14-09: not a second ``AppConfig()``); the previous
+    pipeline is released and its connection closed (``max_entries=1``)."""
+    _ = (database_path, config_fingerprint)
+    return AstroPipeline(config=_cfg)
 
 
 def main() -> None:
-    from vyvar_runtime import ensure_release_data_dir
+    from vyvar_runtime import ensure_data_dir_for_entry
 
-    ensure_release_data_dir(Path(__file__).resolve().parent.parent)
+    ensure_data_dir_for_entry()  # G12-29: the same bootstrap as the CLI
     cfg = AppConfig()
     cfg.ensure_base_dirs()
     pipeline = _cached_astro_pipeline(
         str(cfg.database_path.resolve()),
         _config_cache_fingerprint(cfg),
+        cfg,
     )
 
     st.set_page_config(
@@ -1247,6 +934,7 @@ def main() -> None:
     vyvar_footer_ph = st.empty()
     st.session_state["vyvar_ui_rerender_footer"] = lambda: _vyvar_render_fixed_footer_into(vyvar_footer_ph)
     _vyvar_render_fixed_footer_into(vyvar_footer_ph)
+    _vyvar_render_run_job_monitor(cfg, vyvar_footer_ph)
 
     page = st.sidebar.radio(
         "Navigation",
@@ -1276,14 +964,11 @@ def main() -> None:
             )
         with dcol2:
             apply_draft = st.button("Load", key="vyvar_draft_path_apply", type="primary")
-        with dcol3:
-            _cur = st.session_state.get("vyvar_last_draft_id")
-            st.caption(f"ID: **{_cur}**" if _cur is not None else "ID: -")
         if apply_draft:
             s = (draft_path_inp or "").strip()
             if not s:
-                st.session_state.pop("vyvar_draft_dir_override", None)
-                st.info("Processed field cleared - using the archive path from the configuration.")
+                clear_active_draft()
+                st.info("Processed field cleared.")
                 st.rerun()
             else:
                 ddir, parsed_id, err = resolve_draft_directory(
@@ -1292,16 +977,18 @@ def main() -> None:
                 if err:
                     st.error(err)
                 elif ddir is not None:
-                    st.session_state["vyvar_draft_dir_override"] = str(ddir)
-                    if parsed_id is not None:
-                        st.session_state["vyvar_last_draft_id"] = int(parsed_id)
+                    set_active_draft(ddir, parsed_id)
                     st.success(f"Processed field loaded: {ddir}")
                     st.rerun()
-        ov = _vyvar_effective_draft_dir_override()
-        if ov is not None:
-            st.caption(f"Active override: `{ov}`")
+        # G14-12: one processed field for every view (folder + id resolved once here).
+        active = active_draft(cfg.archive_root)
+        with dcol3:
+            st.caption(f"ID: **{active.draft_id}**" if active.draft_id is not None else "ID: -")
+        if active.draft_dir is not None:
+            st.caption(f"Processed field: `{active.draft_dir}`")
+        elif active.draft_id is not None:
+            st.warning(f"Processed field {active.draft_id}: its folder is not under `{Path(cfg.archive_root) / 'Drafts'}`.")
 
-        _draft_ov = ov
         # A view switch, not st.tabs: Streamlit runs every tab body on each rerun (MASTERSTAR overlay,
         # FITS previews, ePSF plans, variability tables), so every click paid for all six views.
         views = [
@@ -1318,39 +1005,17 @@ def main() -> None:
         if view == views[0]:
             render_live_view(pipeline=pipeline, cfg=cfg, footer_placeholder=vyvar_footer_ph)
         elif view == views[1]:
-            ui_quality_dashboard.render_quality_dashboard(
-                db=pipeline.db,
-                draft_id=st.session_state.get("vyvar_last_draft_id"),
-                archive_text="",
-                cfg=cfg,
-            )
+            ui_quality_dashboard.render_quality_dashboard(draft_id=active.draft_id, draft_dir=active.draft_dir)
         elif view == views[2]:
-            ui_masterstar_qa.render_masterstar_qa(
-                cfg=cfg,
-                draft_id=st.session_state.get("vyvar_last_draft_id"),
-                pipeline=pipeline,
-                draft_dir_override=_draft_ov,
-            )
+            ui_masterstar_qa.render_masterstar_qa(draft_dir=active.draft_dir)
         elif view == views[3]:
-            render_aperture_photometry(
-                cfg=cfg,
-                draft_id=st.session_state.get("vyvar_last_draft_id"),
-                draft_dir_override=_draft_ov,
-            )
+            render_aperture_photometry(cfg=cfg, draft_id=active.draft_id, draft_dir=active.draft_dir)
         elif view == views[4]:
             from ui_epsf_dashboard import render_epsf_dashboard
 
-            render_epsf_dashboard(
-                draft_dir=_draft_ov,
-                cfg=cfg,
-                draft_id=st.session_state.get("vyvar_last_draft_id"),
-            )
+            render_epsf_dashboard(draft_dir=active.draft_dir, cfg=cfg, draft_id=active.draft_id)
         else:
-            render_variability_dashboard(
-                cfg,
-                draft_id=st.session_state.get("vyvar_last_draft_id"),
-                draft_dir_override=_draft_ov,
-            )
+            render_variability_dashboard(cfg, draft_dir=active.draft_dir)
     elif page == "Calibration Library":
         import ui_calibration_library as ui_calibration_library
 
@@ -1359,17 +1024,14 @@ def main() -> None:
             dark_validity_days=int(cfg.masterdark_validity_days),
             flat_validity_days=int(cfg.masterflat_validity_days),
             db=pipeline.db,
+            data_root=Path(cfg.data_root),
         )
     elif page == "Database Explorer":
         ui_database_explorer.render_database_explorer(pipeline=pipeline)
     elif page == "Settings":
         import ui_settings
 
-        ui_settings.render_settings_dashboard(
-            cfg,
-            pipeline,
-            draft_dir_override=_vyvar_effective_draft_dir_override(),
-        )
+        ui_settings.render_settings_dashboard(cfg, draft_dir=active_draft(cfg.archive_root).draft_dir)
 
     _vyvar_render_fixed_footer_into(vyvar_footer_ph)
 

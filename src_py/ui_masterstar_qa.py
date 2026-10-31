@@ -7,10 +7,7 @@ from pathlib import Path
 
 import streamlit as st
 
-from config import AppConfig
-from pipeline import AstroPipeline
 from platesolve_ui_paths import default_bundle_dir, platesolve_bundle_dirs, setup_label
-from ui_session import resolve_draft_dir
 
 
 def _infer_setup_name_from_masterstar_candidate_path(p: Path) -> str | None:
@@ -23,35 +20,6 @@ def _infer_setup_name_from_masterstar_candidate_path(p: Path) -> str | None:
         if re.fullmatch(r"[A-Za-z]+_\d+_\d+", seg):
             return seg
     return None
-
-
-def _resolve_draft_path(cfg: AppConfig, draft_id: int | None, draft_dir_override: Path | None) -> Path | None:
-    """Processed-field root: override -> its folder under Drafts -> last import result; else a manual path."""
-    _session_draft_id = st.session_state.get("vyvar_last_draft_id")
-    _did = _session_draft_id if _session_draft_id is not None else draft_id
-    if draft_dir_override is not None and Path(draft_dir_override).is_dir():
-        return Path(draft_dir_override).resolve()
-    _resolved = resolve_draft_dir(None, _did, cfg.archive_root, drafts_before_session=True)
-    if _resolved and Path(_resolved).is_dir():
-        return Path(_resolved)
-    last_res = st.session_state.get("vyvar_last_import_result")
-    if last_res and getattr(last_res, "archive_path", None) and Path(str(last_res.archive_path)).is_dir():
-        return Path(str(last_res.archive_path))
-    default_ap = ""
-    if _did is not None:
-        try:
-            from draft_provenance import draft_dir_for_id  # noqa: PLC0415
-            default_ap = str(draft_dir_for_id(cfg.archive_root, int(_did)).resolve())
-        except (TypeError, ValueError):
-            default_ap = ""
-    ap_manual = st.text_input("Archive path (processed field)", value=default_ap, key="vyvar_masterstar_ap")
-    if not ap_manual.strip():
-        st.info(
-            "No processed field loaded. Load one above (**Load processed field**), run **RUN VYVAR**, "
-            "or enter the path of its folder (`.../Archive/Drafts/<star>_<YYYYMMDD>_<NNN>`)."
-        )
-        return None
-    return Path(ap_manual.strip())
 
 
 @st.cache_data(max_entries=4, show_spinner=False)
@@ -73,18 +41,15 @@ def _fmt(v: float | None, spec: str, unit: str = "") -> str:
     return "-" if v is None else f"{format(v, spec)}{unit}"
 
 
-def render_masterstar_qa(
-    *,
-    cfg: AppConfig,
-    draft_id: int | None,
-    pipeline: AstroPipeline,
-    draft_dir_override: Path | None = None,
-) -> None:
+def render_masterstar_qa(*, draft_dir: Path | None) -> None:
+    """MASTERSTAR QA of the loaded processed field (G14-12: the folder comes from ``app.main``; the
+    manual archive path input is gone - Load processed field covers it)."""
     if st.session_state.pop("vyvar_masterstar_qa_force_refresh", False):
         st.rerun()
-    ap_path = _resolve_draft_path(cfg, draft_id, draft_dir_override)
-    if ap_path is None:
+    if draft_dir is None:
+        st.info("No processed field loaded. Load one above (**Load processed field**) or run **RUN VYVAR**.")
         return
+    ap_path = Path(draft_dir)
     ps_root = ap_path / "platesolve"
     bundles = platesolve_bundle_dirs(ps_root)
     if not bundles:
@@ -94,15 +59,13 @@ def render_masterstar_qa(
         )
         return
 
-    # The MASTERSTAR candidate picked in the Quality Dashboard selects its setup here.
+    # The MASTERSTAR source frame of the field (manifest ``paths.masterstar``) selects its setup here.
     preferred_setup: str | None = None
-    if draft_id is not None:
-        try:
-            mp = pipeline.db.get_obs_draft_masterstar_source_path(int(draft_id))
-        except Exception:  # noqa: BLE001 - UI only: no DB row -> no preference
-            mp = None
-        if mp:
-            preferred_setup = _infer_setup_name_from_masterstar_candidate_path(Path(str(mp)))
+    from draft_provenance import load_draft_manifest  # noqa: PLC0415
+
+    mp = ((load_draft_manifest(ap_path) or {}).get("paths") or {}).get("masterstar")
+    if mp:
+        preferred_setup = _infer_setup_name_from_masterstar_candidate_path(Path(str(mp)))
 
     from masterstar_qa_plot import render_masterstar_overlay
 

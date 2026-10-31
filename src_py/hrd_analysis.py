@@ -939,8 +939,12 @@ def get_top_interesting_stars(
     *,
     cfg: Any | None = None,
     cache_path: Path | None = None,
+    fetch_online: bool = True,
 ) -> pd.DataFrame:
-    """Return extreme-object table rows for PDF/UI (Stage 1 net -> enrich -> Stage 2 classify)."""
+    """Return extreme-object table rows for PDF/UI (Stage 1 net -> enrich -> Stage 2 classify).
+
+    ``fetch_online=False`` (NEW-1, the GUI's HRD tab): the enrichment reads ``cache_path`` only (no network,
+    nothing written); without that file the rows are classified as without enrichment."""
     if hrd_df is None or hrd_df.empty:
         return pd.DataFrame()
 
@@ -966,9 +970,12 @@ def get_top_interesting_stars(
             cache_path,
             enabled=True,
             timeout_s=HRD_ENRICH_TAP_TIMEOUT_S,
+            fetch=fetch_online,
         )
 
-    enrichment_active = enrich_enabled
+    enrichment_active = enrich_enabled and (
+        fetch_online or (cache_path is not None and Path(cache_path).is_file())
+    )
     scored = _add_extremity_columns(candidates)
     scored = scored.sort_values(["_ext_bp", "_ext_abs"], ascending=[False, False])
     classified: list[tuple[pd.Series, str, str, str, str, str]] = []

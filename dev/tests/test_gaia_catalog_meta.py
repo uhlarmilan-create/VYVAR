@@ -77,7 +77,9 @@ def test_topup_keeps_catalog_meta_row_count(tmp_path: Path) -> None:
     gc.record_coverage(db, box=(0.0, 360.0, -90.0, 90.0), g_max=12.0, source="build_gaia_catalog")
     new = pd.DataFrame({"SOURCE_ID": [1001, 1002, 1], "RA": [10.0, 11.0, 0.0], "DEC": [10.0, 10.0, 10.0],
                         "G_MAG": [13.0, 13.5, 12.0]})
-    res = gc.top_up_field(db, box=(9.0, 12.0, 9.0, 11.0), g_from=12.0, g_to=14.0, fetch=lambda _q: new)
+    # NEW-2 (T19): the top-up checks its rows against the COUNT(*) of the same query
+    res = gc.top_up_field(db, box=(9.0, 12.0, 9.0, 11.0), g_from=12.0, g_to=14.0,
+                          fetch=lambda q: pd.DataFrame({"n": [len(new)]}) if "COUNT(*)" in q else new)
     assert res["status"] == "ok" and res["n_new"] == 2
     assert cdb.read_catalog_meta(db)["gaia_dr3"]["row_count"] == 52
     con = sqlite3.connect(db)

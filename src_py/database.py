@@ -6,6 +6,7 @@ import logging
 import math
 import sqlite3
 import threading
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -44,51 +45,40 @@ def open_sqlite_connection(
     return conn
 
 
-class _LockedCursor:
-    """Hold the connection RLock until this cursor is fully consumed or closed."""
+class _EagerCursor:
+    """Result of :meth:`ThreadSafeSQLiteConnection.execute`: every row is fetched while the RLock is
+    held, so a half-consumed cursor never blocks other threads (G13-16). ``lastrowid``, ``rowcount``
+    and ``description`` are kept from the underlying cursor."""
 
-    __slots__ = ("_cursor", "_lock", "_released")
+    __slots__ = ("_rows", "_pos", "lastrowid", "rowcount", "description")
 
-    def __init__(self, cursor: sqlite3.Cursor, lock: threading.RLock) -> None:
-        self._cursor = cursor
-        self._lock = lock
-        self._released = False
-
-    def _release(self) -> None:
-        if not self._released:
-            self._released = True
-            self._lock.release()
+    def __init__(self, cursor: sqlite3.Cursor) -> None:
+        self.description = cursor.description
+        self._rows: list[sqlite3.Row] = cursor.fetchall() if cursor.description is not None else []
+        self._pos = 0
+        self.lastrowid = cursor.lastrowid
+        self.rowcount = cursor.rowcount
+        cursor.close()
 
     def fetchone(self) -> sqlite3.Row | None:
-        try:
-            row = self._cursor.fetchone()
-            if row is None:
-                self._release()
-            return row
-        except Exception:
-            self._release()
-            raise
+        if self._pos >= len(self._rows):
+            return None
+        row = self._rows[self._pos]
+        self._pos += 1
+        return row
 
     def fetchmany(self, size: int | None = None) -> list[sqlite3.Row]:
-        try:
-            if size is None:
-                rows = self._cursor.fetchmany()
-            else:
-                rows = self._cursor.fetchmany(size)
-            if not rows:
-                self._release()
-            return rows
-        except Exception:
-            self._release()
-            raise
+        n = 1 if size is None else max(0, int(size))
+        rows = self._rows[self._pos:self._pos + n]
+        self._pos += len(rows)
+        return rows
 
     def fetchall(self) -> list[sqlite3.Row]:
-        try:
-            return self._cursor.fetchall()
-        finally:
-            self._release()
+        rows = self._rows[self._pos:]
+        self._pos = len(self._rows)
+        return rows
 
-    def __iter__(self) -> _LockedCursor:
+    def __iter__(self) -> _EagerCursor:
         return self
 
     def __next__(self) -> sqlite3.Row:
@@ -98,25 +88,7 @@ class _LockedCursor:
         return row
 
     def close(self) -> None:
-        try:
-            self._cursor.close()
-        finally:
-            self._release()
-
-    @property
-    def lastrowid(self) -> int:
-        return int(self._cursor.lastrowid)
-
-    @property
-    def rowcount(self) -> int:
-        return int(self._cursor.rowcount)
-
-    @property
-    def description(self):
-        return self._cursor.description
-
-    def __del__(self) -> None:
-        self._release()
+        self._pos = len(self._rows)
 
 
 class ThreadSafeSQLiteConnection:
@@ -136,14 +108,9 @@ class ThreadSafeSQLiteConnection:
         self,
         sql: str,
         parameters: Iterable[Any] = (),
-    ) -> _LockedCursor:
-        self._lock.acquire()
-        try:
-            cur = self._conn.execute(sql, parameters)
-            return _LockedCursor(cur, self._lock)
-        except Exception:
-            self._lock.release()
-            raise
+    ) -> _EagerCursor:
+        with self._lock:
+            return _EagerCursor(self._conn.execute(sql, parameters))
 
     def executemany(self, sql: str, seq_of_parameters: Iterable[Iterable[Any]]) -> None:
         with self._lock:
@@ -161,16 +128,38 @@ class ThreadSafeSQLiteConnection:
         with self._lock:
             self._conn.rollback()
 
+    @property
+    def in_transaction(self) -> bool:
+        with self._lock:
+            return bool(self._conn.in_transaction)
+
+    @contextmanager
+    def immediate_transaction(self) -> Any:
+        """One write transaction (``BEGIN IMMEDIATE``) with the RLock held for its whole length, so no
+        other thread interleaves statements and no other process writes the DB meanwhile. Commits on
+        success, rolls back and re-raises on any error. A pending implicit transaction is committed
+        first (Python's legacy isolation opens one on DML)."""
+        with self._lock:
+            if self._conn.in_transaction:
+                self._conn.commit()
+            self._conn.execute("BEGIN IMMEDIATE;")
+            try:
+                yield self
+            except BaseException:
+                self._conn.rollback()
+                raise
+            self._conn.commit()
+
     def close(self) -> None:
         with self._lock:
             self._conn.close()
 
 _REBUILD_MIGRATION_TABLES = frozenset({
     "EQUIPMENTS",
+    "EQUIPMENT_CURVE",
     "TELESCOPE",
     "LOCATION",
     "OBS_QC_PROCESSING_RUN",
-    "OBS_QC_PROCESSING_FILE",
 })
 
 
@@ -399,7 +388,7 @@ def fits_header_cache_row_to_meta(row: sqlite3.Row) -> dict[str, Any]:
 def _fits_header_cache_pack_row(
     fp: Path,
     sz: int,
-    mt: float,
+    mt_ns: int,
     meta: dict[str, Any],
     imagetyp: str,
     date_obs: str | None,
@@ -433,7 +422,7 @@ def _fits_header_cache_pack_row(
     return (
         str(fp.resolve()),
         int(sz),
-        float(mt),
+        int(mt_ns),
         float(meta.get("exposure", 0.0)),
         str(meta.get("filter", "NoFilter")),
         bx,
@@ -540,9 +529,12 @@ class VyvarDatabase:
         self._ensure_equipments_bayermask_column()
         self._ensure_equipments_rig_photometry_columns()
         self._ensure_camera_profile_schema()
-        self._ensure_calibration_library_table()
+        from calib_library import ensure_schema as _calib_library_schema  # noqa: PLC0415
+
+        _calib_library_schema(self)  # S6-FIX: table + migrations at open; library reads never write
         self._ensure_fits_header_cache_table()
         self._ensure_qc_processing_tables()
+        self._ensure_id_counter_table()
         self._drop_master_sources_table()
         self._normalize_active_columns_to_text()
 
@@ -561,13 +553,20 @@ class VyvarDatabase:
                     f"UPDATE {table} SET ACTIVE = ? WHERE ID = ?;",
                     (want, int(row["ID"])),
                 )
+        self.conn.commit()  # G13-10: no implicit transaction left open for a following rebuild
 
     def _rebuild_table_safely(self, table: str, create_sql: str, insert_sql: str) -> None:
-        """Crash-safe RENAME/CREATE/COPY/DROP table rebuild for one-time migrations."""
+        """Crash-safe RENAME/CREATE/COPY/DROP table rebuild for one-time migrations.
+
+        G13-10: pending work is committed first (a nested ``BEGIN`` fails, and ``PRAGMA foreign_keys``
+        is a no-op inside a transaction). G13-09: ``legacy_alter_table`` is ON during the RENAME, so
+        foreign keys of other tables keep naming ``table`` and never follow it to ``<table>_OLD``."""
         if table not in _REBUILD_MIGRATION_TABLES:
             raise ValueError(f"unsafe table name for rebuild migration: {table!r}")
         old = f"{table}_OLD"
+        self.conn.commit()
         self.conn.execute("PRAGMA foreign_keys = OFF;")
+        self.conn.execute("PRAGMA legacy_alter_table = ON;")
         try:
             self.conn.execute("BEGIN;")
             try:
@@ -581,6 +580,7 @@ class VyvarDatabase:
                 self.conn.rollback()
                 raise
         finally:
+            self.conn.execute("PRAGMA legacy_alter_table = OFF;")
             self.conn.execute("PRAGMA foreign_keys = ON;")
 
     def _normalize_active_columns_to_text(self) -> None:
@@ -798,8 +798,89 @@ class VyvarDatabase:
             raise
         return len(points)
 
+    #: NEW-1 / G14-15: one measured point per camera, readout mode, gain setting and binning (an
+    #: empty mode and NULL are the same mode, as in ``camera_profile``).
+    @staticmethod
+    def _measured_key_sql(alias: str = "") -> str:
+        a = f"{alias}." if alias else ""
+        return f"{a}EQUIPMENT_ID, IFNULL({a}READOUT_MODE, ''), IFNULL({a}GAIN_SETTING, 'none'), {a}BINNING"
+
+    def save_measured_curve_point(
+        self,
+        equipment_id: int,
+        *,
+        readout_mode: str | None,
+        gain_setting: float | None,
+        binning: int,
+        e_per_adu: float | None,
+        readnoise_e: float | None,
+        note: str = "",
+        measured_at: str | None = None,
+    ) -> int:
+        """G14-15 / NEW-1: store a measured gain / read-noise point ("Save to camera"). A new
+        measurement REPLACES the earlier one at the same camera, readout mode, gain setting and
+        binning (one transaction); returns the new row ID."""
+        eid = int(equipment_id)
+        if self.conn.execute("SELECT 1 FROM EQUIPMENTS WHERE ID = ?;", (eid,)).fetchone() is None:
+            raise ValueError(f"EQUIPMENTS ID={eid} does not exist.")
+        raw = {
+            "READOUT_MODE": readout_mode, "GAIN_SETTING": gain_setting, "BINNING": int(binning),
+            "E_PER_ADU": e_per_adu, "READNOISE_E": readnoise_e, "SOURCE": "measured",
+            "MEASURED_AT": measured_at or datetime.now(timezone.utc).date().isoformat(), "NOTE": note,
+        }
+        vals = {c: self._coerce_sql_param("EQUIPMENT_CURVE", c, raw[c]) for c in self.CURVE_POINT_COLUMNS}
+        if vals["E_PER_ADU"] is None and vals["READNOISE_E"] is None:
+            raise ValueError("a measured point needs a gain or a read noise")
+        cols = ", ".join(("EQUIPMENT_ID", *self.CURVE_POINT_COLUMNS))
+        with self.conn.immediate_transaction():
+            self.conn.execute(
+                "DELETE FROM EQUIPMENT_CURVE WHERE SOURCE = 'measured' AND EQUIPMENT_ID = ? "
+                "AND IFNULL(READOUT_MODE, '') = IFNULL(?, '') AND IFNULL(GAIN_SETTING, 'none') = IFNULL(?, 'none') "
+                "AND BINNING = ?;",
+                (eid, vals["READOUT_MODE"], vals["GAIN_SETTING"], vals["BINNING"]),
+            )
+            cur = self.conn.execute(
+                f"INSERT INTO EQUIPMENT_CURVE ({cols}) VALUES ({', '.join('?' * (1 + len(self.CURVE_POINT_COLUMNS)))});",
+                [eid, *vals.values()],
+            )
+        return int(cur.lastrowid)
+
+    def _dedupe_measured_curve_points(self) -> None:
+        """NEW-1 one-off cleanup: repeated "Save to camera" left several measured points at one key and
+        the OLDEST one won. Keep the newest (MEASURED_AT, then ID), delete the rest, log what was
+        removed, then enforce one point per key with a unique index."""
+        dups = self.conn.execute(
+            f"""
+            SELECT c.ID, c.EQUIPMENT_ID, c.READOUT_MODE, c.GAIN_SETTING, c.BINNING, c.E_PER_ADU, c.MEASURED_AT
+              FROM EQUIPMENT_CURVE c
+             WHERE c.SOURCE = 'measured' AND EXISTS (
+                   SELECT 1 FROM EQUIPMENT_CURVE d
+                    WHERE d.SOURCE = 'measured' AND d.ID <> c.ID
+                      AND ({self._measured_key_sql("d")}) = ({self._measured_key_sql("c")})
+                      AND (IFNULL(d.MEASURED_AT, '') > IFNULL(c.MEASURED_AT, '')
+                           OR (IFNULL(d.MEASURED_AT, '') = IFNULL(c.MEASURED_AT, '') AND d.ID > c.ID)))
+             ORDER BY c.ID;
+            """
+        ).fetchall()
+        if dups:
+            with self.conn.immediate_transaction():
+                self.conn.executemany("DELETE FROM EQUIPMENT_CURVE WHERE ID = ?;", [(int(r[0]),) for r in dups])
+            for r in dups:
+                LOGGER.warning(
+                    "[DB] NEW-1 cleanup: removed older measured gain point ID %s (camera %s, mode %s, setting %s, "
+                    "bin %s, %s e-/ADU, measured %s); the newest point at that setting is kept",
+                    r[0], r[1], r[2], r[3], r[4], r[5], r[6],
+                )
+            log_event(f"DB: NEW-1 cleanup removed {len(dups)} older duplicate measured gain point(s) "
+                      "from EQUIPMENT_CURVE (newest kept)")
+        self.conn.execute(
+            f"CREATE UNIQUE INDEX IF NOT EXISTS UX_EQUIPMENT_CURVE_MEASURED ON EQUIPMENT_CURVE "
+            f"({self._measured_key_sql()}) WHERE SOURCE = 'measured';"
+        )
+        self.conn.commit()
+
     def _ensure_qc_processing_tables(self) -> None:
-        """Append-only QC Apply snapshots: hashtag + accepted manifest light rows (IS_REJECTED=0)."""
+        """QC Apply registry: one row per processing hash (draft id; the id floor of ``create_draft``)."""
         self.conn.execute(
             """
             CREATE TABLE IF NOT EXISTS OBS_QC_PROCESSING_RUN (
@@ -807,22 +888,6 @@ class VyvarDatabase:
                 PROCESSING_HASH TEXT NOT NULL UNIQUE,
                 DRAFT_ID INTEGER NOT NULL,
                 CREATED_AT TEXT NOT NULL
-            );
-            """
-        )
-        self.conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS OBS_QC_PROCESSING_FILE (
-                ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                RUN_ID INTEGER NOT NULL,
-                SOURCE_OBS_FILE_ID INTEGER NOT NULL,
-                FILE_PATH TEXT,
-                FILTER TEXT,
-                EXPTIME REAL,
-                INSPECTION_JD REAL,
-                FWHM REAL,
-                DRIFT REAL,
-                FOREIGN KEY (RUN_ID) REFERENCES OBS_QC_PROCESSING_RUN (ID) ON DELETE CASCADE
             );
             """
         )
@@ -874,29 +939,6 @@ class VyvarDatabase:
         return self._resolve_draft_rig_id(int(draft_id), "ID_LOCATION")
 
 
-    def update_obs_draft_status_panel_values(
-        self,
-        draft_id: int,
-        *,
-        center_ra_deg: float | None = None,
-        center_de_deg: float | None = None,
-    ) -> None:
-        """Persist status-panel values for a draft (center + optional focal/pixel) in manifest."""
-        from draft_provenance import patch_draft_manifest, resolve_draft_dir_for_id
-
-        if center_ra_deg is None and center_de_deg is None:
-            return
-        root = resolve_draft_dir_for_id(self, int(draft_id))
-        if root is None:
-            raise ValueError(f"Draft '{draft_id}' not found for status-panel update.")
-        center: dict[str, float | None] = {}
-        if center_ra_deg is not None:
-            center["ra_deg"] = float(center_ra_deg)
-        if center_de_deg is not None:
-            center["de_deg"] = float(center_de_deg)
-        patch_draft_manifest(root, int(draft_id), center=center)
-
-
     # ------------------------------------------------------------------
     # MASTERSTAR selection vs MASTERSTAR product (separate persistence)
     # ------------------------------------------------------------------
@@ -940,80 +982,33 @@ class VyvarDatabase:
         draft_id: int,
         processing_hash: str,
     ) -> int:
-        """Idempotent upsert run + copy light rows with ``IS_REJECTED`` 0."""
+        """Idempotent upsert of the QC Apply run row for ``processing_hash``; returns its ID.
+
+        G13-14: one transaction, rolled back on any error (the shared connection never keeps a
+        half-written state for a later commit to persist). NEW-5: the per-file snapshot is gone."""
         h = str(processing_hash).strip()
         if not h:
             raise ValueError("processing_hash is empty")
         now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-        self.conn.execute(
-            """
-            INSERT INTO OBS_QC_PROCESSING_RUN (PROCESSING_HASH, DRAFT_ID, CREATED_AT)
-            VALUES (?, ?, ?)
-            ON CONFLICT(PROCESSING_HASH) DO UPDATE SET
-                DRAFT_ID = excluded.DRAFT_ID,
-                CREATED_AT = excluded.CREATED_AT;
-            """,
-            (h, int(draft_id), now),
-        )
-        run_row = self.conn.execute(
-            "SELECT ID FROM OBS_QC_PROCESSING_RUN WHERE PROCESSING_HASH = ?;",
-            (h,),
-        ).fetchone()
-        if run_row is None:
-            raise ValueError(f"Cannot resolve QC processing run for hash: {h}")
-        run_id = int(run_row["ID"])
-        self.conn.execute("DELETE FROM OBS_QC_PROCESSING_FILE WHERE RUN_ID = ?;", (run_id,))
-        light_rows = self.fetch_draft_light_rows_for_quality(int(draft_id))
-        for frow in light_rows:
-            if frow.get("IS_REJECTED") not in (None, 0):
-                continue
-            ex_v: float | None = None
-            if frow["EXPTIME"] is not None:
-                try:
-                    ex_f = float(frow["EXPTIME"])
-                    ex_v = ex_f if math.isfinite(ex_f) else None
-                except (TypeError, ValueError):
-                    ex_v = None
-            jd_v: float | None = None
-            if frow["INSPECTION_JD"] is not None:
-                try:
-                    jd_f = float(frow["INSPECTION_JD"])
-                    jd_v = jd_f if math.isfinite(jd_f) else None
-                except (TypeError, ValueError):
-                    jd_v = None
-            fwhm_v: float | None = None
-            if frow["FWHM"] is not None:
-                try:
-                    fw_f = float(frow["FWHM"])
-                    fwhm_v = fw_f if math.isfinite(fw_f) else None
-                except (TypeError, ValueError):
-                    fwhm_v = None
-            drift_v: float | None = None
-            if frow["DRIFT"] is not None:
-                try:
-                    dr_f = float(frow["DRIFT"])
-                    drift_v = dr_f if math.isfinite(dr_f) else None
-                except (TypeError, ValueError):
-                    drift_v = None
+        with self.conn.immediate_transaction():
             self.conn.execute(
                 """
-                INSERT INTO OBS_QC_PROCESSING_FILE (
-                    RUN_ID, SOURCE_OBS_FILE_ID, FILE_PATH, FILTER, EXPTIME, INSPECTION_JD, FWHM, DRIFT
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+                INSERT INTO OBS_QC_PROCESSING_RUN (PROCESSING_HASH, DRAFT_ID, CREATED_AT)
+                VALUES (?, ?, ?)
+                ON CONFLICT(PROCESSING_HASH) DO UPDATE SET
+                    DRAFT_ID = excluded.DRAFT_ID,
+                    CREATED_AT = excluded.CREATED_AT;
                 """,
-                (
-                    run_id,
-                    int(frow["ID"]),
-                    str(frow["FILE_PATH"] or ""),
-                    str(frow["FILTER"]) if frow["FILTER"] is not None else None,
-                    ex_v,
-                    jd_v,
-                    fwhm_v,
-                    drift_v,
-                ),
+                (h, int(draft_id), now),
             )
-        self.conn.commit()
-        return run_id
+            run_row = self.conn.execute(
+                "SELECT ID FROM OBS_QC_PROCESSING_RUN WHERE PROCESSING_HASH = ?;",
+                (h,),
+            ).fetchone()
+            if run_row is None:
+                raise ValueError(f"Cannot resolve QC processing run for hash: {h}")
+            self._bump_id_counter("draft_id", int(draft_id))
+        return int(run_row["ID"])
 
     def update_obs_draft_status(self, draft_id: int, status: str) -> None:
         from draft_provenance import patch_draft_manifest, resolve_draft_dir_for_id
@@ -1038,16 +1033,18 @@ class VyvarDatabase:
             int(cols["CCD_TEMP"]["notnull"] if "CCD_TEMP" in cols else 1)
             or str(cols["GAIN"]["type"] if "GAIN" in cols else "").upper() != "REAL"
             or "READOUT_MODE" not in cols
+            or "MTIME_NS" not in cols
         ):
             self.conn.execute("DROP TABLE FITS_HEADER_CACHE;")
             self.conn.commit()
-            LOGGER.info("[DB] FITS_HEADER_CACHE rebuilt (unknown CCD temperature NULL, exact gain; G01-08/G01-10)")
+            LOGGER.info("[DB] FITS_HEADER_CACHE rebuilt (unknown CCD temperature NULL, exact gain, exact mtime_ns; "
+                        "G01-08/G01-10/G13-46)")
         self.conn.execute(
             """
             CREATE TABLE IF NOT EXISTS FITS_HEADER_CACHE (
                 FILE_PATH TEXT PRIMARY KEY,
                 FILE_SIZE INTEGER NOT NULL,
-                MTIME REAL NOT NULL,
+                MTIME_NS INTEGER NOT NULL,
                 EXPTIME REAL NOT NULL,
                 FILTER TEXT NOT NULL,
                 BINNING INTEGER NOT NULL,
@@ -1070,7 +1067,7 @@ class VyvarDatabase:
             """
         )
         self.conn.execute(
-            "CREATE INDEX IF NOT EXISTS IDX_FITS_HDR_CACHE_STALE ON FITS_HEADER_CACHE (FILE_PATH, FILE_SIZE, MTIME);"
+            "CREATE INDEX IF NOT EXISTS IDX_FITS_HDR_CACHE_STALE ON FITS_HEADER_CACHE (FILE_PATH, FILE_SIZE, MTIME_NS);"
         )
         self.conn.commit()
 
@@ -1083,9 +1080,10 @@ class VyvarDatabase:
         path: str | Path,
         *,
         file_size: int,
-        mtime: float,
+        mtime_ns: int,
     ) -> sqlite3.Row | None:
-        """Return cache row if it exists and matches current ``file_size`` and ``mtime``."""
+        """Return cache row if it exists and matches current ``file_size`` and ``st_mtime_ns`` exactly
+        (G13-46: the former 2 s tolerance could serve a stale header after a quick rewrite)."""
         key = self.fits_header_cache_file_key(path)
         row = self.conn.execute(
             "SELECT * FROM FITS_HEADER_CACHE WHERE FILE_PATH = ?;",
@@ -1095,8 +1093,7 @@ class VyvarDatabase:
             return None
         if int(row["FILE_SIZE"]) != int(file_size):
             return None
-        # Filesystems may round mtime; allow tiny float noise (and ~2s coarse stamps).
-        if abs(float(row["MTIME"]) - float(mtime)) > 2.0:
+        if int(row["MTIME_NS"]) != int(mtime_ns):
             return None
         return row
 
@@ -1107,7 +1104,7 @@ class VyvarDatabase:
             st = p.stat()
         except OSError:
             return None
-        row = self.fits_header_cache_get_if_fresh(p, file_size=int(st.st_size), mtime=float(st.st_mtime))
+        row = self.fits_header_cache_get_if_fresh(p, file_size=int(st.st_size), mtime_ns=int(st.st_mtime_ns))
         if row is None:
             return None
         return fits_header_cache_row_to_meta(row)
@@ -1119,7 +1116,7 @@ class VyvarDatabase:
             st = p.stat()
         except OSError:
             return None
-        row = self.fits_header_cache_get_if_fresh(p, file_size=int(st.st_size), mtime=float(st.st_mtime))
+        row = self.fits_header_cache_get_if_fresh(p, file_size=int(st.st_size), mtime_ns=int(st.st_mtime_ns))
         if row is None:
             return None
         flt = str(row["FILTER"] or "").strip()
@@ -1129,22 +1126,22 @@ class VyvarDatabase:
 
     def fits_header_cache_upsert_batch(
         self,
-        items: list[tuple[Path, int, float, dict[str, Any], str, str | None]],
+        items: list[tuple[Path, int, int, dict[str, Any], str, str | None]],
     ) -> None:
         """Insert or replace many rows in one transaction. Each item:
-        ``(path, file_size, mtime, meta_dict, imagetyp_raw, date_obs_str_or_none)``.
+        ``(path, file_size, mtime_ns, meta_dict, imagetyp_raw, date_obs_str_or_none)``.
         """
         if not items:
             return
         sql = """
             INSERT INTO FITS_HEADER_CACHE (
-                FILE_PATH, FILE_SIZE, MTIME, EXPTIME, FILTER, BINNING, BINNING_Y,
+                FILE_PATH, FILE_SIZE, MTIME_NS, EXPTIME, FILTER, BINNING, BINNING_Y,
                 NAXIS1, NAXIS2, PIXEL_UM, CCD_TEMP, GAIN, RA_DEG, DEC_DEG, JD_START,
                 TELESCOPE, CAMERA, DATE_OBS, IMAGETYP, OFFSET, READOUT_MODE
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(FILE_PATH) DO UPDATE SET
                 FILE_SIZE = excluded.FILE_SIZE,
-                MTIME = excluded.MTIME,
+                MTIME_NS = excluded.MTIME_NS,
                 EXPTIME = excluded.EXPTIME,
                 FILTER = excluded.FILTER,
                 BINNING = excluded.BINNING,
@@ -1164,61 +1161,27 @@ class VyvarDatabase:
                 OFFSET = excluded.OFFSET,
                 READOUT_MODE = excluded.READOUT_MODE;
         """
-        self.conn.execute("BEGIN IMMEDIATE;")
-        try:
-            for fp, sz, mt, meta, imagetyp, date_obs in items:
-                self.conn.execute(sql, _fits_header_cache_pack_row(fp, sz, mt, meta, imagetyp, date_obs))
-            self.conn.commit()
-        except Exception:
-            self.conn.rollback()
-            raise
+        with self.conn.immediate_transaction():
+            for fp, sz, mt_ns, meta, imagetyp, date_obs in items:
+                self.conn.execute(sql, _fits_header_cache_pack_row(fp, sz, mt_ns, meta, imagetyp, date_obs))
 
     def fits_header_cache_upsert_one(
         self,
         path: Path,
         *,
         file_size: int,
-        mtime: float,
+        mtime_ns: int,
         meta: dict[str, Any],
         imagetyp: str,
         date_obs: str | None,
     ) -> None:
-        self.fits_header_cache_upsert_batch([(path, file_size, mtime, meta, imagetyp, date_obs)])
+        self.fits_header_cache_upsert_batch([(path, file_size, mtime_ns, meta, imagetyp, date_obs)])
 
     def _ensure_calibration_library_table(self) -> None:
-        """Master Dark/Flat registry for fast matching on import (path + XBINNING, EXPTIME, TEMP, FILTER)."""
-        self.conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS CALIBRATION_LIBRARY (
-                ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                KIND TEXT NOT NULL,
-                FILE_PATH TEXT NOT NULL UNIQUE,
-                XBINNING INTEGER NOT NULL,
-                EXPTIME REAL NOT NULL,
-                CCD_TEMP REAL,
-                FILTER_NAME TEXT NOT NULL DEFAULT '',
-                GAIN INTEGER NOT NULL DEFAULT 0,
-                NCOMBINE INTEGER,
-                REGISTERED_AT TEXT NOT NULL
-            );
-            """
-        )
-        self.conn.execute(
-            "CREATE INDEX IF NOT EXISTS IDX_CAL_LIB_LOOKUP ON CALIBRATION_LIBRARY "
-            "(KIND, XBINNING, EXPTIME, FILTER_NAME, GAIN);"
-        )
-        self.conn.commit()
-        self._migrate_calibration_library_scope_columns()
+        """CALIBRATION_LIBRARY DDL and column migrations; G13-45: owned by ``calib_library``."""
+        from calib_library import create_table  # noqa: PLC0415
 
-    def _migrate_calibration_library_scope_columns(self) -> None:
-        """Add optional equipment/telescope scope (set = camera + telescope). Legacy rows: NULL,NULL = generic."""
-        cur = self.conn.execute("PRAGMA table_info('CALIBRATION_LIBRARY');")
-        cols = {str(r[1]).upper() for r in cur.fetchall()}
-        if "ID_EQUIPMENTS" not in cols:
-            self.conn.execute("ALTER TABLE CALIBRATION_LIBRARY ADD COLUMN ID_EQUIPMENTS INTEGER;")
-        if "ID_TELESCOPE" not in cols:
-            self.conn.execute("ALTER TABLE CALIBRATION_LIBRARY ADD COLUMN ID_TELESCOPE INTEGER;")
-        self.conn.commit()
+        create_table(self.conn)
 
     @staticmethod
     def calibration_scopes_match(
@@ -1238,7 +1201,6 @@ class VyvarDatabase:
         self, file_path: str | Path
     ) -> dict[str, Any] | None:
         """Return the registry row for an absolute master path, if any."""
-        self._ensure_calibration_library_table()
         fp = str(Path(file_path).resolve())
         cur = self.conn.execute(
             "SELECT * FROM CALIBRATION_LIBRARY WHERE FILE_PATH = ? LIMIT 1;",
@@ -1644,6 +1606,21 @@ class VyvarDatabase:
             self.conn.execute("ALTER TABLE EQUIPMENTS ADD COLUMN SIGMA_SYS_MAG REAL;")
         self.conn.commit()
 
+    _EQUIPMENT_CURVE_DDL = """
+            CREATE TABLE IF NOT EXISTS EQUIPMENT_CURVE (
+                ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                EQUIPMENT_ID INTEGER NOT NULL REFERENCES EQUIPMENTS(ID),
+                READOUT_MODE TEXT,
+                GAIN_SETTING REAL,
+                BINNING INTEGER NOT NULL DEFAULT 1,
+                E_PER_ADU REAL,
+                READNOISE_E REAL,
+                SOURCE TEXT NOT NULL DEFAULT 'manual',
+                MEASURED_AT TEXT,
+                NOTE TEXT
+            );
+            """
+
     def _ensure_camera_profile_schema(self) -> None:
         """CAMERA-PROFILE-2026-10: camera model / readout mode from the shipped catalog, binning
         convention, meaning of the header GAIN card, default gain setting, and the table of measured or
@@ -1659,23 +1636,9 @@ class VyvarDatabase:
         ):
             if name not in cols:
                 self.conn.execute(f"ALTER TABLE EQUIPMENTS ADD COLUMN {name} {decl};")
-        self.conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS EQUIPMENT_CURVE (
-                ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                EQUIPMENT_ID INTEGER NOT NULL REFERENCES EQUIPMENTS(ID),
-                READOUT_MODE TEXT,
-                GAIN_SETTING REAL,
-                BINNING INTEGER NOT NULL DEFAULT 1,
-                E_PER_ADU REAL,
-                READNOISE_E REAL,
-                SOURCE TEXT NOT NULL DEFAULT 'manual',
-                MEASURED_AT TEXT,
-                NOTE TEXT
-            );
-            """
-        )
+        self.conn.execute(self._EQUIPMENT_CURVE_DDL)
         self.conn.commit()
+        self._dedupe_measured_curve_points()
 
     # ------------------------------------------------------------------ #
     # Reference objects: cameras, telescopes, sites (REF-OBJECTS-2026-10)
@@ -1882,46 +1845,32 @@ class VyvarDatabase:
         return False
 
     def _heal_qc_orphan_old_tables(self) -> None:
-        """Drop stale *_OLD QC tables or recover when only *_OLD survived a crash."""
-        for base in ("OBS_QC_PROCESSING_RUN", "OBS_QC_PROCESSING_FILE"):
-            old = f"{base}_OLD"
-            if not self._table_exists(old):
-                continue
-            if self._table_exists(base):
-                self.conn.execute(f"DROP TABLE IF EXISTS {old};")
-            else:
-                self.conn.execute(f"ALTER TABLE {old} RENAME TO {base};")
-
-    def _qc_file_fk_parent(self) -> str | None:
-        """Return the parent table name referenced by OBS_QC_PROCESSING_FILE.RUN_ID, if any."""
-        if not self._table_exists("OBS_QC_PROCESSING_FILE"):
-            return None
-        try:
-            for row in self.conn.execute("PRAGMA foreign_key_list('OBS_QC_PROCESSING_FILE');"):
-                # row: id, seq, table, from, to, on_update, on_delete, match
-                if str(row[3]).upper() == "RUN_ID":
-                    return str(row[2])
-        except sqlite3.Error:
-            return None
-        return None
-
-    def _qc_file_needs_run_fk_rebuild(self) -> bool:
-        """True when FILE FK points at a missing/wrong parent (e.g. OBS_QC_PROCESSING_RUN_OLD)."""
-        parent = self._qc_file_fk_parent()
-        if parent is None:
-            # No FK recorded: still rebuild if orphan *_OLD naming is present historically
-            return False
-        return str(parent).upper() != "OBS_QC_PROCESSING_RUN"
+        """Drop a stale OBS_QC_PROCESSING_RUN_OLD or recover when only it survived a crash."""
+        base = "OBS_QC_PROCESSING_RUN"
+        old = f"{base}_OLD"
+        if not self._table_exists(old):
+            return
+        if self._table_exists(base):
+            self.conn.execute(f"DROP TABLE IF EXISTS {old};")
+        else:
+            self.conn.execute(f"ALTER TABLE {old} RENAME TO {base};")
 
     def _drop_vestigial_tables(self) -> None:
         # WAVE-B STEP 5: SETTINGS held only masterdark/masterflat validity days (config.json-authoritative).
         # PHOTOMETRY_LIGHT_CURVE was never read; light curves are file-based CSVs.
+        # NEW-5 (T19, Milan 2026-10-31): OBS_QC_PROCESSING_FILE was written on every QC apply and never
+        # read (a copy of the manifest light rows, which stay authoritative); it is dropped.
+        self.conn.commit()
         self.conn.execute("PRAGMA foreign_keys = OFF;")
         try:
             self.conn.execute("DROP TABLE IF EXISTS SCANNING;")
             self.conn.execute("DROP TABLE IF EXISTS OBSERVATION;")
             self.conn.execute("DROP TABLE IF EXISTS OBS_FILES;")
+            self.conn.execute("DROP TABLE IF EXISTS OBS_QC_PROCESSING_FILE;")
+            self.conn.execute("DROP TABLE IF EXISTS OBS_QC_PROCESSING_FILE_OLD;")
+            self.conn.commit()
             self._rebuild_qc_tables_without_obs_draft_fk()
+            self.conn.execute("PRAGMA foreign_keys = OFF;")
             self._drop_final_data_view()
             self.conn.execute("DROP TABLE IF EXISTS OBS_DRAFT;")
             self.conn.execute("DROP TABLE IF EXISTS SETTINGS;")
@@ -1936,107 +1885,65 @@ class VyvarDatabase:
             return False
         return self._table_has_fk_to("OBS_QC_PROCESSING_RUN", legacy_draft)
 
-    def _qc_file_has_obs_draft_fk(self) -> bool:
-        legacy_draft = "OBS" + "_DRAFT"
-        if not self._table_exists("OBS_QC_PROCESSING_FILE"):
-            return False
-        return self._table_has_fk_to("OBS_QC_PROCESSING_FILE", legacy_draft)
-
     def _rebuild_qc_tables_without_obs_draft_fk(self) -> None:
-        """Remove legacy draft-table FK from QC tables on older databases.
-
-        Also rebuilds OBS_QC_PROCESSING_FILE when its RUN_ID FK still points at
-        OBS_QC_PROCESSING_RUN_OLD (half-finished migration; TARGET-DEPTH-01).
-        """
+        """Remove the legacy draft-table FK from OBS_QC_PROCESSING_RUN on older databases."""
         self._heal_qc_orphan_old_tables()
-        run_needs = self._qc_run_has_obs_draft_fk()
-        file_needs = self._qc_file_has_obs_draft_fk() or self._qc_file_needs_run_fk_rebuild()
-        if not run_needs and not file_needs:
-            return
-        if run_needs:
-            self._rebuild_table_safely(
-                "OBS_QC_PROCESSING_RUN",
-                """
-                CREATE TABLE OBS_QC_PROCESSING_RUN (
-                    ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                    PROCESSING_HASH TEXT NOT NULL UNIQUE,
-                    DRAFT_ID INTEGER NOT NULL,
-                    CREATED_AT TEXT NOT NULL
-                );
-                """,
-                """
-                INSERT INTO OBS_QC_PROCESSING_RUN (ID, PROCESSING_HASH, DRAFT_ID, CREATED_AT)
-                SELECT ID, PROCESSING_HASH, DRAFT_ID, CREATED_AT FROM OBS_QC_PROCESSING_RUN_OLD;
-                """,
-            )
-            self.conn.execute(
-                "CREATE INDEX IF NOT EXISTS IDX_QC_PROC_RUN_DRAFT ON OBS_QC_PROCESSING_RUN (DRAFT_ID);"
-            )
-            file_needs = True
-        if file_needs and self._table_exists("OBS_QC_PROCESSING_FILE"):
-            self._rebuild_table_safely(
-                "OBS_QC_PROCESSING_FILE",
-                """
-                CREATE TABLE OBS_QC_PROCESSING_FILE (
-                    ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                    RUN_ID INTEGER NOT NULL,
-                    SOURCE_OBS_FILE_ID INTEGER NOT NULL,
-                    FILE_PATH TEXT,
-                    FILTER TEXT,
-                    EXPTIME REAL,
-                    INSPECTION_JD REAL,
-                    FWHM REAL,
-                    DRIFT REAL,
-                    FOREIGN KEY (RUN_ID) REFERENCES OBS_QC_PROCESSING_RUN (ID) ON DELETE CASCADE
-                );
-                """,
-                """
-                INSERT INTO OBS_QC_PROCESSING_FILE (
-                    ID, RUN_ID, SOURCE_OBS_FILE_ID, FILE_PATH, FILTER, EXPTIME,
-                    INSPECTION_JD, FWHM, DRIFT
-                )
-                SELECT
-                    ID, RUN_ID, SOURCE_OBS_FILE_ID, FILE_PATH, FILTER, EXPTIME,
-                    INSPECTION_JD, FWHM, DRIFT
-                FROM OBS_QC_PROCESSING_FILE_OLD;
-                """,
-            )
-
-    def _drop_equipments_focal_column(self) -> None:
-        """One-time migration: focal length belongs on TELESCOPE, not EQUIPMENTS."""
-        cursor = self.conn.execute("PRAGMA table_info('EQUIPMENTS');")
-        cols = {row["name"] for row in cursor.fetchall()}
-        if "FOCAL" not in cols:
+        if not self._qc_run_has_obs_draft_fk():
             return
         self._rebuild_table_safely(
-            "EQUIPMENTS",
+            "OBS_QC_PROCESSING_RUN",
             """
-            CREATE TABLE EQUIPMENTS (
+            CREATE TABLE OBS_QC_PROCESSING_RUN (
                 ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                CAMERANAME TEXT,
-                ALIAS TEXT,
-                SENSORTYPE TEXT,
-                SENSORSIZE TEXT,
-                PIXELSIZE REAL,
-                ACTIVE TEXT DEFAULT 'YES',
-                SATURATE_ADU REAL,
-                GAIN_ADU REAL,
-                READNOISE_E REAL,
-                BAYERMASK TEXT,
-                IS_DEFAULT INTEGER DEFAULT 0
+                PROCESSING_HASH TEXT NOT NULL UNIQUE,
+                DRAFT_ID INTEGER NOT NULL,
+                CREATED_AT TEXT NOT NULL
             );
             """,
             """
-            INSERT INTO EQUIPMENTS (
-                ID, CAMERANAME, ALIAS, SENSORTYPE, SENSORSIZE, PIXELSIZE, ACTIVE,
-                SATURATE_ADU, GAIN_ADU, READNOISE_E, BAYERMASK, IS_DEFAULT
-            )
-            SELECT
-                ID, CAMERANAME, ALIAS, SENSORTYPE, SENSORSIZE, PIXELSIZE, ACTIVE,
-                SATURATE_ADU, GAIN_ADU, READNOISE_E, BAYERMASK, IS_DEFAULT
-            FROM EQUIPMENTS_OLD;
+            INSERT INTO OBS_QC_PROCESSING_RUN (ID, PROCESSING_HASH, DRAFT_ID, CREATED_AT)
+            SELECT ID, PROCESSING_HASH, DRAFT_ID, CREATED_AT FROM OBS_QC_PROCESSING_RUN_OLD;
             """,
         )
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS IDX_QC_PROC_RUN_DRAFT ON OBS_QC_PROCESSING_RUN (DRAFT_ID);"
+        )
+        self.conn.commit()
+
+    def _drop_equipments_focal_column(self) -> None:
+        """One-time migration: focal length belongs on TELESCOPE, not EQUIPMENTS.
+
+        G13-09: ``ALTER TABLE ... DROP COLUMN`` (SQLite >= 3.35) keeps every other column and the
+        EQUIPMENT_CURVE foreign key; the former rename-rebuild re-pointed that key to
+        ``EQUIPMENTS_OLD`` and dropped the columns added since. A leftover ``EQUIPMENTS_OLD`` of an
+        earlier failed rebuild is dropped (after the curve key no longer names it)."""
+        self._heal_equipment_curve_fk()
+        if self._table_exists("EQUIPMENTS_OLD"):
+            self.conn.execute("DROP TABLE EQUIPMENTS_OLD;")
+            self.conn.commit()
+            LOGGER.warning("[DB] leftover EQUIPMENTS_OLD of an earlier migration dropped")
+        cols = {row["name"] for row in self.conn.execute("PRAGMA table_info('EQUIPMENTS');").fetchall()}
+        if "FOCAL" in cols:
+            self.conn.commit()
+            self.conn.execute("ALTER TABLE EQUIPMENTS DROP COLUMN FOCAL;")
+            self.conn.commit()
+            LOGGER.info("[DB] EQUIPMENTS.FOCAL dropped (focal length is on TELESCOPE)")
+
+    def _heal_equipment_curve_fk(self) -> None:
+        """G13-09 healing: a DB migrated by the former FOCAL rebuild has EQUIPMENT_CURVE referencing
+        ``EQUIPMENTS_OLD`` (every save failed). Rebuild it with the canonical key; rows are kept."""
+        parents = {str(r[2]) for r in self.conn.execute("PRAGMA foreign_key_list('EQUIPMENT_CURVE');").fetchall()}
+        if not parents or parents == {"EQUIPMENTS"}:
+            return
+        cols = ", ".join(("ID", "EQUIPMENT_ID", *self.CURVE_POINT_COLUMNS))
+        self._rebuild_table_safely(
+            "EQUIPMENT_CURVE",
+            self._EQUIPMENT_CURVE_DDL.replace("IF NOT EXISTS ", ""),
+            f"INSERT INTO EQUIPMENT_CURVE ({cols}) SELECT {cols} FROM EQUIPMENT_CURVE_OLD;",
+        )
+        self._dedupe_measured_curve_points()  # the rebuild dropped the unique index
+        LOGGER.warning("[DB] EQUIPMENT_CURVE foreign key re-pointed from %s to EQUIPMENTS (G13-09)",
+                       ", ".join(sorted(parents)))
 
     @staticmethod
     def _jd_to_yyyymmdd(jd: float) -> str:
@@ -2575,10 +2482,17 @@ class VyvarDatabase:
         return out
 
     def create_draft(self, data: dict[str, Any]) -> int:
-        """Create an ingestion draft (manifest-direct; no draft manifest SQL)."""
-        id_equipments = int(data.get("id_equipments", 1))
-        id_telescope = int(data.get("id_telescope", 1))
-        id_location = int(data.get("id_location", 1))
+        """Create an ingestion draft (processed field) and return its id.
+
+        G13-43: the rig ids are required (KeyError), there is no designated ID 1.
+        G12-22 / G12-21 / NEW-3 / NEW-4: the id and the folder are allocated inside one DB write
+        transaction (``BEGIN IMMEDIATE``), so two concurrent imports (GUI + CLI) serialise on the
+        database and never get the same id. The id is above the ``ID_COUNTER`` high-water mark, every
+        id recorded in OBS_QC_PROCESSING_RUN and every field folder, so ids are never reused when
+        folders are deleted or a manifest is unreadable. A DB error here raises (no silent floor 0)."""
+        id_equipments = int(data["id_equipments"])
+        id_telescope = int(data["id_telescope"])
+        id_location = int(data["id_location"])
         self._validate_observation_foreign_keys(
             id_equipments=id_equipments,
             id_telescope=id_telescope,
@@ -2587,13 +2501,43 @@ class VyvarDatabase:
         from draft_provenance import create_draft_manifest
 
         archive_root = self.resolve_archive_root()
-        # ids are never reused: above every id the database has recorded (old folders may be deleted)
-        try:
+        with self.conn.immediate_transaction():
             row = self.conn.execute("SELECT MAX(DRAFT_ID) FROM OBS_QC_PROCESSING_RUN;").fetchone()
-            floor = int(row[0] or 0) if row else 0
-        except Exception:  # noqa: BLE001
-            floor = 0
-        return int(create_draft_manifest(archive_root, {**data, "min_id_floor": floor}))
+            floor = max(self._id_counter_value("draft_id"), int(row[0] or 0))
+            did = int(create_draft_manifest(archive_root, {**data, "min_id_floor": floor}))
+            self._bump_id_counter("draft_id", did)
+        return did
+
+    def autodetect_candidates(self) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+        """G14-23: active cameras and telescopes with the columns optics auto-detection matches on."""
+        act = self.sql_expr_active_is_true("ACTIVE")
+        eq = [dict(r) for r in self.conn.execute(
+            "SELECT ID, CAMERANAME, ALIAS, SENSORTYPE, SENSORSIZE, PIXELSIZE, GAIN_ADU, MODEL_KEY "
+            f"FROM EQUIPMENTS WHERE {act};"
+        ).fetchall()]
+        tel = [dict(r) for r in self.conn.execute(
+            f"SELECT ID, TELESCOPENAME, ALIAS, DIAMETER, FOCAL FROM TELESCOPE WHERE {act};"
+        ).fetchall()]
+        return eq, tel
+
+    def _ensure_id_counter_table(self) -> None:
+        """G12-22: monotonic id high-water marks (``NAME`` -> largest id ever allocated)."""
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS ID_COUNTER (NAME TEXT PRIMARY KEY, VALUE INTEGER NOT NULL);"
+        )
+        self.conn.commit()
+
+    def _id_counter_value(self, name: str) -> int:
+        row = self.conn.execute("SELECT VALUE FROM ID_COUNTER WHERE NAME = ?;", (str(name),)).fetchone()
+        return int(row[0]) if row is not None else 0
+
+    def _bump_id_counter(self, name: str, value: int) -> None:
+        """Raise the high-water mark ``name`` to ``value`` (never lowers it); caller commits."""
+        self.conn.execute(
+            "INSERT INTO ID_COUNTER (NAME, VALUE) VALUES (?, ?) "
+            "ON CONFLICT(NAME) DO UPDATE SET VALUE = MAX(VALUE, excluded.VALUE);",
+            (str(name), int(value)),
+        )
 
     def update_draft_import_log(
         self,

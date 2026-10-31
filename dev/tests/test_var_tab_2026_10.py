@@ -119,7 +119,7 @@ def test_tab_renders_and_period_controls(tmp_path: Path) -> None:
         "import sys\nfrom pathlib import Path\n"
         f"sys.path.insert(0, {str(SRC)!r})\n"
         "from config import AppConfig\nfrom ui_variability import render_variability_dashboard\n"
-        f"render_variability_dashboard(AppConfig(), draft_dir_override=Path({str(draft)!r}))\n")
+        f"render_variability_dashboard(AppConfig(), draft_dir=Path({str(draft)!r}))\n")
     at = AppTest.from_file(str(app), default_timeout=60)
     at.run()
     assert not at.exception, at.exception

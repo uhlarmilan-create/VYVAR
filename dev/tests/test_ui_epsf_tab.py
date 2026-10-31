@@ -55,17 +55,16 @@ def _setup(root: Path, name: str, types: list[str], *, frames: bool = True) -> d
     return {"obs_group_dir": og, "masterstar_fits": og / "MASTERSTAR.fits", "per_frame_csv_dir": fr}
 
 
-def test_run_plan_covers_every_setup_with_the_same_selection(tmp_path: Path) -> None:
+def test_run_plan_covers_every_setup_with_every_in_scope_target(tmp_path: Path) -> None:
+    """Every target with an aperture light curve of each setup; vsx_out_of_scope_types excludes (S6-FIX)."""
     setups = {"g_120_4": _setup(tmp_path, "g", ["EA", "RRAB"]), "r_100_4": _setup(tmp_path, "r", ["EA", "EW"]),
               "i_60_4": _setup(tmp_path, "i", ["EA"], frames=False)}
-    plan = {r.setup: r for r in epsf_run_plan(setups, "EA, EW")}
+    plan = {r.setup: r for r in epsf_run_plan(setups, ["RRAB"])}
     assert set(plan) == set(setups)
     assert sorted(plan["g_120_4"].fit.target_ids) == ["1"] and plan["g_120_4"].runnable
     assert sorted(plan["r_100_4"].fit.target_ids) == ["1", "2"] and plan["r_100_4"].runnable
-    assert plan["g_120_4"].fit.unmatched_tokens == ("EW",)  # EW only in r: matched in some setup
     assert plan["i_60_4"].missing == ("aligned frames directory",) and not plan["i_60_4"].runnable
-    e = plan["r_100_4"].pending_entry()
-    assert e["setup_name"] == "r_100_4" and e["platesolve_dir"] == str(tmp_path / "r")
+    assert plan["r_100_4"].platesolve_dir == tmp_path / "r"
 
 
 def test_generate_files_writes_every_setup_with_epsf_curves(tmp_path: Path) -> None:

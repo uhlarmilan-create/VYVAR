@@ -18,9 +18,11 @@ whole pipeline: the frame limit (``frame_depth.py``) capped by this coverage dep
 """
 from __future__ import annotations
 
+import logging
 import math
 import sqlite3
 import time
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
@@ -28,7 +30,9 @@ from typing import Any, Callable
 import pandas as pd
 
 from net_call import call_with_timeout, mark_unavailable, unavailable_reason
-from catalog_db import add_catalog_meta_rows, connect_rw, ra_intervals_deg, resolve_catalog_path
+from catalog_db import add_catalog_meta_rows, connect_ro, connect_rw, ra_intervals_deg, resolve_catalog_path
+
+LOGGER = logging.getLogger(__name__)
 
 #: Agreed margin around the field edges for a top-up (Milan 2026-10-14: "+- 1 degree around the field edges").
 TOPUP_MARGIN_DEG = 1.0
@@ -102,12 +106,169 @@ def _utc_now() -> str:
 
 
 def _log(msg: str) -> None:
+    """Run log line; G04-45: a failing infolog is reported (WARNING), never swallowed."""
     try:
         from infolog import log_event  # noqa: PLC0415
 
         log_event(msg)
-    except Exception:  # noqa: BLE001 - logging must never break a catalogue operation
-        pass
+    except Exception as exc:  # noqa: BLE001 - logging must never break a catalogue operation
+        LOGGER.warning("infolog failed (%s); message was: %s", exc, msg)
+
+
+# ------------------------------------------------------------------ complete TAP downloads (G05-03, NEW-2)
+#: G05-03 / NEW-2 guard against a TAP server whose COUNT(*) and returned rows never agree: a box is
+#: split into four at most this many times (4**6 = 4096 sub-boxes of one strip). It is not a row
+#: cap and decides nothing about completeness - the COUNT(*) equality does.
+MAX_SPLIT_DEPTH = 6
+
+#: The ESA archive's documented row limit of an anonymous async job (archive FAQ). Used ONLY to
+#: label strips of a build made before the COUNT check (report / warning); never a decision.
+ESA_ANON_ASYNC_ROW_CAP = 3_000_000
+
+
+class IncompleteDownload(RuntimeError):
+    """The rows of a box never matched its COUNT(*) (more rows than counted, or the split guard)."""
+
+
+@dataclass(frozen=True)
+class SkyBox:
+    """RA/Dec box; lower edges inclusive, upper edges inclusive when ``*_closed`` (else open)."""
+
+    ra0: float
+    ra1: float
+    de0: float
+    de1: float
+    ra_closed: bool = True
+    de_closed: bool = True
+
+    def where(self) -> str:
+        ra_op = "<=" if self.ra_closed else "<"
+        de_op = "<=" if self.de_closed else "<"
+        return (f"ra >= {self.ra0:.8f} AND ra {ra_op} {self.ra1:.8f} "
+                f"AND dec >= {self.de0:.8f} AND dec {de_op} {self.de1:.8f}")
+
+    def split4(self) -> list[SkyBox]:
+        """Four sub-boxes (RA and Dec halves); the inner edges are half-open, so every star of the
+        box is in exactly one sub-box."""
+        rm, dm = 0.5 * (self.ra0 + self.ra1), 0.5 * (self.de0 + self.de1)
+        out = []
+        for d0, d1, dc in ((self.de0, dm, False), (dm, self.de1, self.de_closed)):
+            for r0, r1, rc in ((self.ra0, rm, False), (rm, self.ra1, self.ra_closed)):
+                out.append(SkyBox(r0, r1, d0, d1, rc, dc))
+        return out
+
+
+def region_where(region: list[SkyBox]) -> str:
+    return " OR ".join(f"({b.where()})" for b in region)
+
+
+def region_adql(region: list[SkyBox], *, select: str, table: str, mag_where: str) -> str:
+    return f"SELECT {select}\n        FROM {table}\n        WHERE ({region_where(region)})\n          AND {mag_where}"
+
+
+def region_count_adql(region: list[SkyBox], *, table: str, mag_where: str) -> str:
+    """COUNT(*) of exactly the rows :func:`region_adql` selects (same WHERE)."""
+    return f"SELECT COUNT(*) AS n\n        FROM {table}\n        WHERE ({region_where(region)})\n          AND {mag_where}"
+
+
+def _tap_count(fetch: Callable[[str], pd.DataFrame], adql: str) -> int:
+    df = fetch(adql)
+    if df is None or len(df) != 1 or len(df.columns) != 1:
+        raise IncompleteDownload(f"COUNT(*) query returned no single value: {None if df is None else df.shape}")
+    return int(df.iloc[0, 0])
+
+
+def fetch_region_complete(
+    fetch: Callable[[str], pd.DataFrame],
+    region: list[SkyBox],
+    *,
+    select: str,
+    table: str,
+    mag_where: str,
+    on_rows: Callable[[pd.DataFrame], None],
+    depth: int = 0,
+) -> tuple[int, int]:
+    """G05-03 / NEW-2: download ``region`` completely. A box is complete only when the rows
+    received equal the TAP ``COUNT(*)`` of the same query; otherwise each box is split into four
+    and fetched again (recursively). ``on_rows`` gets every verified part (normalised frame).
+    Returns (COUNT(*), rows delivered); raises :class:`IncompleteDownload` when it cannot be made
+    complete. Network errors of ``fetch`` propagate."""
+    n_expected = _tap_count(fetch, region_count_adql(region, table=table, mag_where=mag_where))
+    if n_expected == 0:
+        return 0, 0
+    df = normalize_tap_dataframe(fetch(region_adql(region, select=select, table=table, mag_where=mag_where)))
+    if len(df) == n_expected:
+        on_rows(df)
+        return n_expected, len(df)
+    if len(df) > n_expected:
+        raise IncompleteDownload(f"{len(df)} rows for COUNT(*) {n_expected} ({region_where(region)})")
+    if depth >= MAX_SPLIT_DEPTH:
+        raise IncompleteDownload(
+            f"{len(df)} of {n_expected} rows after {depth} splits ({region_where(region)})")
+    LOGGER.warning("Gaia TAP: %d of %d rows (truncated) - box split in 4 (level %d)", len(df), n_expected, depth + 1)
+    del df
+    got_e = got_r = 0
+    for box in region:
+        for sub in box.split4():
+            e, r = fetch_region_complete(fetch, [sub], select=select, table=table, mag_where=mag_where,
+                                         on_rows=on_rows, depth=depth + 1)
+            got_e += e
+            got_r += r
+    if got_e != n_expected:
+        raise IncompleteDownload(f"sub-box counts {got_e} != COUNT(*) {n_expected} ({region_where(region)})")
+    return n_expected, got_r
+
+
+# ------------------------------------------------------------------ strip completeness (G05-03)
+def ensure_strip_columns(conn: sqlite3.Connection) -> None:
+    """strip_progress keeps the G limit (mag_limit), the TAP COUNT(*) of the strip query
+    (n_expected) and ``verified``: 1 = rows equal the COUNT, 0 = known truncated, NULL = a strip of
+    a build before the COUNT check (never checked)."""
+    cols = {str(r[1]) for r in conn.execute("PRAGMA table_info(strip_progress)").fetchall()}
+    for name, decl in (("mag_limit", "REAL"), ("n_expected", "INTEGER"), ("verified", "INTEGER")):
+        if name not in cols:
+            conn.execute(f"ALTER TABLE strip_progress ADD COLUMN {name} {decl}")
+
+
+def strips_needing_repair(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    """G05-03 detection: strips of ``strip_progress`` whose completeness is not verified - known
+    truncated (verified 0) or never COUNT-checked (verified NULL, every strip of an older build).
+    Largest first; ``at_anonymous_cap`` labels a stored count equal to the documented ESA cap."""
+    if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='strip_progress'").fetchone() is None:
+        return []
+    cols = {str(r[1]) for r in conn.execute("PRAGMA table_info(strip_progress)").fetchall()}
+    sel = ", ".join(c if c in cols else f"NULL AS {c}" for c in ("mag_limit", "n_expected", "verified"))
+    rows = conn.execute(
+        f"SELECT strip_key, ra_min, ra_max, dec_min, dec_max, n_stars, {sel} FROM strip_progress "
+        "ORDER BY n_stars DESC, strip_key"
+    ).fetchall()
+    out = []
+    for key, r0, r1, d0, d1, n, ml, ne, ver in rows:
+        if ver is not None and int(ver) == 1:
+            continue
+        out.append({
+            "strip_key": str(key), "box": (float(r0), float(r1), float(d0), float(d1)),
+            "n_stars": None if n is None else int(n), "mag_limit": ml, "n_expected": ne,
+            "state": "truncated" if ver is not None else "never_checked",
+            "at_anonymous_cap": n is not None and int(n) == ESA_ANON_ASYNC_ROW_CAP,
+        })
+    return out
+
+
+def _truncated_strip_boxes(conn: sqlite3.Connection) -> list[tuple[float, float, float, float]]:
+    if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='strip_progress'").fetchone() is None:
+        return []
+    cols = {str(r[1]) for r in conn.execute("PRAGMA table_info(strip_progress)").fetchall()}
+    if "verified" not in cols:
+        return []
+    return [tuple(float(v) for v in r) for r in conn.execute(
+        "SELECT ra_min, ra_max, dec_min, dec_max FROM strip_progress WHERE verified = 0").fetchall()]
+
+
+def _boxes_overlap(a: tuple[float, float, float, float], b: tuple[float, float, float, float]) -> bool:
+    if a[3] <= b[2] or b[3] <= a[2]:
+        return False
+    return any(x0 < y1 and y0 < x1 for x0, x1 in ra_intervals_deg(a[0], a[1]) for y0, y1 in ra_intervals_deg(b[0], b[1]))
 
 
 # ------------------------------------------------------------------ schema / insert (shared with the builder)
@@ -290,7 +451,8 @@ def _insert_coverage(conn: sqlite3.Connection, rec: dict[str, Any]) -> None:
 
 
 def load_coverage(db_path: str | Path) -> list[dict[str, Any]]:
-    """Coverage rows of the DB; registers an older DB on first use (in memory when read-only).
+    """Coverage rows of the DB (read-only, G04-45). A DB built before the coverage record has its
+    registration computed in memory (:func:`register_existing_db` stores it).
 
     An empty ``gaia_coverage`` table is a build by ``build_gaia_catalog.py`` that has not finished
     (it records its box only after the last strip): no coverage is claimed for it.
@@ -298,29 +460,54 @@ def load_coverage(db_path: str | Path) -> list[dict[str, Any]]:
     p = _db_path(db_path)
     if not p.is_file():
         raise FileNotFoundError(f"Gaia DB not found: {p}")
-    conn = connect_rw(p)
+    conn = connect_ro(p)
     try:
-        has = conn.execute(
-            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='gaia_coverage'"
-        ).fetchone()
-        if has:
+        if _has_coverage_table(conn):
             return _coverage_rows(conn)
         rec = _register_existing(conn)
-        if rec is None:
-            return []
-        try:
-            _create_coverage_table(conn)
-            _insert_coverage(conn, rec)
-            conn.commit()
-            _log(
-                f"GAIA COVERAGE: {p.name} registered as RA 0-360, Dec {rec['dec_min']:.2f}..{rec['dec_max']:.2f}, "
-                f"G <= {rec['g_max']:.2f} ({rec['n_stars']} stars)"
-            )
-        except sqlite3.Error as exc:
-            _log(f"GAIA COVERAGE: {p.name} is not writable ({exc}); coverage used from its contents only")
-        return [rec]
+        return [] if rec is None else [rec]
     finally:
         conn.close()
+
+
+def _has_coverage_table(conn: sqlite3.Connection) -> bool:
+    return conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='gaia_coverage'"
+    ).fetchone() is not None
+
+
+def coverage_is_stored(db_path: str | Path) -> bool:
+    """True when the DB holds a ``gaia_coverage`` table (registered or built with it)."""
+    conn = connect_ro(_db_path(db_path))
+    try:
+        return _has_coverage_table(conn)
+    finally:
+        conn.close()
+
+
+def register_existing_db(db_path: str | Path) -> dict[str, Any] | None:
+    """G04-45: store the coverage registration of a DB built before the coverage record (explicit
+    write; ``gaia_maintain.py --register`` and the online top-up). Returns the stored row, None
+    when the DB already has a coverage table or holds no stars. Raises sqlite3.Error when the DB
+    is not writable."""
+    p = _db_path(db_path)
+    conn = connect_rw(p)
+    try:
+        if _has_coverage_table(conn):
+            return None
+        rec = _register_existing(conn)
+        if rec is None:
+            return None
+        _create_coverage_table(conn)
+        _insert_coverage(conn, rec)
+        conn.commit()
+    finally:
+        conn.close()
+    _log(
+        f"GAIA COVERAGE: {p.name} registered as RA 0-360, Dec {rec['dec_min']:.2f}..{rec['dec_max']:.2f}, "
+        f"G <= {rec['g_max']:.2f} ({rec['n_stars']} stars)"
+    )
+    return rec
 
 
 def record_coverage(
@@ -346,9 +533,20 @@ def record_coverage(
 
 def covered_depth_g(db_path: str | Path, box: tuple[float, float, float, float]) -> float | None:
     """Faintest G to which the DB is complete over the whole ``box``; None when no record covers it
-    (a field outside the Dec range of the DB: TODO-GAIA-COVERAGE-DEC)."""
+    (a field outside the Dec range of the DB: TODO-GAIA-COVERAGE-DEC).
+
+    G05-03: a box touching a strip the COUNT check found truncated (strip_progress verified 0) is
+    not covered by the whole-DB records (build / registration); only a top-up record (complete by
+    its own COUNT check) can cover it."""
+    conn = connect_ro(_db_path(db_path))
+    try:
+        holes = [h for h in _truncated_strip_boxes(conn) if _boxes_overlap(box, h)]
+    finally:
+        conn.close()
     best: float | None = None
     for rec in load_coverage(db_path):
+        if holes and rec["source"] != "gaia_tap_topup":
+            continue
         outer = (rec["ra_min"], rec["ra_max"], rec["dec_min"], rec["dec_max"])
         if _box_inside(box, outer):
             g = float(rec["g_max"])
@@ -366,18 +564,18 @@ def coverage_summary(db_path: str | Path) -> list[dict[str, Any]]:
 
 
 # ------------------------------------------------------------------ online top-up
+def _topup_region(box: tuple[float, float, float, float]) -> list[SkyBox]:
+    return [SkyBox(a, b, box[2], box[3]) for a, b in ra_intervals_deg(box[0], box[1])]
+
+
+def _topup_mag_where(g_from: float, g_to: float) -> str:
+    return f"phot_g_mean_mag > {float(g_from):.4f}\n          AND phot_g_mean_mag <= {float(g_to):.4f}"
+
+
 def build_topup_adql(box: tuple[float, float, float, float], *, g_from: float, g_to: float) -> str:
     """ADQL for the stars of ``box`` with g_from < G <= g_to (``gaiadr3.gaia_source``)."""
-    ra_terms = " OR ".join(
-        f"(ra >= {a:.8f} AND ra <= {b:.8f})" for a, b in ra_intervals_deg(box[0], box[1])
-    )
-    return (
-        f"SELECT {GAIA_SOURCE_SELECT}\n        FROM gaiadr3.gaia_source\n"
-        f"        WHERE ({ra_terms})\n"
-        f"          AND dec >= {box[2]:.8f} AND dec <= {box[3]:.8f}\n"
-        f"          AND phot_g_mean_mag > {float(g_from):.4f}\n"
-        f"          AND phot_g_mean_mag <= {float(g_to):.4f}"
-    )
+    return region_adql(_topup_region(box), select=GAIA_SOURCE_SELECT, table="gaiadr3.gaia_source",
+                       mag_where=_topup_mag_where(g_from, g_to))
 
 
 def _fetch_tap(adql: str) -> pd.DataFrame:
@@ -404,6 +602,9 @@ def top_up_field(
 
     Fail-open: without the archive the result says why (``status='offline'``) and nothing changes.
     Coverage is recorded only after every row is stored, so a broken download never claims depth.
+    NEW-2: the download is complete only when its rows equal the TAP COUNT(*) of the same query
+    (split in four and retried otherwise, as the builder does); when it cannot be made complete the
+    verified rows are kept but no coverage is recorded (``status='incomplete'``, WARNING).
     """
     out: dict[str, Any] = {
         "status": "skipped", "g_from": round(float(g_from), 3), "g_to": round(float(g_to), 3),
@@ -421,16 +622,21 @@ def top_up_field(
         # then claim the new depth for the whole sky); a DB that cannot take it is not extended.
         out.update({"status": "db_not_writable", "error": "coverage record of the DB cannot be written"})
         return out
-    adql = build_topup_adql(box, g_from=g_from, g_to=g_to)
     t0 = time.monotonic()
+    parts: list[pd.DataFrame] = []
+    complete_error: str | None = None
     try:
-        df = (fetch or _fetch_tap)(adql)
+        fetch_region_complete(fetch or _fetch_tap, _topup_region(box), select=GAIA_SOURCE_SELECT,
+                              table="gaiadr3.gaia_source", mag_where=_topup_mag_where(g_from, g_to),
+                              on_rows=parts.append)
+    except IncompleteDownload as exc:
+        complete_error = str(exc)
     except Exception as exc:  # noqa: BLE001 - offline / archive down: continue with the local DB
         if fetch is None:
             mark_unavailable("gaia_tap_topup", exc)
         out.update({"status": "offline", "error": f"{type(exc).__name__}: {str(exc)[:200]}"})
         return out
-    df = normalize_tap_dataframe(df)
+    df = normalize_tap_dataframe(pd.concat(parts, ignore_index=True)) if parts else normalize_tap_dataframe(None)
     try:
         conn = connect_rw(_db_path(db_path))
         try:
@@ -440,30 +646,46 @@ def top_up_field(
             conn.commit()
         finally:
             conn.close()
-        record_coverage(db_path, box=box, g_max=float(g_to), source="gaia_tap_topup", n_stars=int(len(df)))
+        if complete_error is None:
+            record_coverage(db_path, box=box, g_max=float(g_to), source="gaia_tap_topup", n_stars=int(len(df)))
     except sqlite3.Error as exc:  # read-only / locked main DB: the run continues with what it has
         out.update({"status": "db_not_writable", "n_fetched": int(len(df)),
                     "error": f"{type(exc).__name__}: {str(exc)[:200]}"})
         return out
     out.update({
-        "status": "ok", "n_fetched": int(len(df)), "n_new": int(n_new),
-        "seconds": round(time.monotonic() - t0, 1),
+        "status": "ok" if complete_error is None else "incomplete", "n_fetched": int(len(df)),
+        "n_new": int(n_new), "seconds": round(time.monotonic() - t0, 1),
     })
+    if complete_error is not None:
+        out["error"] = f"download not complete (COUNT check): {complete_error[:300]}"
+        LOGGER.warning("Gaia top-up incomplete, no coverage recorded: %s", complete_error)
+        _log(f"WARNING: GAIA TOP-UP incomplete ({complete_error[:300]}); {len(df)} verified rows kept, "
+             "no coverage recorded")
     return out
 
 
 def _coverage_table_stored(db_path: str | Path) -> bool:
-    load_coverage(db_path)  # registers an older DB
+    """The DB has its coverage table, registering an older DB first (G04-45: one explicit write)."""
     try:
-        conn = connect_rw(_db_path(db_path))
-        try:
-            return conn.execute(
-                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='gaia_coverage'"
-            ).fetchone() is not None
-        finally:
-            conn.close()
+        register_existing_db(db_path)
+        return coverage_is_stored(db_path)
     except sqlite3.Error:
         return False
+
+
+def _warn_unverified_strips(db_path: str | Path, box: tuple[float, float, float, float]) -> None:
+    """G05-03: say so when the field lies in a strip of an older build that is known truncated or
+    whose stored count equals the anonymous TAP row cap (repair: build_gaia_catalog.py --repair)."""
+    conn = connect_ro(_db_path(db_path))
+    try:
+        bad = [s for s in strips_needing_repair(conn)
+               if (s["state"] == "truncated" or s["at_anonymous_cap"]) and _boxes_overlap(box, s["box"])]
+    finally:
+        conn.close()
+    for s in bad:
+        _log(f"WARNING: GAIA DB strip {s['strip_key']} ({s['n_stars']} rows, {s['state']}"
+             f"{', at the anonymous TAP row cap' if s['at_anonymous_cap'] else ''}) overlaps this field: the "
+             "local Gaia DB may miss stars here; run catalogs/build_gaia_catalog.py --repair")
 
 
 def ensure_field_depth(
@@ -479,6 +701,7 @@ def ensure_field_depth(
     Returns ``{"status": "covered"|"ok"|"offline"|"no_coverage"|..., "depth_before", "depth_after", ...}``.
     """
     field = field_box(center, radius_deg)
+    _warn_unverified_strips(db_path, field_box(center, radius_deg, margin_deg=TOPUP_MARGIN_DEG))
     before = covered_depth_g(db_path, field)
     res: dict[str, Any] = {"depth_before": before, "g_needed": round(float(g_needed), 3)}
     if before is None:

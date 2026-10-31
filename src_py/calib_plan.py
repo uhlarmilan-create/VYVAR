@@ -256,6 +256,15 @@ def build_masters_from_source(
 # ---------------------------------------------------------------------------
 # masters lying next to the LIGHTs
 # ---------------------------------------------------------------------------
+def is_dark_typed(fp: Path) -> bool:
+    """IMAGETYP of the file says DARK or DARKFLAT (dark-flat frames may be typed FLAT DARK)."""
+    try:
+        with fits.open(fp, memmap=True) as h:
+            return cl.header_kind(h[0].header) in (cl.KIND_DARK, cl.KIND_DARKFLAT)
+    except (OSError, ValueError):
+        return False
+
+
 def masters_next_to_lights(
     paths: Sequence[str | Path],
     *,
@@ -316,6 +325,7 @@ def build_calibration_plan(
     warnings: Sequence[str] = (),
     source_masters: Sequence[cl.LibraryMaster] = (),
     masters_from: str = FROM_LIGHTS,
+    persist_offsets: bool = False,
 ) -> CalibrationPlan:
     """Choose masters for every LIGHT group. ``observation_groups`` as built by
     ``importer.smart_scan_source`` (keys: filter, exposure_s, binning, gain, temp, light_paths).
@@ -324,12 +334,13 @@ def build_calibration_plan(
     source is tried first (``lights`` or ``library``); the other is the fallback. The
     matching rules (camera, gain, offset, exposure, binning, temperature, filter,
     telescope, validity window) are the same for both.
+
+    G01-22: a scan writes nothing to CALIBRATION_LIBRARY; the measured flat offset is stored in
+    the library only with ``persist_offsets`` (RUN), where the calibration reads it.
     """
     mf = masters_from if masters_from in MASTERS_FROM else FROM_LIGHTS
     plan = CalibrationPlan(camera_id, telescope_id, {}, list(built), list(warnings), bool(precalibrated),
                            masters_from=mf, source_masters=[Path(m.path).name for m in source_masters])
-    if db is not None:
-        cl.ensure_schema(db)
     src = list(source_masters)
     order = [mf] + [x for x in MASTERS_FROM if x != mf]
     if not src:
@@ -391,7 +402,7 @@ def build_calibration_plan(
                 gp.flat_reason = fs.reason
                 gp.flat_substitute = fs.master.capture_utc.date().isoformat() if fs.master.capture_utc else "unknown"
         if gp.flat is not None:
-            _resolve_flat_offset(db, gp)
+            _resolve_flat_offset(db, gp, persist=persist_offsets)
         if gp.dark is None and gp.flat is None:
             gp.status = STATUS_NO_MASTERS
         elif gp.dark is None:
@@ -458,15 +469,16 @@ def import_planned_source_masters(
             lm = _imp(gp.flat)
             if lm is not None:
                 gp.flat = lm
-                _resolve_flat_offset(db, gp)
+                _resolve_flat_offset(db, gp, persist=True)
                 gp.messages = list(dict.fromkeys(gp.messages))
     for x in msgs:
         log_event(f"CALIB MASTERS FROM LIGHT FOLDER: {x}")
     return msgs
 
 
-def _resolve_flat_offset(db: Any, gp: GroupPlan, ) -> None:
-    """Record how the chosen flat's offset is handled; measure P for legacy/unknown flats."""
+def _resolve_flat_offset(db: Any, gp: GroupPlan, *, persist: bool) -> None:
+    """Record how the chosen flat's offset is handled; measure P for legacy/unknown flats.
+    ``persist`` (RUN only, G01-22) stores the measured P in the library row."""
     m = gp.flat
     assert m is not None
     try:
@@ -483,9 +495,10 @@ def _resolve_flat_offset(db: Any, gp: GroupPlan, ) -> None:
     est = cl.measure_offset_adu(db, camera_id=int(m.camera_id or 0), gain=m.gain, offset=m.offset,
                                 binning=m.binning, temp=m.temp, temp_tol=None)
     if est.adu is not None:
-        cl.update_flat_offset(db, m.path, handling=cl.OFFSET_UNKNOWN, offset_adu=est.adu)
+        if persist:
+            cl.update_flat_offset(db, m.path, handling=cl.OFFSET_UNKNOWN, offset_adu=est.adu)
         m.offset_adu = est.adu
-        gp.flat_offset_handling, gp.flat_offset_adu = "removed-at-use", est.adu
+        gp.flat_offset_handling, gp.flat_offset_adu = cl.OFFSET_REMOVED_AT_USE, est.adu
         gp.messages.append(f"flat built without offset removal: {est.adu:.1f} ADU removed at use ({est.method})")
         # G01-02: show early (scan) that the run will refuse this flat; the calibration stops on it
         import numpy as np  # noqa: PLC0415

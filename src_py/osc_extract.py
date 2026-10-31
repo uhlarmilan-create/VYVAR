@@ -324,3 +324,15 @@ def iter_mosaic_light_fits(group_dir: Path) -> list[Path]:
         except OSError:
             continue
     return out
+
+
+def parse_osc_channel_from_setup(setup_name: str) -> tuple[str, str | None]:
+    """Return ``(base_name, channel)``; channel is None when not an OSC channel folder."""
+    name = str(setup_name or "").strip()
+    if not name:
+        return "", None
+    for ch in OSC_CHANNELS:
+        suffix = f"_{ch}"
+        if name.endswith(suffix):
+            return name[: -len(suffix)], ch
+    return name, None

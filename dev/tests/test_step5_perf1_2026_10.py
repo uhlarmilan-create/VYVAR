@@ -440,7 +440,9 @@ def _site_db(tmp_path, *, with_location=True, centre=(201.1234, 41.4321)):
                                              "object_name": "BO CVn", "observation_start_jd": 2460970.4})
     db = VyvarDatabase.for_config(cfg)
     if centre is not None:
-        db.update_obs_draft_status_panel_values(did, center_ra_deg=centre[0], center_de_deg=centre[1])
+        # S6-FIX CENTRE-PER-SETUP: the centre of the headers' setup (NoFilter, 60 s, bin 1)
+        dp.patch_draft_manifest(dp.resolve_draft_dir_for_id(db, did), did, center_by_setup={
+            "NoFilter_60_1": {"ra_deg": centre[0], "de_deg": centre[1], "source": "MASTERSTAR_WCS"}})
     return db, did, cfg
 
 
@@ -1212,7 +1214,7 @@ def test_g01_38_schema_once_and_capture_date_backfill(tmp_path, monkeypatch):
         assert again == first
         cl.get_master_by_path(db2, paths[1])
     assert first == ref
-    assert len(n_ddl) == 1                                    # schema / migrations once per connection
+    assert len(n_ddl) == 0  # schema / migrations once per connection, when it opens (S6-FIX CLIB-READONLY)
     # only the master without a capture time in its header is still opened per listing
     assert {str(p) for p in opened} <= {str(paths[2])}
 

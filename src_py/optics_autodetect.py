@@ -1,9 +1,11 @@
 """Scan Source auto-detect (VYVAR Phase 3).
 
-Fingerprint the camera / telescope / observer site from a representative FITS
-header so the Scan Source UI can pre-fill its selectors, *overriding* the
-``IS_DEFAULT`` baseline. Detection is evidence-based and never blocks: the user
-can always override, and an unconfident match simply leaves the default in place.
+Fingerprint the camera / telescope from a representative FITS header so the Scan
+Source UI can pre-fill its selectors, *overriding* the ``IS_DEFAULT`` baseline.
+Detection is evidence-based and never blocks: the user can always override, and an
+unconfident match simply leaves the default in place. The observing site is never
+auto-selected: the user picks it from the site table (S6-FIX SITE-MANUAL-2026-10);
+the run still reads SITELAT / SITELONG of the headers (``param_resolver.resolve_site``).
 
 Why fingerprinting (not just name keywords):
     * draft 360 carries ``INSTRUME='QHY CCD QHY294PROM'`` but a useless
@@ -60,7 +62,6 @@ class Detection:
 class AutodetectReport:
     equipment: Detection = field(default_factory=Detection)
     telescope: Detection = field(default_factory=Detection)
-    location: Detection = field(default_factory=Detection)
     header_path: str | None = None
     #: Phase 4 - fields neither present in the FITS header nor auto-detected.
     #: Each item: {"field", "detail", "fallback"} so the UI can surface ONLY the gaps
@@ -118,6 +119,21 @@ def _dims_close(a: float, b: float, tol_frac: float = 0.01, tol_abs: float = 8.0
 # --------------------------------------------------------------------------- #
 # Detectors
 # --------------------------------------------------------------------------- #
+def _pick_best(scored: list[tuple[float, Detection]]) -> Detection:
+    """G03-03: the row with the highest *raw* score wins, independent of the row order; the confidence
+    (capped at 0.99) is for display only. Equal top scores of different rows -> no match (the user picks;
+    the reasons name the tied rows)."""
+    if not scored:
+        return Detection()
+    top = max(sc for sc, _ in scored)
+    if top <= 0.0:
+        return Detection()
+    best = [d for sc, d in scored if sc == top]
+    if len(best) > 1:
+        return Detection(reasons=["tie: " + " / ".join(sorted(d.label for d in best)) + " - pick one"])
+    return best[0]
+
+
 def detect_equipment(header: Any, equipments: list[dict[str, Any]]) -> Detection:
     instr_n = _norm(_hdr_str(header, "INSTRUME", "CAMERA", "INSTRUMENT", "DETNAM"))
     naxis1 = _hdr_float(header, "NAXIS1", "IMAGEW")
@@ -131,7 +147,7 @@ def detect_equipment(header: Any, equipments: list[dict[str, Any]]) -> Detection
     px_full = header_native_pixel_um_mean(header) if header is not None else None
     sensortype_n = _norm(_hdr_str(header, "SENSOR", "SENSORTYP"))
 
-    best: Detection = Detection()
+    scored: list[tuple[float, Detection]] = []
     for row in equipments:
         score = 0.0
         reasons: list[str] = []
@@ -172,14 +188,13 @@ def detect_equipment(header: Any, equipments: list[dict[str, Any]]) -> Detection
         ):
             score += 0.20
             reasons.append(f"SENSORTYPE {row.get('SENSORTYPE')}")
-        if score > best.confidence:
-            best = Detection(
-                matched_id=int(row["ID"]),
-                label=f"{int(row['ID'])}: {row.get('CAMERANAME')} ({row.get('ALIAS')})",
-                confidence=min(0.99, score),
-                reasons=reasons,
-            )
-    return best
+        scored.append((score, Detection(
+            matched_id=int(row["ID"]),
+            label=f"{int(row['ID'])}: {row.get('CAMERANAME')} ({row.get('ALIAS')})",
+            confidence=min(0.99, score),
+            reasons=reasons,
+        )))
+    return _pick_best(scored)
 
 
 def detect_telescope(header: Any, telescopes: list[dict[str, Any]]) -> Detection:
@@ -187,7 +202,7 @@ def detect_telescope(header: Any, telescopes: list[dict[str, Any]]) -> Detection
     apt_h = _hdr_float(header, "APTDIA", "APERTURE", "TELDIAM", "DIAMETER")
     tel_n = _norm(_hdr_str(header, "TELESCOP", "TELESCOPE"))
 
-    best: Detection = Detection()
+    scored: list[tuple[float, Detection]] = []
     for row in telescopes:
         score = 0.0
         reasons: list[str] = []
@@ -208,41 +223,13 @@ def detect_telescope(header: Any, telescopes: list[dict[str, Any]]) -> Detection
         if tel_n and core and len(core) >= 3 and core in tel_n:
             score += 0.20
             reasons.append(f"name TELESCOP~{row.get('TELESCOPENAME')}")
-        if score > best.confidence:
-            best = Detection(
-                matched_id=int(row["ID"]),
-                label=f"{int(row['ID'])}: {row.get('TELESCOPENAME')} ({row.get('ALIAS')})",
-                confidence=min(0.99, score),
-                reasons=reasons,
-            )
-    return best
-
-
-def detect_location(header: Any, locations: list[dict[str, Any]]) -> Detection:
-    lat_h = _hdr_float(header, "SITELAT", "OBSLAT", "OBSGEO-B", "LAT-OBS")
-    lon_h = _hdr_float(header, "SITELONG", "OBSLONG", "OBSGEO-L", "LONG-OBS")
-    if lat_h is None or lon_h is None:
-        return Detection()
-    best: Detection = Detection()
-    for row in locations:
-        try:
-            lat_db = float(row.get("lat"))
-            lon_db = float(row.get("lon"))
-        except (TypeError, ValueError):
-            continue
-        if abs(lat_h - lat_db) <= 0.02 and abs(lon_h - lon_db) <= 0.02:
-            conf = 0.9 if (abs(lat_h - lat_db) <= 0.005 and abs(lon_h - lon_db) <= 0.005) else 0.6
-            if conf > best.confidence:
-                best = Detection(
-                    matched_id=int(row["id"]),
-                    label=f"{int(row['id'])}: {row.get('name')}",
-                    confidence=conf,
-                    reasons=[
-                        f"SITELAT/LONG {lat_h:.4f},{lon_h:.4f} ~ {row.get('name')} "
-                        f"{lat_db:.4f},{lon_db:.4f}"
-                    ],
-                )
-    return best
+        scored.append((score, Detection(
+            matched_id=int(row["ID"]),
+            label=f"{int(row['ID'])}: {row.get('TELESCOPENAME')} ({row.get('ALIAS')})",
+            confidence=min(0.99, score),
+            reasons=reasons,
+        )))
+    return _pick_best(scored)
 
 
 # --------------------------------------------------------------------------- #
@@ -295,7 +282,6 @@ def assess_unresolved(
     header: Any,
     equipment: Detection,
     telescope: Detection,
-    location: Detection,
 ) -> list[dict[str, str]]:
     """Fields neither in the FITS header nor auto-detected (Phase 4 poor-FITS prompt).
 
@@ -319,12 +305,12 @@ def assess_unresolved(
                 "fallback": "default telescope (IS_DEFAULT)",
             }
         )
-    if not location.ok and not _has_any(header, "SITELAT", "OBSLAT", "OBSGEO-B"):
+    if not _has_any(header, "SITELAT", "OBSLAT", "OBSGEO-B"):
         gaps.append(
             {
                 "field": "Observer site",
                 "detail": "No SITELAT / SITELONG in header - BJD/airmass site cannot come from FITS.",
-                "fallback": "default location (IS_DEFAULT)",
+                "fallback": "the site selected above",
             }
         )
     if not _has_any(header, "OBJCTRA", "RA", "CRVAL1", "OBJRA"):
@@ -343,19 +329,16 @@ def autodetect_from_source(
     *,
     equipments: list[dict[str, Any]],
     telescopes: list[dict[str, Any]],
-    locations: list[dict[str, Any]],
 ) -> AutodetectReport:
-    """Read a sample light header and fingerprint optics + site against the DB."""
+    """Read a sample light header and fingerprint the camera and telescope against the DB."""
     hdr, path = find_sample_light_header(source_root)
     if hdr is None:
         return AutodetectReport(header_path=None)
     eq = detect_equipment(hdr, equipments)
     tel = detect_telescope(hdr, telescopes)
-    loc = detect_location(hdr, locations)
     return AutodetectReport(
         equipment=eq,
         telescope=tel,
-        location=loc,
         header_path=path,
-        unresolved=assess_unresolved(hdr, eq, tel, loc),
+        unresolved=assess_unresolved(hdr, eq, tel),
     )

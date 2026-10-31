@@ -26,7 +26,7 @@ def _draft(tmp_path: Path) -> Path:
     (lc / "lightcurve_2_psf.csv").write_text(head + "bjd,psf_fit_ok,psf_delta_mag,psf_delta_mag_err\n2461316.3,False,,\n")
     (ps / "epsf_frames").mkdir()
     (ps / "epsf_frames" / "epsf_frames_manifest.json").write_text(json.dumps({
-        "oversampling": 2, "frames": [{"fwhm_px": 4.0}, {"fwhm_px": 5.0}], "spatial": {"grid": [3, 3]}, "fit_set": {"selection": "E*"},
+        "oversampling": 2, "frames": [{"fwhm_px": 4.0}, {"fwhm_px": 5.0}], "spatial": {"grid": [3, 3]},
         "fit_sources": {"merged_neighbours": [{"catalog_id": "1", "neighbour_id": "55", "sep_px": 1.8, "dmag": 3.2}]}}))
     return ps
 
@@ -43,7 +43,7 @@ def test_export_writes_kept_epochs_sorted_with_header(tmp_path: Path) -> None:
     assert hdr["star"] == "V1 Cyg" and hdr["catalog_id"] == "1" and hdr["observer_code"] == "UMIA"
     assert hdr["filter"] == "g" and hdr["exptime_s"] == "120" and hdr["ensemble_comp_ids"] == "7,8,9"
     assert hdr["n_epochs"] == "3" and hdr["epochs_dropped"].startswith("1 (frame not fitted")
-    assert "3x3" in hdr["method"] and hdr["epsf_targets_selection"] == "E*"
+    assert "3x3" in hdr["method"] and "epsf_targets_selection" not in hdr  # S6-FIX: epsf_targets removed
     assert hdr["unresolved_neighbour"].startswith("Gaia DR3 55 at 1.8 px")
     data = pd.read_csv(p, comment="#")
     assert list(data.columns) == ["bjd_tdb", "delta_mag", "err"]

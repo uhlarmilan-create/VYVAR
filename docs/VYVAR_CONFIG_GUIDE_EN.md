@@ -1,7 +1,7 @@
 # VYVAR Configuration Guide (config.json) - EN
 
 _Companion document: `VYVAR_CONFIG_GUIDE_CZ.md` (Czech). Generated from the
-parameter registry (`dev/validation/params_registry.json`, 57 entries) and
+parameter registry (`dev/validation/params_registry.json`, 55 entries) and
 the parameter source audit (`dev/results/PARAM_SOURCE_AUDIT.md`), state as of
 2026-10-22 (CODE-REVIEW-2026-10 step 7: 58 keys became fixed constants). When parameters change, update
 this guide together with the registry._
@@ -38,8 +38,8 @@ parameters, and this guide labels every one of them:
   them (e.g. from the astrometric solution). These no longer carry
   config.json fallbacks after WAVE-B.
 - **Setting (config.json)** - the genuine user-tunable behavior of the
-  pipeline. This is the majority of the 57 registered parameters (config.json
-  persists 50 of them; the rest are database facts, FITS/runtime values, or
+  pipeline. This is the majority of the 55 registered parameters (config.json
+  persists 49 of them; the rest are database facts, FITS/runtime values, or
   internal plumbing).
   WAVE-B also hardcoded 20 blind/plate-solve solver internals that were never
   tuned in practice, and merged 14 tier/aperture scalars into 3 structured
@@ -203,8 +203,7 @@ Measuring star brightness: aperture sizing, sky annulus, error model, aperture c
 | `annulus_inner_fwhm` | 2.7; range 1 .. 10 | Setting | config.json | PSF photometry (`psf_photometry.py:1940`) | Inner radius of the sky annulus in FWHM units (APERTURE-01d; AIJ Sky_Inner 14 px on draft 516). |
 | `annulus_outer_fwhm` | 5.2; range 1.5 .. 12 | Setting | config.json | PSF photometry (`psf_photometry.py:1941`) | Outer radius of the sky annulus in FWHM units (APERTURE-01d; AIJ Sky_Outer 27 px on draft 516). |
 | `aperture_fwhm_factor` | 1.35; range 0.5 .. 6 | Setting | config.json | per-frame catalogues (`photometry_shared.enhance_catalog_dataframe_aperture`) | Aperture radius of the per-frame catalogues: r = f x frame QC FWHM (APERTURE-01). The light curves use k* per target from the fixed grid 1.0-2.0 x FWHM (APERTURE-K-2026-10). |
-| `epsf_auto_run` | False | Setting (config.json) | config.json | night-run orchestration (`night_run.py`) | When true, RUN VYVAR / night_run automatically runs the ePSF stage (**beta**) after aperture photometry. Default OFF. Aperture is validated end-to-end (AstroImageJ 4.86 mmag RMS, 134 epochs, BO CVn). ePSF is internally consistent with aperture on the reference night (era06); independent external and multi-rig validation pending. UI ePSF buttons still force the stage. |
-| `epsf_targets` | ALL | Setting (config.json) | config.json | ePSF stage (`epsf_stage.py`, `epsf_science_set.py`) | Targets RUN ePSF measures: `ALL` = every VSX target with aperture photometry (after `vsx_out_of_scope_types`; exoplanet hosts and variability-search candidates are not catalogue variables), or comma-separated VSX types / star names / catalog ids; the `*` wildcard applies to variability types only (`E*` = EA, EB, EW, ...), names and ids match exactly. Used by the night run when `epsf_auto_run` is on; the ePSF tab can override it per run (EPSF-TARGETS-2026-10). |
+| `epsf_auto_run` | False | Setting (config.json) | config.json | night-run orchestration (`night_run.py`) | When true, RUN VYVAR / night_run automatically runs the ePSF stage (**beta**) after aperture photometry. Default OFF. Aperture is validated end-to-end (AstroImageJ 4.86 mmag RMS, 134 epochs, BO CVn). ePSF is internally consistent with aperture on the reference night (era06); independent external and multi-rig validation pending. RUN VYVAR from the GUI is the night run (same rule); otherwise the ePSF tab runs the stage only when its RUN ePSF button is pressed. ePSF fits every target with an aperture light curve (`vsx_out_of_scope_types` excludes a target from both photometries; `epsf_targets` was removed 2026-10-31, S6-FIX EPSF-SCOPE-2026-10). |
 | `epsf_export_auto` | true | Setting (config.json) | config.json | ePSF stage (`epsf_stage.py`, `epsf_export.py`) | Write the ePSF light-curve files for the user (`photometry/lightcurves_reports/epsf/<star>_<date>_<setup>_epsf.txt`: bjd_tdb, delta_mag, err with a descriptive header) automatically when RUN ePSF finishes. false: the ePSF tab's "Generate ePSF light-curve files" button writes them. Not an AAVSO / VarAstro submission (EPSF-EXPORT-2026-10). |
 | `gs11_dilution_enabled` | False | Setting (config.json) | config.json | light-curve construction (`method_lc_output.py:144`) | Enables catalog-based dilution estimation (how much neighbour light leaks into apertures). |
 | `save_lightcurve_png` | False | Setting (config.json) | config.json | aperture photometry (`photometry_core.py:7386`) | Also saves per-target light-curve PNG previews during the run. |

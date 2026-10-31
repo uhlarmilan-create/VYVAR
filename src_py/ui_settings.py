@@ -286,17 +286,22 @@ def _render_observer_site(cfg: AppConfig) -> None:
                    "a run may choose another site on the import page. Telescopes and cameras are in Database Explorer too.")
 
 
-def _render_dao_helper(cfg: AppConfig, pipeline: Any, draft_dir_override: Path | None, draft: dict[str, Any]) -> None:
-    """Suggestion from the active MASTERSTAR for the detection / aperture values (fills the draft;
-    Save writes it). Computing these per draft automatically is a later, separate step."""
+def _render_dao_helper(draft_dir: Path | None, draft: dict[str, Any]) -> None:
+    """Suggestion from a MASTERSTAR of the loaded processed field for the detection / aperture values
+    (fills the draft; Save writes it). G04-34: the MASTERSTAR of the setup selected here
+    (``platesolve/<setup>/MASTERSTAR.fits``), never the source light frame of the manifest."""
     from masterstar_context import masterstar_header_fwhm_px, resolve_masterstar_fits_path  # noqa: PLC0415
+    from platesolve_ui_paths import platesolve_bundle_dirs, setup_label  # noqa: PLC0415
 
-    with st.expander("Suggest detection values from the active MASTERSTAR"):
-        ms = resolve_masterstar_fits_path(cfg=cfg, db=getattr(pipeline, "db", None),
-                                          draft_id=st.session_state.get("vyvar_last_draft_id"),
-                                          draft_dir_override=draft_dir_override)
-        if ms is None or not Path(ms).is_file():
+    with st.expander("Suggest detection values from a MASTERSTAR"):
+        setups = [p.name for p in platesolve_bundle_dirs(Path(draft_dir) / "platesolve")] if draft_dir else []
+        if not setups:
             st.caption("No MASTERSTAR for the loaded processed field (Pipeline -> Load processed field).")
+            return
+        setup = st.selectbox("Observation setup (MASTERSTAR)", setups, format_func=setup_label, key=f"{_P}dao_setup")
+        ms = resolve_masterstar_fits_path(Path(draft_dir), str(setup))
+        if ms is None:
+            st.caption(f"No MASTERSTAR.fits in setup {setup}.")
             return
         fwhm = masterstar_header_fwhm_px(Path(ms))
         n = sm.masterstar_detection_count(Path(ms))
@@ -382,9 +387,8 @@ def _render_header(cfg: AppConfig, groups: dict[str, list[str]], registry: dict[
 
 def render_settings_dashboard(
     cfg: AppConfig,
-    pipeline: Any,
     *,
-    draft_dir_override: Path | None = None,
+    draft_dir: Path | None = None,
 ) -> None:
     st.markdown(_CSS, unsafe_allow_html=True)
     try:
@@ -422,7 +426,7 @@ def render_settings_dashboard(
             _render_paths(cfg, groups[group], registry, draft, current, defaults, errors)
         else:
             if group == "detection":
-                _render_dao_helper(cfg, pipeline, draft_dir_override, draft)
+                _render_dao_helper(draft_dir, draft)
             _render_group(groups[group], registry, draft, current, defaults, errors)
 
     with head:

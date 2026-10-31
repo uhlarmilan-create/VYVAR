@@ -1,9 +1,10 @@
 """ePSF photometry tab (EPSF-TARGETS-2026-10, Milan 2026-10-19).
 
-RUN ePSF runs after the aperture photometry of a draft: automatically when ``epsf_auto_run`` is on
-(night run / full flow), otherwise from this tab. The user chooses the targets (``ALL`` or VSX types,
-names, catalog ids - ``epsf_science_set.build_epsf_fit_set``); the tab then shows the PSF light curve
-of each measured target, optionally over its aperture light curve.
+RUN ePSF runs after the aperture photometry of a draft: automatically in the night run when ``epsf_auto_run``
+is on (also a RUN VYVAR from the GUI, which is the night run), otherwise only from this tab's button. It fits
+every target with an aperture light curve (``epsf_science_set.build_epsf_fit_set``; no target selection, S6-FIX
+EPSF-SCOPE-2026-10); the tab then shows the PSF light curve of each measured target, optionally over its
+aperture light curve.
 """
 
 from __future__ import annotations
@@ -17,23 +18,12 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from epsf_science_set import parse_epsf_selection
-from ui_session import resolve_draft_dir_path
-
 if TYPE_CHECKING:
     from config import AppConfig
 
-_TARGETS_HELP = (
-    "ALL = every target that has aperture photometry - VSX variables, exoplanet hosts (type EXOPLANET), "
-    "manual targets (types excluded in config.json vsx_out_of_scope_types have none). Or a comma-separated "
-    "list of types (EA, EB, EW, EXOPLANET), star names "
-    "(V0393 Cyg) or catalog ids; * is a wildcard for variability types only (E* = EA, EB, EW, ...); names and ids match exactly. "
-    "The comparison stars of the chosen targets are measured with them."
-)
-
-
 def psf_lightcurve_targets(platesolve_dir: Path) -> pd.DataFrame:
-    """Targets with an internal PSF light curve: catalog_id, name, vsx_type, mag (from active_targets)."""
+    """Targets with an internal PSF light curve: catalog_id, name, vsx_type, mag (from active_targets; a PSF
+    light curve without an aperture candidate row keeps its id as name)."""
     lc_dir = Path(platesolve_dir) / "photometry" / "lightcurves"
     ids = sorted(p.name[len("lightcurve_") : -len("_psf.csv")] for p in lc_dir.glob("lightcurve_*_psf.csv"))
     out = pd.DataFrame({"catalog_id": ids})
@@ -41,7 +31,7 @@ def psf_lightcurve_targets(platesolve_dir: Path) -> pd.DataFrame:
         return out.assign(name=[], vsx_type=[], mag=[])
     from epsf_science_set import epsf_target_candidates
 
-    cand = epsf_target_candidates(platesolve_dir).set_index("catalog_id")
+    cand = epsf_target_candidates(platesolve_dir, None).set_index("catalog_id")
     out["name"] = [str(cand["name"].get(c, c)) if c in cand.index else c for c in ids]
     out["vsx_type"] = [str(cand["vsx_type"].get(c, "")) if c in cand.index else "" for c in ids]
     out["mag"] = [cand["mag"].get(c, np.nan) if c in cand.index else np.nan for c in ids]
@@ -102,23 +92,14 @@ class EpsfSetupRun:
     def runnable(self) -> bool:
         return bool(self.fit.target_ids) and not self.missing
 
-    def pending_entry(self) -> dict[str, str]:
-        return {
-            "setup_name": self.setup,
-            "masterstar_fits_path": str(self.masterstar_fits),
-            "masterstars_csv_path": str(self.masterstars_csv),
-            "per_frame_csv_dir": str(self.frames_dir),
-            "platesolve_dir": str(self.platesolve_dir),
-        }
-
 
 @st.cache_data(max_entries=16, show_spinner=False)
-def _fit_set_cached(platesolve_dir: str, selection: str, stamp: tuple) -> Any:
-    """G14-26: ``build_epsf_fit_set`` once per setup, selection and file state (``stamp``: the comparison
-    table, active targets and the aperture light curves it reads)."""
+def _fit_set_cached(platesolve_dir: str, out_of_scope_types: tuple, stamp: tuple) -> Any:
+    """G14-26: ``build_epsf_fit_set`` once per setup, ``vsx_out_of_scope_types`` and file state (``stamp``: the
+    comparison table, active targets and the aperture light curves it reads)."""
     from epsf_science_set import build_epsf_fit_set  # noqa: PLC0415
 
-    return build_epsf_fit_set(Path(platesolve_dir), selection)
+    return build_epsf_fit_set(Path(platesolve_dir), list(out_of_scope_types))
 
 
 def _fit_set_stamp(ps: Path) -> tuple:
@@ -137,9 +118,10 @@ def _compare_draft_cached(platesolve_dir: str, catalog_ids: tuple, stamp: tuple)
     return compare_draft(Path(platesolve_dir), list(catalog_ids))
 
 
-def epsf_run_plan(all_setups: dict[str, dict[str, Any]], selection: str) -> list[EpsfSetupRun]:
-    """EPSF-MULTISETUP-2026-10 (Milan 2026-10-19): RUN ePSF measures every setup of the draft with the same
-    target selection - each setup has its own targets with aperture photometry and its own comparison stars."""
+def epsf_run_plan(all_setups: dict[str, dict[str, Any]], out_of_scope_types: Any) -> list[EpsfSetupRun]:
+    """EPSF-MULTISETUP-2026-10 (Milan 2026-10-19): RUN ePSF measures every setup of the draft - each setup has
+    its own targets with aperture photometry and its own comparison stars. ``out_of_scope_types``: the
+    ``vsx_out_of_scope_types`` of the field's config (the job's)."""
     from epsf_science_set import EpsfFitSet
 
     plan = []
@@ -154,22 +136,16 @@ def epsf_run_plan(all_setups: dict[str, dict[str, Any]], selection: str) -> list
         if frames is None or not frames.is_dir():
             missing.append("aligned frames directory")
         if ps is None:
-            fit = EpsfFitSet(frozenset(), frozenset(), selection=selection, empty_reason="setup directory not found")
+            fit = EpsfFitSet(frozenset(), frozenset(), empty_reason="setup directory not found")
             missing.insert(0, "setup directory")
         else:
-            fit = _fit_set_cached(str(ps), str(selection), _fit_set_stamp(ps))
+            fit = _fit_set_cached(str(ps), tuple(out_of_scope_types or ()), _fit_set_stamp(ps))
         plan.append(EpsfSetupRun(setup, ps, ms_fits, ms_csv, frames, fit, tuple(missing)))
     return plan
 
 
-def _render_target_selection(cfg: "AppConfig", all_setups: dict[str, dict[str, Any]], draft_key: str) -> list[EpsfSetupRun]:
-    selection = st.text_input(
-        "Targets for ePSF photometry",
-        value=str(getattr(cfg, "epsf_targets", "ALL") or "ALL"),
-        key=f"epsf_targets_{draft_key}",
-        help=_TARGETS_HELP,
-    )
-    plan = epsf_run_plan(all_setups, selection)
+def _render_run_plan(field_cfg: "AppConfig", all_setups: dict[str, dict[str, Any]]) -> list[EpsfSetupRun]:
+    plan = epsf_run_plan(all_setups, field_cfg.vsx_out_of_scope_types)
     rows = []
     for r in plan:
         if r.missing:
@@ -181,19 +157,16 @@ def _render_target_selection(cfg: "AppConfig", all_setups: dict[str, dict[str, A
         rows.append({"setup": r.setup, "targets": len(r.fit.target_ids), "of candidates": r.fit.n_candidates,
                      "comparison stars": len(r.fit.comp_ids - r.fit.target_ids), "status": status})
     n_run = sum(r.runnable for r in plan)
-    st.caption(f"RUN ePSF measures every setup of the night with this selection: {n_run} of {len(plan)} setup(s).")
+    st.caption(f"RUN ePSF measures every target with an aperture light curve (types in vsx_out_of_scope_types "
+               f"excluded) in every setup of the night: {n_run} of {len(plan)} setup(s).")
     st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
-    unmatched = set.intersection(*(set(r.fit.unmatched_tokens) for r in plan)) if plan else set()
-    if unmatched:
-        st.warning("Not matched in any setup (check the spelling): "
-                   + ", ".join(t for t in parse_epsf_selection(selection) if t in unmatched))
     from epsf_science_set import epsf_target_candidates
 
     for r in plan:
         if not r.fit.target_ids:
             continue
-        with st.expander(f"Selected targets - {r.setup} ({len(r.fit.target_ids)})", expanded=False):
-            cand = epsf_target_candidates(r.platesolve_dir)
+        with st.expander(f"Targets - {r.setup} ({len(r.fit.target_ids)})", expanded=False):
+            cand = epsf_target_candidates(r.platesolve_dir, field_cfg.vsx_out_of_scope_types)
             sel = cand[cand["catalog_id"].isin(r.fit.target_ids)].sort_values("mag")
             st.dataframe(
                 sel.rename(columns={"name": "star", "vsx_type": "VSX type", "mag": "G"})[["star", "VSX type", "G"]],
@@ -320,7 +293,7 @@ def _render_frame_models(platesolve_dir: Path) -> None:
 
     fs = man.get("fit_set") or {}
     st.caption(
-        f"Last run: targets '{fs.get('selection', '?')}', {fs.get('n_targets', '?')} targets + "
+        f"Last run: {fs.get('n_targets', '?')} targets + "
         f"{fs.get('n_comps', '?')} comparison stars; {len(fr)} frames, "
         f"{int((~fr['converged'].astype(bool)).sum())} models not converged."
     )
@@ -342,13 +315,13 @@ def render_epsf_dashboard(
     *,
     draft_id: int | None = None,
 ) -> None:
-    """ePSF tab: target selection + RUN ePSF, then the PSF light curves."""
+    """ePSF tab: the run plan + RUN ePSF, then the PSF light curves (``draft_dir``: the loaded processed field,
+    ``app.main``; G14-12). The plan uses the field's config snapshot, as the RUN ePSF job does."""
     st.header("ePSF Photometry")
-    resolved = resolve_draft_dir_path(draft_dir, draft_id, cfg.archive_root, drafts_before_session=True)
-    if resolved is None:
+    if draft_dir is None:
         st.info("No processed field loaded. Load one above (Load processed field) or run VAR-STREM.")
         return
-    draft_path = Path(resolved)
+    draft_path = Path(draft_dir)
 
     from platesolve_ui_paths import find_photometry_setups
 
@@ -356,33 +329,34 @@ def render_epsf_dashboard(
     if not all_setups:
         st.warning("No platesolve setups with per-frame catalogs found for this processed field.")
         return
-    if bool(getattr(cfg, "epsf_auto_run", False)):
-        st.caption(f"ePSF is ON in config.json (epsf_auto_run): it runs after the aperture photometry for "
-                   f"targets '{getattr(cfg, 'epsf_targets', 'ALL')}'. Run it again here with another selection.")
+    from night_run import resolve_cfg_for_photometry  # noqa: PLC0415
+
+    field_cfg = resolve_cfg_for_photometry(cfg, draft_path, existing_draft=True)[0]
+    if bool(cfg.epsf_auto_run):
+        st.caption("ePSF is ON in config.json (epsf_auto_run): the night run measures it after the aperture "
+                   "photometry. Run it again here with the button.")
     else:
         st.caption("ePSF is OFF in config.json (epsf_auto_run): run it here after the aperture photometry.")
 
-    plan = _render_target_selection(cfg, all_setups, draft_path.name)
+    plan = _render_run_plan(field_cfg, all_setups)
     runnable = [r for r in plan if r.runnable]
-    run = st.button("RUN ePSF photometry", type="primary", key=f"epsf_run_btn_{draft_path.name}",
-                    disabled=not runnable,
-                    help="For every setup of the night: builds the ePSF of every frame and fits the selected "
-                    "targets with their comparison stars; writes their ePSF light curves. It replaces the previous "
-                    "ePSF run: light curves of targets outside the new selection are removed.")
-    if run:
-        st.session_state["vyvar_pending_job"] = {
-            "kind": "run_epsf",
-            "label": "RUN ePSF Photometry...",
-            "archive_path": str(draft_path),
-            "draft_id": int(draft_id) if draft_id is not None else None,
-            "epsf_targets": runnable[0].fit.selection,
-            "setups": [r.pending_entry() for r in runnable],
-        }
-        st.rerun()
+    from ui_session import any_job_running, start_task_job  # noqa: PLC0415
 
-    last = st.session_state.get("vyvar_last_job_output")
-    if isinstance(last, dict) and last.get("job_kind") == "run_epsf" and last.get("archive_path") == str(draft_path):
-        st.success(str(last.get("message")))
+    busy = any_job_running(cfg.data_root)
+    run = st.button("RUN ePSF photometry", type="primary", key=f"epsf_run_btn_{draft_path.name}",
+                    disabled=not runnable or busy,
+                    help="For every setup of the night: builds the ePSF of every frame and fits every target with "
+                    "an aperture light curve with its comparison stars; writes their ePSF light curves. It replaces "
+                    "the previous ePSF run: light curves of targets without an aperture light curve are removed. "
+                    "Runs as a separate "
+                    "process with the config snapshot of the processed field (as a night re-run).")
+    if run:
+        # G14-04 / G09-43: a job process (task_jobs.task_run_epsf), not the Streamlit thread
+        start_task_job(cfg.data_root, "run_epsf", {
+            "draft_dir": str(draft_path),
+            "draft_id": int(draft_id) if draft_id is not None else None,
+            "setups": [r.setup for r in runnable],
+        }, label="RUN ePSF photometry")
 
     st.divider()
     st.subheader("Light curves")

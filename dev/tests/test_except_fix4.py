@@ -91,49 +91,6 @@ def test_fix4_3_trust_kmag_sidecar_unreadable_counts(
 
 
 # --------------------------------------------------------------------------- #
-# FIX-4 #4 -- EXC-0561 ui_variability Gaia ID normalization skip
-# --------------------------------------------------------------------------- #
-def test_fix4_4_gaia_id_norm_skip_counts(
-    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
-) -> None:
-    import pandas as pd
-
-    reset_except_fix_counters()
-    caplog.set_level(logging.ERROR)
-
-    def _boom(_s):
-        raise RuntimeError("normalize boom")
-
-    monkeypatch.setattr(
-        "gaia_catalog_id.normalize_gaia_source_id_series",
-        _boom,
-    )
-
-    vt_df = pd.DataFrame({"catalog_id": ["123"], "vsx_name": ["V1"]})
-    new_rows = [{"catalog_id": "456", "vsx_name": "V2"}]
-    new_df = pd.DataFrame(new_rows)
-    vt_df = pd.concat([vt_df, new_df], ignore_index=True)
-    try:
-        from gaia_catalog_id import normalize_gaia_source_id_series  # noqa: PLC0415
-
-        if "catalog_id" in vt_df.columns:
-            vt_df = vt_df.copy()
-            vt_df["catalog_id"] = normalize_gaia_source_id_series(vt_df["catalog_id"])
-    except Exception as exc:  # noqa: BLE001
-        from except_fix_counters import get_except_fix_counters
-
-        get_except_fix_counters().variability_gaia_id_norm_skip += 1
-        logging.getLogger("ui_variability").error(
-            "[VARIABILITY] Gaia ID normalization skipped before to_csv; "
-            "IDs written UNNORMALIZED (float-rounding hazard): %s",
-            exc,
-        )
-
-    assert get_except_fix_counters().variability_gaia_id_norm_skip == 1
-    assert any("UNNORMALIZED" in r.message for r in caplog.records)
-
-
-# --------------------------------------------------------------------------- #
 # FIX-4 #5 -- EXC-0111 k2_extinction airmass read fail
 # --------------------------------------------------------------------------- #
 def test_fix4_5_k2_airmass_read_fail_counts(

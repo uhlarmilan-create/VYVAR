@@ -264,7 +264,7 @@ def profile_from_connection(conn: sqlite3.Connection, equipment_id: int | None) 
     if "EQUIPMENT_CURVE" in tables:
         for r in conn.execute(
             "SELECT READOUT_MODE, GAIN_SETTING, BINNING, E_PER_ADU, READNOISE_E, SOURCE, NOTE "
-            "FROM EQUIPMENT_CURVE WHERE EQUIPMENT_ID = ?;",
+            "FROM EQUIPMENT_CURVE WHERE EQUIPMENT_ID = ? ORDER BY MEASURED_AT DESC, ID DESC;",  # NEW-1: newest first
             (eid,),
         ).fetchall():
             r_mode = (str(r[0]).strip() or None) if r[0] is not None else None

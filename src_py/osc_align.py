@@ -14,7 +14,7 @@ import pandas as pd
 from gaia_catalog_id import read_vyvar_csv
 from astropy.io import fits
 
-from osc_extract import OSC_CHANNELS, channel_obs_group_folder
+from osc_extract import OSC_CHANNELS, channel_obs_group_folder, parse_osc_channel_from_setup  # noqa: F401 - re-export
 
 LOGGER = logging.getLogger(__name__)
 
@@ -28,18 +28,6 @@ OSC_BAND_TOKENS: dict[str, str] = {
 OSC_REGISTRATION_HANDOFF = "osc_registration_handoff.json"
 OSC_WCS_PROPAGATION_META = "osc_wcs_propagation.json"
 from astrosolve import MASTERSTAR_PLATESOLVE_MIN_MATCH_RATE as PLATESOLVE_MATCH_RATE_WARN
-
-
-def parse_osc_channel_from_setup(setup_name: str) -> tuple[str, str | None]:
-    """Return ``(base_name, channel)``; channel is None when not an OSC channel folder."""
-    name = str(setup_name or "").strip()
-    if not name:
-        return "", None
-    for ch in OSC_CHANNELS:
-        suffix = f"_{ch}"
-        if name.endswith(suffix):
-            return name[: -len(suffix)], ch
-    return name, None
 
 
 def osc_band_token_for_channel(channel: str | None) -> str | None:

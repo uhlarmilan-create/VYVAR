@@ -136,10 +136,9 @@ Zivy dokument - pri pridani/zmazani modulu aktualizovat tabulku a kontrolu uplno
 | `ui_aperture_photometry.py` | UI | Aperture Photometry Lightcurves - aperture photometry UI. | photometry_report.py; night_run.py; app.py; scripts/_rerun_phase01_draft365.py; ... | no |
 | `ui_calibration.py` | UI | Streamlit UI helpers for calibration / smart-import (equipment header, master binning, multi-obs status). | app.py | no |
 | `ui_calibration_library.py` | UI | Streamlit dashboard for CalibrationLibrary validity overview, delete, and master generation. | app.py | no |
-| `ui_components.py` | UI | Reusable Streamlit UI components. | ui_quality_dashboard.py; app.py | no |
 | `ui_dao_stars.py` | UI | DAO-STARS: uprava hlavnych MASTERSTAR parametrov detekcie / SIP (config.json). | ui_settings.py | no |
 | `ui_database_explorer.py` | UI | Database Explorer tab: table browser + staging maintenance (OBS_FILES / OBS_DRAFT only). | app.py | no |
-| `ui_epsf_dashboard.py` | UI | ePSF tab: target selection (ALL / VSX types / names, live preview), RUN ePSF over every setup of the night (EPSF-MULTISETUP-2026-10), ePSF light curves with the aperture curve as an option (EPSF-TARGETS-2026-10). | app.py | no |
+| `ui_epsf_dashboard.py` | UI | ePSF tab: run plan (every target with an aperture light curve, per setup), RUN ePSF over every setup of the night (EPSF-MULTISETUP-2026-10), ePSF light curves with the aperture curve as an option (EPSF-TARGETS-2026-10). | app.py | no |
 | `ui_finalization.py` | UI | UI: final approval step - persist OBSERVATION and archive key artifacts under ``finalized/``. | app.py | no |
 | `ui_hrd.py` | UI | Field HRD view (HRD-TAB-2026-10): three diagram variants, one notable-star table, interactive field image. | ui_aperture_photometry.py | no |
 | `hrd_field_render.py` | core | Field images of the HRD view: inverted, catalogue colour (vivid, Lupton 2004 hue-preserving) and physical blackbody; BP-RP palette and Teff. | ui_hrd.py | yes |

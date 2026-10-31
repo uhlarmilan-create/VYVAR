@@ -93,9 +93,10 @@ def _reset_hrd_service_state():
 @pytest.fixture
 def infolog_lines(tmp_path: Path):
     """INFOLOG-ONE-2026-10: open a run infolog in tmp_path; call the fixture to read its lines."""
-    from infolog import end_infolog_session, ensure_infolog_logging, start_infolog_session
+    from infolog import end_infolog_session, setup_run_logging, start_infolog_session
 
-    ensure_infolog_logging()
+    teardown = setup_run_logging()
     path = Path(start_infolog_session(tmp_path / "infolog_draft"))
     yield lambda: path.read_text(encoding="utf-8").splitlines()
     end_infolog_session()
+    teardown()

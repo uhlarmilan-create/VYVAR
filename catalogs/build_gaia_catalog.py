@@ -5,6 +5,10 @@ Downloads Gaia DR3 from the ESA archive (TAP, astroquery) in RA/Dec strips:
   * half-open RA/Dec intervals: no duplicates on strip borders;
   * INTEGER PRIMARY KEY (source_id) + INSERT OR IGNORE: safe resume;
   * ``strip_progress`` records finished strips; an interrupted build continues where it stopped;
+  * G05-03 (Milan 2026-10-31): a strip is done only when the rows received equal the TAP
+    ``COUNT(*)`` of the same query (same WHERE, same G limit); otherwise it is split into four
+    sub-boxes and fetched again, recursively. The anonymous archive caps a job at a row limit, so
+    a dense strip came back cut. Each strip is stored atomically (one transaction);
   * ``gaia_coverage`` records the box and G limit the build covers (VYVAR tops up fainter
     stars online per field);
   * the indexes VYVAR queries use (``catalog_db.GAIA_INDEXES``) and the ``catalog_meta`` row
@@ -16,6 +20,8 @@ Output: the ``gaia_db_path`` of config.json (Settings -> Paths and catalogs), de
 Examples (from the VYVAR folder):
   python catalogs/build_gaia_catalog.py --help
   python catalogs/build_gaia_catalog.py --mag-limit 17.5
+  python catalogs/build_gaia_catalog.py --check                  # strips not verified complete
+  python catalogs/build_gaia_catalog.py --repair --strip 258.3495_270.0926_-34.0319_-26.0365
   python catalogs/build_gaia_catalog.py --dec-min 89 --dec-max 90 --mag-limit 10 --skip-vacuum --out tmp/smoke_gaia.db
 
 Environment fallbacks (when the option is not given): GAIA_MAG_LIMIT, GAIA_DEC_MIN, GAIA_DEC_MAX,
@@ -57,19 +63,25 @@ import pandas as pd  # noqa: E402
 from astroquery.gaia import Gaia  # noqa: E402
 
 from gaia_coverage import (  # noqa: E402
-    GAIA_ROW_COLUMNS,
     GAIA_SOURCE_LITE_SELECT,
     GAIA_SOURCE_SELECT,
+    IncompleteDownload,
+    SkyBox,
+    ensure_strip_columns,
+    fetch_region_complete,
     init_gaia_tables,
     insert_gaia_rows,
-    normalize_tap_dataframe,
     record_coverage,
+    region_adql,
+    region_count_adql,
+    strips_needing_repair,
 )
 
 from catalog_db import (  # noqa: E402
     GAIA_BUILD_MAG_LIMIT_DEFAULT,
     GAIA_DB_DEFAULT,
     GAIA_INDEXES,
+    add_catalog_meta_rows,
     configured_catalog_path,
     write_catalog_meta,
 )
@@ -80,7 +92,6 @@ DEFAULT_OUT = configured_catalog_path("gaia_db_path", GAIA_DB_DEFAULT)
 MAX_RETRIES = 8
 RETRY_BASE_S = 20
 RETRY_MAX_WAIT_S = 240
-COMMIT_EVERY = 3
 
 def _env_float(name: str, default: float) -> float:
     raw = os.environ.get(name, "").strip()
@@ -127,6 +138,9 @@ class BuildConfig:
     use_full_source: bool
     skip_vacuum: bool
     no_strip_clamp: bool
+    check: bool = False
+    repair: bool = False
+    repair_keys: tuple[str, ...] = ()
 
 
 def parse_args(argv: list[str] | None = None) -> BuildConfig:
@@ -187,6 +201,24 @@ def parse_args(argv: list[str] | None = None) -> BuildConfig:
         default=_env_bool("SKIP_VACUUM"),
         help="Skip final VACUUM (env SKIP_VACUUM).",
     )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="List the strips of --out whose completeness is not verified (G05-03) and exit.",
+    )
+    parser.add_argument(
+        "--repair",
+        action="store_true",
+        help="Re-check (COUNT) and, when short, re-download the unverified strips of --out (G05-03); "
+        "resumable, one strip per transaction. With --strip only those strips.",
+    )
+    parser.add_argument(
+        "--strip",
+        action="append",
+        default=[],
+        metavar="KEY",
+        help="strip_key (ra0_ra1_dec0_dec1, as --check prints it) for --repair; repeatable.",
+    )
     args = parser.parse_args(argv)
 
     if not math.isfinite(args.mag_limit) or args.mag_limit <= 0:
@@ -212,6 +244,9 @@ def parse_args(argv: list[str] | None = None) -> BuildConfig:
         use_full_source=bool(args.full_source),
         skip_vacuum=bool(args.skip_vacuum),
         no_strip_clamp=_env_bool("GAIA_NO_STRIP_CLAMP"),
+        check=bool(args.check),
+        repair=bool(args.repair),
+        repair_keys=tuple(str(k).strip() for k in args.strip if str(k).strip()),
     )
 
 
@@ -288,16 +323,19 @@ def strip_key(strip: tuple[float, float, float, float]) -> str:
     return f"{r0:.4f}_{r1:.4f}_{d0:.4f}_{d1:.4f}"
 
 
-def _ra_clause(r0: float, r1: float, last_ra: bool) -> str:
-    if last_ra:
-        return f"ra >= {r0} AND ra <= 360.0"
-    return f"ra >= {r0} AND ra < {r1}"
+def _source(use_full_source: bool) -> tuple[str, str]:
+    """(TAP table, SELECT list); ``gaia_source_lite`` by default (faster, fewer HTTP 500 from TAP)."""
+    return (("gaiadr3.gaia_source", GAIA_SOURCE_SELECT) if use_full_source
+            else ("gaiadr3.gaia_source_lite", GAIA_SOURCE_LITE_SELECT))
 
 
-def _dec_clause(d0: float, d1: float, last_dec: bool) -> str:
-    if last_dec:
-        return f"dec >= {d0} AND dec <= {d1}"
-    return f"dec >= {d0} AND dec < {d1}"
+def _strip_box(r0: float, r1: float, d0: float, d1: float, last_ra: bool, last_dec: bool) -> SkyBox:
+    """Half-open strip box; the last RA / Dec strip includes its upper edge."""
+    return SkyBox(r0, r1, d0, d1, ra_closed=last_ra, de_closed=last_dec)
+
+
+def _mag_where(mag_limit: float) -> str:
+    return f"phot_g_mean_mag IS NOT NULL\n          AND phot_g_mean_mag <= {float(mag_limit)}"
 
 
 def build_adql(
@@ -311,38 +349,29 @@ def build_adql(
     mag_limit: float,
     use_full_source: bool,
 ) -> str:
-    """``use_full_source=False`` -> ``gaia_source_lite`` (faster, fewer HTTP 500 from TAP)."""
-    ra_c = _ra_clause(r0, r1, last_ra)
-    de_c = _dec_clause(d0, d1, last_dec)
-    mag_f = float(mag_limit)
-    table, select = (
-        ("gaiadr3.gaia_source", GAIA_SOURCE_SELECT)
-        if use_full_source
-        else ("gaiadr3.gaia_source_lite", GAIA_SOURCE_LITE_SELECT)
-    )
-    return f"""
-        SELECT{select}
-        FROM {table}
-        WHERE ({ra_c})
-          AND ({de_c})
-          AND phot_g_mean_mag IS NOT NULL
-          AND phot_g_mean_mag <= {mag_f}
-        """
+    """Row query of one strip; :func:`build_count_adql` is its COUNT(*) (same WHERE)."""
+    table, select = _source(use_full_source)
+    return region_adql([_strip_box(r0, r1, d0, d1, last_ra, last_dec)], select=select, table=table,
+                       mag_where=_mag_where(mag_limit))
+
+
+def build_count_adql(
+    r0: float, r1: float, d0: float, d1: float, *, last_ra: bool, last_dec: bool, mag_limit: float,
+    use_full_source: bool,
+) -> str:
+    table, _select = _source(use_full_source)
+    return region_count_adql([_strip_box(r0, r1, d0, d1, last_ra, last_dec)], table=table,
+                             mag_where=_mag_where(mag_limit))
 
 
 def get_done_strips(conn: sqlite3.Connection) -> set[str]:
+    """Strips that need no download: verified complete, or of an older build (never checked; see
+    ``--check`` / ``--repair``). A strip the COUNT check found truncated (verified 0) is not done."""
     try:
-        cur = conn.execute("SELECT strip_key FROM strip_progress")
+        cur = conn.execute("SELECT strip_key FROM strip_progress WHERE verified IS NULL OR verified = 1")
         return {str(r[0]) for r in cur.fetchall()}
     except sqlite3.Error:
         return set()
-
-
-def _ensure_strip_mag_column(conn: sqlite3.Connection) -> None:
-    """strip_progress keeps the G limit of each strip (a resumed build may use another limit)."""
-    cols = {str(r[1]) for r in conn.execute("PRAGMA table_info(strip_progress)").fetchall()}
-    if "mag_limit" not in cols:
-        conn.execute("ALTER TABLE strip_progress ADD COLUMN mag_limit REAL")
 
 
 def mark_strip_done(
@@ -350,13 +379,21 @@ def mark_strip_done(
     strip: tuple[float, float, float, float],
     n_stars: int,
     mag_limit: float,
+    *,
+    n_expected: int | None,
+    verified: bool = True,
 ) -> None:
+    """Record a strip: ``verified`` True when its rows equal the TAP COUNT(*) ``n_expected``,
+    False when the COUNT check found it truncated (never counted as done; ``n_expected`` may be
+    unknown then)."""
+    if verified and (n_expected is None or int(n_stars) != int(n_expected)):
+        raise ValueError(f"strip {strip_key(strip)}: {n_stars} rows != COUNT(*) {n_expected}; not done")
     r0, r1, d0, d1 = strip
     conn.execute(
         """
         INSERT OR REPLACE INTO strip_progress
-            (strip_key, ra_min, ra_max, dec_min, dec_max, n_stars, finished_at, mag_limit)
-        VALUES (?,?,?,?,?,?,?,?)
+            (strip_key, ra_min, ra_max, dec_min, dec_max, n_stars, finished_at, mag_limit, n_expected, verified)
+        VALUES (?,?,?,?,?,?,?,?,?,?)
         """,
         (
             strip_key(strip),
@@ -367,19 +404,24 @@ def mark_strip_done(
             n_stars,
             datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             float(mag_limit),
+            None if n_expected is None else int(n_expected),
+            1 if verified else 0,
         ),
     )
 
 
 def built_depth_g(conn: sqlite3.Connection, keys: set[str]) -> float | None:
     """G to which every strip of the grid is complete: the smallest strip limit. A strip from a
-    build before the limit was stored counts with the faintest star it holds."""
+    build before the limit was stored counts with the faintest star it holds. G05-03: a strip the
+    COUNT check found truncated has no depth, so the grid has none (None)."""
     depth: float | None = None
-    for key, r0, r1, d0, d1, ml in conn.execute(
-        "SELECT strip_key, ra_min, ra_max, dec_min, dec_max, mag_limit FROM strip_progress"
+    for key, r0, r1, d0, d1, ml, ver in conn.execute(
+        "SELECT strip_key, ra_min, ra_max, dec_min, dec_max, mag_limit, verified FROM strip_progress"
     ).fetchall():
         if str(key) not in keys:
             continue
+        if ver is not None and int(ver) == 0:
+            return None
         if ml is None:
             row = conn.execute(
                 "SELECT MAX(g_mag) FROM gaia_dr3 WHERE ra >= ? AND ra <= ? AND dec >= ? AND dec <= ?",
@@ -392,42 +434,79 @@ def built_depth_g(conn: sqlite3.Connection, keys: set[str]) -> float | None:
     return depth
 
 
-def download_strip(
+def _tap_fetch(adql: str, *, max_retries: int = MAX_RETRIES) -> pd.DataFrame:
+    """One TAP job (rows or COUNT) with retries; raises after ``max_retries`` failures."""
+    for attempt in range(max_retries):
+        try:
+            results = Gaia.launch_job_async(adql).get_results()
+            return results.to_pandas() if len(results) else pd.DataFrame()
+        except Exception as e:  # noqa: BLE001
+            if attempt == max_retries - 1:
+                raise
+            wait = min(RETRY_MAX_WAIT_S, int(RETRY_BASE_S * (2**attempt)))
+            print(f"\n    WARN attempt {attempt + 1}/{max_retries}: {e}")
+            print(f"    waiting {wait} s ...", flush=True)
+            time.sleep(wait)
+    raise RuntimeError("unreachable")
+
+
+def download_strip_complete(
+    conn: sqlite3.Connection,
     strip: tuple[float, float, float, float],
     last_ra: bool,
     last_dec: bool,
     *,
     mag_limit: float,
     use_full_source: bool,
-    max_retries: int = MAX_RETRIES,
-) -> pd.DataFrame | None:
-    r0, r1, d0, d1 = strip
-    query = build_adql(
-        r0,
-        r1,
-        d0,
-        d1,
-        last_ra=last_ra,
-        last_dec=last_dec,
-        mag_limit=mag_limit,
-        use_full_source=use_full_source,
-    )
+    fetch=_tap_fetch,
+) -> tuple[int, int, int]:
+    """G05-03: download one strip completely (COUNT check, split in four when short) and insert
+    its rows into ``conn`` (no commit). Returns (COUNT(*), rows received, new rows)."""
+    table, select = _source(use_full_source)
+    n_new = 0
 
-    for attempt in range(max_retries):
-        try:
-            job = Gaia.launch_job_async(query)
-            results = job.get_results()
-            if len(results) == 0:
-                return pd.DataFrame(columns=list(GAIA_ROW_COLUMNS))
-            df = results.to_pandas()
-            return normalize_tap_dataframe(df)
-        except Exception as e:  # noqa: BLE001
-            wait = min(RETRY_MAX_WAIT_S, int(RETRY_BASE_S * (2**attempt)))
-            print(f"\n    WARN attempt {attempt + 1}/{max_retries}: {e}")
-            if attempt < max_retries - 1:
-                print(f"    waiting {wait} s ...", flush=True)
-                time.sleep(wait)
-    return None
+    def _insert(df: pd.DataFrame) -> None:
+        nonlocal n_new
+        n_new += insert_gaia_rows(conn, df)
+
+    n_exp, n_rows = fetch_region_complete(
+        fetch, [_strip_box(*strip, last_ra, last_dec)], select=select, table=table,
+        mag_where=_mag_where(mag_limit), on_rows=_insert,
+    )
+    return n_exp, n_rows, n_new
+
+
+def _store_strip(
+    conn: sqlite3.Connection,
+    strip: tuple[float, float, float, float],
+    last_ra: bool,
+    last_dec: bool,
+    *,
+    mag_limit: float,
+    use_full_source: bool,
+    fetch,
+    n_stars_if_truncated: int = 0,
+) -> tuple[str, int, int]:
+    """Download + record one strip in ONE transaction: ("ok", rows, new), ("truncated", 0, 0)
+    (its new rows rolled back, recorded verified 0 with ``n_stars_if_truncated``) or
+    ("error", 0, 0) (nothing recorded, the strip stays as it was)."""
+    try:
+        n_exp, n_rows, n_new = download_strip_complete(
+            conn, strip, last_ra, last_dec, mag_limit=mag_limit, use_full_source=use_full_source, fetch=fetch)
+        mark_strip_done(conn, strip, n_rows, mag_limit, n_expected=n_exp)
+        add_catalog_meta_rows(conn, "gaia_dr3", n_new)
+        conn.commit()
+        return "ok", n_rows, n_new
+    except IncompleteDownload as exc:
+        conn.rollback()
+        print(f" TRUNCATED: {exc}")
+        mark_strip_done(conn, strip, int(n_stars_if_truncated), mag_limit, n_expected=None, verified=False)
+        conn.commit()
+        return "truncated", 0, 0
+    except Exception as exc:  # noqa: BLE001 - archive down / insert failure: strip stays to do
+        conn.rollback()
+        print(f" ERR: {type(exc).__name__}: {exc}")
+        return "error", 0, 0
 
 
 def create_indexes(conn: sqlite3.Connection) -> None:
@@ -447,7 +526,7 @@ def _rough_eta_hint(n_strips: int, use_full_source: bool) -> str:
     return f"~{total_s / 3600:.1f}h (TAP, approx)"
 
 
-def create_local_gaia(cfg: BuildConfig) -> None:
+def create_local_gaia(cfg: BuildConfig, *, fetch=_tap_fetch) -> None:
     _configure_gaia(cfg)
 
     db_path = cfg.db_path
@@ -488,7 +567,8 @@ def create_local_gaia(cfg: BuildConfig) -> None:
     conn.execute("PRAGMA synchronous=NORMAL")
     conn.execute("PRAGMA temp_store=MEMORY")
     init_gaia_tables(conn)
-    _ensure_strip_mag_column(conn)
+    ensure_strip_columns(conn)
+    conn.commit()
 
     done = get_done_strips(conn)
     todo = [(s, lr, ld) for (s, lr, ld) in items if strip_key(s) not in done]
@@ -521,34 +601,17 @@ def create_local_gaia(cfg: BuildConfig) -> None:
                 flush=True,
             )
 
-            df = download_strip(
-                strip,
-                last_ra,
-                last_dec,
-                mag_limit=cfg.mag_limit,
-                use_full_source=cfg.use_full_source,
+            state, n_rows, n_new = _store_strip(
+                conn, strip, last_ra, last_dec, mag_limit=cfg.mag_limit,
+                use_full_source=cfg.use_full_source, fetch=fetch,
             )
-            if df is None:
-                print(" ERR")
+            if state != "ok":
                 failed.append(strip)
                 continue
-
-            try:
-                n_new = insert_gaia_rows(conn, df)
-            except Exception as exc:  # noqa: BLE001
-                print(f" INSERT FAIL: {exc}")
-                failed.append(strip)
-                continue
-
             total_inserted += n_new
-            mark_strip_done(conn, strip, len(df), cfg.mag_limit)
             recent_dt.append(time.time() - t_strip)
-            print(f" ok tap_rows={len(df):,} new={n_new:,}")
+            print(f" ok tap_rows={n_rows:,} (= COUNT) new={n_new:,}")
 
-            if idx % COMMIT_EVERY == 0:
-                conn.commit()
-
-        conn.commit()
         print()
         print(f"  New stars inserted: {total_inserted:,}")
         if failed:
@@ -581,7 +644,7 @@ def create_local_gaia(cfg: BuildConfig) -> None:
     rec = write_catalog_meta(
         conn, "gaia_dr3", source=f"ESA Gaia DR3 {table_name} (TAP)", builder=BUILDER, built_utc=built,
         params={"g_max": g_cov, "ra": [0.0, 360.0], "dec": [float(cfg.dec_min), float(cfg.dec_max)],
-                "strips_left": len(left)},
+                "strips_left": len(left), **_completeness_params(conn)},
     )
     print(f"  catalog_meta: {rec['row_count']:,} stars, G <= {g_cov}, built {built}")
 
@@ -602,8 +665,96 @@ def create_local_gaia(cfg: BuildConfig) -> None:
     print("=" * 62)
 
 
+def _completeness_params(conn: sqlite3.Connection) -> dict[str, object]:
+    """catalog_meta params of G05-03: strips never COUNT-checked, strips known truncated."""
+    bad = strips_needing_repair(conn)
+    return {"strips_unverified": sum(1 for s in bad if s["state"] == "never_checked"),
+            "truncated_strips": [s["strip_key"] for s in bad if s["state"] == "truncated"]}
+
+
+def check_strips(db_path: Path) -> list[dict]:
+    """``--check``: print and return the strips whose completeness is not verified."""
+    from catalog_db import connect_ro  # noqa: PLC0415
+
+    conn = connect_ro(db_path)
+    try:
+        bad = strips_needing_repair(conn)
+    finally:
+        conn.close()
+    print(f"  {db_path}: {len(bad)} strip(s) not verified complete")
+    for s in bad:
+        tag = " AT ANONYMOUS TAP ROW CAP" if s["at_anonymous_cap"] else ""
+        print(f"    {s['strip_key']:40s} {s['state']:14s} rows={s['n_stars']} expected={s['n_expected']}{tag}")
+    return bad
+
+
+def repair_strips(cfg: BuildConfig, *, fetch=_tap_fetch) -> dict[str, int]:
+    """``--repair`` (G05-03): for every unverified strip (or the ``--strip`` keys) run the COUNT(*)
+    of its query; equal to the stored rows -> marked verified (no download); otherwise downloaded
+    again completely (split in four when short), its rows added (INSERT OR IGNORE) and recorded,
+    one strip per transaction (resumable: a repaired strip is verified and skipped next time). The
+    strip keeps its stored G limit; a strip of an older build without one uses --mag-limit."""
+    _configure_gaia(cfg)
+    conn = sqlite3.connect(str(cfg.db_path))
+    conn.execute("PRAGMA journal_mode=WAL")
+    init_gaia_tables(conn)
+    ensure_strip_columns(conn)
+    conn.commit()
+    todo = strips_needing_repair(conn)
+    if cfg.repair_keys:
+        known = {s["strip_key"] for s in todo}
+        missing = [k for k in cfg.repair_keys if k not in known]
+        if missing:
+            conn.close()
+            raise SystemExit(f"--strip not among the unverified strips of {cfg.db_path}: {missing}")
+        todo = [s for s in todo if s["strip_key"] in set(cfg.repair_keys)]
+    dec_top = conn.execute("SELECT MAX(dec_max) FROM strip_progress").fetchone()[0]
+    table, _sel = _source(cfg.use_full_source)
+    print(f"  Repair:      {len(todo)} strip(s) of {cfg.db_path} ({table})")
+    out = {"verified": 0, "downloaded": 0, "truncated": 0, "error": 0, "new_rows": 0}
+    for i, s in enumerate(todo, start=1):
+        r0, r1, d0, d1 = s["box"]
+        last_ra, last_dec = r1 >= 360.0 - 1e-9, dec_top is not None and abs(d1 - float(dec_top)) < 1e-9
+        ml = float(s["mag_limit"]) if s["mag_limit"] is not None else float(cfg.mag_limit)
+        print(f"[{i:4d}/{len(todo)}] {s['strip_key']} G <= {ml:g} stored rows={s['n_stars']} ", end="", flush=True)
+        try:
+            n_exp = int(fetch(build_count_adql(r0, r1, d0, d1, last_ra=last_ra, last_dec=last_dec,
+                                               mag_limit=ml, use_full_source=cfg.use_full_source)).iloc[0, 0])
+        except Exception as exc:  # noqa: BLE001
+            print(f" ERR (COUNT): {type(exc).__name__}: {exc}")
+            out["error"] += 1
+            continue
+        if s["n_stars"] is not None and int(s["n_stars"]) == n_exp:
+            mark_strip_done(conn, s["box"], n_exp, ml, n_expected=n_exp)
+            conn.commit()
+            print(f" COUNT={n_exp:,} = stored rows: verified")
+            out["verified"] += 1
+            continue
+        print(f" COUNT={n_exp:,}: downloading again", end="", flush=True)
+        state, n_rows, n_new = _store_strip(conn, s["box"], last_ra, last_dec, mag_limit=ml,
+                                            use_full_source=cfg.use_full_source, fetch=fetch,
+                                            n_stars_if_truncated=int(s["n_stars"] or 0))
+        if state == "ok":
+            print(f" ok rows={n_rows:,} new={n_new:,}")
+            out["downloaded"] += 1
+            out["new_rows"] += n_new
+        else:
+            out[state] += 1
+    params = _completeness_params(conn)
+    conn.close()
+    print(f"  Repair done: {out}; still unverified {params['strips_unverified']}, "
+          f"truncated {len(params['truncated_strips'])}")
+    return out
+
+
 def main(argv: list[str] | None = None) -> None:
-    create_local_gaia(parse_args(argv))
+    cfg = parse_args(argv)
+    if cfg.check:
+        check_strips(cfg.db_path)
+    elif cfg.repair:
+        repair_strips(cfg)
+    else:
+        create_local_gaia(cfg)
 
 
 if __name__ == "__main__":

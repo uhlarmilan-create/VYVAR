@@ -52,7 +52,7 @@ def _resolve_paths(paths: EpsfStagePaths) -> EpsfStagePaths:
 
 def remove_stale_epsf_products(photometry_dir: Path, setup: str, target_ids: frozenset[str] | set[str]) -> list[str]:
     """EPSF-STALE-2026-10: the fit + merge rewrites every psf_* column of the setup's sidecars and replaces the
-    ePSF manifest, so an ePSF light curve (and its user export) of a target outside the new selection describes
+    ePSF manifest, so an ePSF light curve (and its user export) of a target outside the new fit set describes
     fits that no longer exist - remove it. Returns the removed catalog ids."""
     from epsf_export import find_epsf_export
 
@@ -80,12 +80,11 @@ def run_epsf_stage(
     do_build: bool = True,
     do_fit_merge: bool = True,
     do_lc: bool = True,
-    targets: str | None = None,
 ) -> dict[str, Any]:
     """Build ePSF, fit+merge psf_* into proc sidecars, write internal PSF LCs.
 
-    ``targets``: which targets are fitted (``epsf_science_set.build_epsf_fit_set`` selection: ``ALL`` or
-    comma-separated VSX types / names / ids, ``*`` wildcards); None -> :func:`configured_epsf_targets`.
+    Every target with an aperture light curve is fitted (``epsf_science_set.build_epsf_fit_set``; a target
+    excluded by ``cfg.vsx_out_of_scope_types`` never is - the aperture path's predicate; S6-FIX EPSF-SCOPE-2026-10).
 
     G09-18: the invariant records of the fit + merge (INV-PSF-ADDITIVE-01, INV-PSF-FRAME-01) and the night chi2
     locus are written to the setup's ``photometry/pipeline_meta.json`` (``epsf_invariants``,
@@ -144,12 +143,10 @@ def run_epsf_stage(
 
     from epsf_science_set import build_epsf_fit_set
 
-    selection = targets if targets is not None else configured_epsf_targets(cfg)
-    fit_set = build_epsf_fit_set(ps, selection)
+    fit_set = build_epsf_fit_set(ps, cfg.vsx_out_of_scope_types)
     out["fit_set"] = fit_set.to_meta_dict()
-    _p(progress_cb, f"fit set '{fit_set.selection}': {len(fit_set.target_ids)} targets + "
-       f"{len(fit_set.comp_ids - fit_set.target_ids)} comparison stars"
-       + (f"; not matched: {', '.join(fit_set.unmatched_tokens)}" if fit_set.unmatched_tokens else ""))
+    _p(progress_cb, f"fit set: {len(fit_set.target_ids)} targets + "
+       f"{len(fit_set.comp_ids - fit_set.target_ids)} comparison stars")
     if (do_fit_merge or do_lc) and not fit_set.catalog_ids:
         _p(progress_cb, f"PSF fit skipped: {fit_set.empty_reason}")
         do_fit_merge = do_lc = False
@@ -182,7 +179,7 @@ def run_epsf_stage(
         out["removed_stale"] = remove_stale_epsf_products(phot, ps.name, fit_set.target_ids)
         if out["removed_stale"]:
             _p(progress_cb, f"removed the ePSF light curves of {len(out['removed_stale'])} target(s) outside this "
-               "run's selection (their PSF fits were replaced)")
+               "run's fit set (their PSF fits were replaced)")
 
     if do_lc:
         from psf_internal_lc import write_internal_psf_lightcurves
@@ -228,11 +225,6 @@ def run_epsf_stage(
         LOGGER.warning("[ePSF stage] pipeline_meta stamp skipped: %s", exc)
 
     return out
-
-
-def configured_epsf_targets(cfg: Any) -> str:
-    """The ePSF target selection of the configuration (``epsf_targets``, default ``ALL``)."""
-    return str(getattr(cfg, "epsf_targets", "ALL") or "ALL")
 
 
 def summarize_invariant_records(records: list[dict[str, Any]]) -> dict[str, Any]:

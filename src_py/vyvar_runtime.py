@@ -81,13 +81,21 @@ def bootstrap_release_data_dir(install_root: Path) -> tuple[Path, dict[str, Boot
         except Exception as exc:  # noqa: BLE001
             report["config.json"] = f"FAILED:{type(exc).__name__}:{exc}"
 
-    db_path = data_root / "vyvar.sqlite3"
-    if db_path.is_file():
+    # G12-29: the database the config names (``database_path``), not always ``vyvar.sqlite3``
+    try:
+        from config import AppConfig  # noqa: PLC0415
+
+        db_path = AppConfig(project_root=install_root).database_path
+    except Exception as exc:  # noqa: BLE001 - reported as the bootstrap failure
+        report["vyvar.sqlite3"] = f"FAILED:{type(exc).__name__}:{exc}"
+        db_path = None
+    if db_path is not None and db_path.is_file():
         report["vyvar.sqlite3"] = "preexisting"
-    else:
+    elif db_path is not None:
         try:
             from database import VyvarDatabase
 
+            db_path.parent.mkdir(parents=True, exist_ok=True)
             db = VyvarDatabase(str(db_path))
             db.close()
             report["vyvar.sqlite3"] = "created"
@@ -109,6 +117,15 @@ def bootstrap_release_data_dir(install_root: Path) -> tuple[Path, dict[str, Boot
 
 def bootstrap_failures(report: dict[str, BootstrapStatus]) -> dict[str, BootstrapStatus]:
     return {key: status for key, status in report.items() if str(status).startswith("FAILED:")}
+
+
+#: the install folder (the parent of ``src_py``)
+INSTALL_ROOT = Path(__file__).resolve().parent.parent
+
+
+def ensure_data_dir_for_entry() -> Path:
+    """G12-29: the data-dir bootstrap of every entry point (GUI ``app.main`` and CLI ``night_run.main``)."""
+    return ensure_release_data_dir(INSTALL_ROOT)
 
 
 def ensure_release_data_dir(install_root: Path, ) -> Path:

@@ -1,9 +1,10 @@
 """Headless VYVAR night pipeline runner.
 
 Production entry: ``run_night_pipeline``. UI RUN VYVAR
-(``app._run_vyvar_full_pipeline``) resolves optics / location / flats into
-``NightRunParams`` and starts ``python -m run_job --job`` (run_job), so the
-GUI and the night runner run the same code (INV-ONE-ENTRY-01).
+(``app._run_vyvar_full_pipeline``) builds the same ``NightRunParams`` as the CLI
+(source, camera, telescope, site, mode), checks ``check_run_preconditions`` and
+starts ``python -m run_job --job`` (run_job), so the GUI and the night runner run
+the same code (INV-ONE-ENTRY-01). Everything else comes from the run's config.
 
 No Streamlit dependencies. Progress via ``logging`` and optional callback.
 """
@@ -39,34 +40,23 @@ _DEFAULT_MASTERSTAR_SELECTION_PCT = 10.0
 
 @dataclass
 class NightRunParams:
-    """Input parameters for a headless night pipeline run."""
+    """Input parameters for a headless night pipeline run.
+
+    G12-10 / G12-11 / G14-07 (Milan 2026-10-31): only the run inputs the GUI and the CLI both give;
+    validity windows, the DAO threshold and the optics come from the run's config and DB, so the GUI
+    and the CLI build identical params for the same inputs."""
 
     source_dir: Path
     equipment_id: int
     telescope_id: int
     config_path: Path | None = None
-    existing_pipeline: Any | None = None
     location_id: int | None = None
     location_source_hint: str | None = None
     # Draft rig.location_id when resolving without an explicit UI/CLI site
     # (precedence: explicit location_id > manifest_location_id > config).
     manifest_location_id: int | None = None
-    platesolve_equipment_id: int | None = None
     progress_cb: Callable[[str], None] | None = None
     dry_run: bool = False
-    manual_flat_map: dict[str, str] | None = None
-    # UI session_state vyvar_flatfb_{group_key} -> source obs_key. Empty = bookkeeping only.
-    flat_fallback_choices: dict[str, str] | None = None
-    apply_smart_plan_flat_fallbacks: bool = False
-    masterdark_validity_days: int | None = None
-    masterflat_validity_days: int | None = None
-    # Resolved optics from W1; None = use equipment_id/telescope_id (current W2).
-    optics: Any | None = None
-    # Preprocess / platesolve (UI defaults from render_live_view)
-    dao_threshold_sigma: float | None = None
-    # UI RUN VYVAR hardcodes cat_match_arc=2.0; pipeline floors with max(10, sep) for
-    # MASTERSTAR initial match - so NightRun default follows UI intent (effective 10").
-    post_platesolve_hook: Callable[[int, Path, AppConfig, AstroPipeline], None] | None = None
     pre_calibrated_mode: bool = False
     #: CAL-2026-10: masters next to the LIGHTs ("lights", default) or from the
     #: Calibration Library ("library") are preferred; the other source is the fallback.
@@ -113,6 +103,10 @@ class NightRunResult:
     epsf_stage: dict[str, Any] = field(default_factory=dict)
     #: frame_qc per observation group (limits, rejections, best frame).
     frame_qc: dict[str, Any] = field(default_factory=dict)
+    #: G12-15: the run stopped on ``check_run_preconditions`` (nothing was imported).
+    preconditions_failed: bool = False
+    #: N5: ``logs/run_preflight_error_<ts>.log`` of a run that failed before its infolog opened.
+    failure_log: str | None = None
 
 
 # Aperture photometry must cover at least this fraction of active_targets in photometry_summary.
@@ -403,6 +397,81 @@ def _load_app_config(config_path: Path | None) -> AppConfig:
     return AppConfig() if config_path is None else AppConfig.from_file(config_path)
 
 
+def gaia_db_problem(cfg: Any) -> str | None:
+    """Why the Gaia DR3 database of ``cfg`` cannot be used for MASTERSTAR (None: usable). The one
+    check of the GUI RUN button and the night run (G12-15)."""
+    from catalog_db import validate_gaia_db_schema  # noqa: PLC0415
+
+    path = str(getattr(cfg, "gaia_db_path", "") or "").strip()
+    try:
+        ok, msg = validate_gaia_db_schema(path)
+    except Exception as exc:  # noqa: BLE001 - reported as the problem
+        ok, msg = False, f"{type(exc).__name__}: {exc}"
+    return None if ok else f"Gaia DR3 database not usable ({path or 'no path set'}): {msg}"
+
+
+@dataclass
+class RunPreconditions:
+    """Result of :func:`check_run_preconditions`: the problems (empty = the run may start) and the
+    observing site resolved for the run (G12-16: resolved once, the run uses this one)."""
+
+    problems: list[str]
+    site: Any | None = None
+
+
+def check_run_preconditions(cfg: AppConfig, params: NightRunParams, db: Any) -> RunPreconditions:
+    """G12-15 / G12-16: what RUN VYVAR needs before anything is imported - the source folder, the
+    camera and telescope rows, the observing site and (not for a dry run) the Gaia DR3 database. The
+    GUI runs it before it starts the job, ``run_night_pipeline`` before the scan (CLI exit code 2).
+    ``cfg`` is not changed."""
+    from observer_location import resolve_observer_location_for_run  # noqa: PLC0415
+
+    problems: list[str] = []
+    src = Path(params.source_dir).expanduser()
+    if not src.is_dir():
+        problems.append(f"Invalid source directory: {src}")
+    for table, label, value in (
+        ("EQUIPMENTS", _NIGHT_RUN_INPUT_CAMERA, params.equipment_id),
+        ("TELESCOPE", _NIGHT_RUN_INPUT_TELESCOPE, params.telescope_id),
+    ):
+        rid = _positive_id(value)
+        if rid is None or not db._fk_row_exists(table, rid):
+            problems.append(f"{label} id={value} not found in {table}")
+    hint = params.location_source_hint
+    if hint is None and params.location_id is not None:
+        hint = "cli_arg"
+    site = None
+    try:
+        site = resolve_observer_location_for_run(
+            cfg.database_path,
+            explicit_location_id=params.location_id,
+            manifest_location_id=params.manifest_location_id,
+            cfg=cfg,
+            source_hint=hint,
+        )
+    except ValueError as exc:
+        problems.append(str(exc))
+    if not params.dry_run:
+        gaia = gaia_db_problem(cfg)
+        if gaia:
+            problems.append(gaia)
+    return RunPreconditions(problems=problems, site=site)
+
+
+def _write_failure_log(cfg: Any | None, *, step: str, exc: BaseException, db: Any = None) -> str | None:
+    """N5: ``<data_dir>/logs/run_preflight_error_<ts>.log`` for a run that failed before its infolog
+    opened (the GUI writes the same file for its own early failures). Returns the path."""
+    from config import resolve_data_root  # noqa: PLC0415
+    from run_preflight_log import write_run_preflight_error_log  # noqa: PLC0415
+
+    try:
+        data_root = getattr(cfg, "data_root", None) or resolve_data_root(Path(__file__).resolve().parent.parent)
+        return str(write_run_preflight_error_log(data_root, step=step, exc=exc, db=db, cfg=cfg))
+    except Exception as log_exc:  # noqa: BLE001 - the run's own error is already in the result
+        LOGGER.warning("[NightRun] preflight / failure log not written: %s", log_exc)
+        return None
+
+
 def _masterstar_candidate_path_for_job(
     archive: Path | None,
     path_any: str,
@@ -465,6 +534,37 @@ def _make_progress_cb(
             user_cb(line)
 
     return _inner
+
+
+class _RunStages:
+    """G12-34: the one status / stage / timing helper of a run (``run_night_pipeline`` and the
+    photometry slice it calls): a stage is started once, every timing writes ``[PHASE] <label> done``."""
+
+    def __init__(self, timings: dict[str, float], progress_cb: Callable[[str], None] | None) -> None:
+        self.timings = timings
+        self._cb = progress_cb
+        self.current = "start"
+
+    def progress(self, msg: str) -> None:
+        LOGGER.info("[NightRun] %s", msg)
+        if self._cb is not None:
+            self._cb(msg)
+
+    def stage(self, name: str) -> None:
+        """Status line + infolog milestone for one named pipeline process."""
+        from infolog import log_phase_boundary  # noqa: PLC0415
+
+        self.current = name
+        self.progress(name)
+        log_phase_boundary(name, status="start")
+
+    def done(self, label: str, t0: float) -> None:
+        from infolog import log_milestone  # noqa: PLC0415
+
+        elapsed = time.time() - t0
+        self.timings[label] = elapsed
+        LOGGER.info("[NightRun] [OK] %s - %.1fs", label, elapsed)
+        log_milestone(f"[PHASE] {label} done {elapsed:.1f}s")
 
 
 def _night_run_preprocess(
@@ -817,6 +917,7 @@ def run_night_photometry(
     write_pdfs: bool = True,
     existing_draft: bool = False,
     epsf: bool | None = None,
+    stages: _RunStages | None = None,
 ) -> dict[str, Any]:
     """Photometry-only slice shared by ``run_night_pipeline`` (C1/C2) and C3.
 
@@ -844,22 +945,9 @@ def run_night_photometry(
         "epsf_stage": {},
     }
 
-    def _p(msg: str) -> None:
-        LOGGER.info("[NightRun] %s", msg)
-        if progress_cb is not None:
-            progress_cb(msg)
-
-    def _stage(name: str) -> None:
-        """Status line + infolog milestone for one named pipeline process."""
-        from infolog import log_phase_boundary  # noqa: PLC0415
-
-        _p(name)
-        log_phase_boundary(name, status="start")
-
-    def _t(label: str, t0: float) -> None:
-        elapsed = time.time() - t0
-        timings[label] = elapsed
-        LOGGER.info("[NightRun] [OK] %s - %.1fs", label, elapsed)
+    if stages is None:
+        stages = _RunStages(timings, progress_cb)
+    _p, _stage, _t = stages.progress, stages.stage, stages.done
 
     draft_dir = None
     if draft_dir_override is not None:
@@ -1006,7 +1094,7 @@ def run_night_photometry(
 
         do_epsf = resolve_epsf_run(epsf, phot_cfg)
         if do_epsf:
-            from epsf_stage import EpsfStagePaths, configured_epsf_targets, run_epsf_stage
+            from epsf_stage import EpsfStagePaths, run_epsf_stage
 
             _stage(f"ePSF photometry - {nm}")
             t0 = time.time()
@@ -1023,8 +1111,6 @@ def run_night_photometry(
                     progress_cb=_p,
                     db=pipeline.db,
                     draft_id=draft_id,
-                    # NEW-5: the same call as the GUI's RUN ePSF (explicit photometry dir and selection)
-                    targets=configured_epsf_targets(phot_cfg),
                 )
                 out["epsf_stage"][str(nm)] = {
                     "epsf_model_sha256": epsf_out.get("epsf_model_sha256"),
@@ -1098,14 +1184,14 @@ def run_night_photometry(
     return out
 
 
-def _nr_scan_source(*, _md_days, _mf_days, _t, cfg, eq_id, params, pipeline, source, tel_id):
+def _nr_scan_source(*, _t, cfg, eq_id, params, pipeline, source, tel_id):
     """Smart scan of the source folder (rig ids, light groups) and the scan facts in the result."""
     t0 = time.time()
     plan = smart_scan_source(
         source_root=source,
         calibration_library_root=cfg.calibration_library_root,
-        masterdark_validity_days=_md_days,
-        masterflat_validity_days=_mf_days,
+        masterdark_validity_days=int(cfg.masterdark_validity_days),
+        masterflat_validity_days=int(cfg.masterflat_validity_days),
         db=pipeline.db,
         id_equipments=eq_id,
         id_telescope=tel_id,
@@ -1122,21 +1208,13 @@ def _nr_scan_source(*, _md_days, _mf_days, _t, cfg, eq_id, params, pipeline, sou
     return lights_bad, plan
 
 
-def _nr_import(*, _p, _stage, _t, cfg, eq_id, params, pipeline, plan, tel_id):
-    """Pre-calibrated / calibrated import plan, observer site and the import session into a new draft."""
+def _nr_import(*, _p, _stage, _t, cfg, eq_id, params, pipeline, plan, tel_id, site):
+    """Pre-calibrated / calibrated import plan, observer site and the import session into a new draft.
+    ``site``: the site resolved by ``check_run_preconditions`` (G12-16: resolved once)."""
     from parallel_frames import check_disk_for_run  # noqa: PLC0415
 
     # DISK-PREFLIGHT-2026-10: fail before the import, not in the middle of the night
     _p(check_disk_for_run(cfg.archive_root, list(plan.lights_files)))
-
-    # CAL-2026-10: the calibration plan alone decides masters (same for GUI and CLI).
-    # Manual flat paths and flats borrowed from another filter bypass the library
-    # links and validity window, so they are no longer applied.
-    if params.manual_flat_map or params.apply_smart_plan_flat_fallbacks:
-        _p(
-            "Calibration: manual / substitute flats are ignored - import the master into "
-            "the calibration library and link it to camera + telescope instead."
-        )
 
     if params.pre_calibrated_mode:
         from draft_provenance import (
@@ -1148,23 +1226,11 @@ def _nr_import(*, _p, _stage, _t, cfg, eq_id, params, pipeline, plan, tel_id):
         apply_pre_calibrated_import_plan(plan)
         _p(calibration_mode_report_line(CALIBRATION_MODE_PRE))
 
-    # Import - resolve observing site first (product rule SITE-UI-01).
+    # Import - the observing site of this run (product rule SITE-UI-01) goes into the run's own cfg.
     _stage("Import session")
-    from observer_location import (  # noqa: PLC0415
-        apply_resolved_observer_location_to_config,
-        resolve_observer_location_for_run,
-    )
+    from observer_location import apply_resolved_observer_location_to_config  # noqa: PLC0415
 
-    _loc_hint = params.location_source_hint
-    if _loc_hint is None and params.location_id is not None:
-        _loc_hint = "cli_arg"
-    _resolved_site = resolve_observer_location_for_run(
-        cfg.database_path,
-        explicit_location_id=params.location_id,
-        manifest_location_id=params.manifest_location_id,
-        cfg=cfg,
-        source_hint=_loc_hint,
-    )
+    _resolved_site = site
     apply_resolved_observer_location_to_config(cfg, _resolved_site)
     _p(_resolved_site.milestone_line())
     t0 = time.time()
@@ -1471,15 +1537,17 @@ def _nr_preprocess_and_platesolve(
     ph: str | None = None
     try:
         ph = generate_observation_hash(pipeline.db, draft_id)
-    except Exception:  # noqa: BLE001
-        ph = None
+    except Exception as exc:  # noqa: BLE001
+        ph = None  # G12-22: no QC apply record / PROCESSED status for this run - said, not silent
+        LOGGER.warning("observation hash failed for draft %s (QC apply not recorded, status stays): %s",
+                       draft_id, exc)
+        from infolog import log_event  # noqa: PLC0415
+
+        log_event(f"WARNING: observation hash failed for draft {draft_id}: {exc} "
+                  "(QC apply not recorded, field status not set to PROCESSED)")
     _t("preprocess_prep", t0)
 
-    dao_sigma = resolve_detection_threshold_sigma(
-        params.dao_threshold_sigma
-        if params.dao_threshold_sigma is not None
-        else cfg.detection_threshold_sigma
-    )
+    dao_sigma = resolve_detection_threshold_sigma(cfg.detection_threshold_sigma)
 
     pipeline.config.detection_threshold_sigma = dao_sigma
 
@@ -1523,10 +1591,13 @@ def _nr_preprocess_and_platesolve(
         progress_cb=prog_cb,
     )
     _t("platesolve_align_masterstar", t0)
+    from manifest_centre import record_manifest_centres_from_masterstars  # noqa: PLC0415  (G14-03, per setup)
+
+    record_manifest_centres_from_masterstars(ap, int(draft_id))
     return ps_out,
 
 
-def _nr_photometry(*, cfg, draft_id, params, pipeline, result, timings):
+def _nr_photometry(*, cfg, draft_id, params, pipeline, result, stages):
     """Night photometry of every setup and its outcome in the result."""
     phot = run_night_photometry(
         cfg=cfg,
@@ -1534,10 +1605,11 @@ def _nr_photometry(*, cfg, draft_id, params, pipeline, result, timings):
         draft_id=draft_id,
         draft_dir_override=None,
         progress_cb=params.progress_cb,
-        timings=timings,
+        timings=stages.timings,
         write_pdfs=True,
         existing_draft=False,
         epsf=params.epsf,
+        stages=stages,
     )
     result.cfg_source = str(phot.get("cfg_source") or "live")
     result.cfg_changed_keys = list(phot.get("cfg_changed_keys") or [])
@@ -1554,72 +1626,54 @@ def _nr_photometry(*, cfg, draft_id, params, pipeline, result, timings):
     return phot, phot_errors
 
 
-def run_night_pipeline(params: NightRunParams) -> NightRunResult:
-    """Run full VYVAR pipeline headless (mirrors ``_run_vyvar_full_pipeline``)."""
+def run_night_pipeline(params: NightRunParams, cfg: AppConfig | None = None) -> NightRunResult:
+    """Run full VYVAR pipeline headless (the GUI's job child and the CLI).
+
+    ``cfg``: the run config when the caller already built it (N4, CLI ``main``); else it is loaded
+    from ``params.config_path`` (the install's config.json when None)."""
     result = NightRunResult(success=False)
     timings: dict[str, float] = {}
     t_run = time.time()
 
-    from infolog import ensure_infolog_logging, quiet_repeated_library_warnings  # noqa: PLC0415
+    from infolog import quiet_repeated_library_warnings, setup_run_logging  # noqa: PLC0415
 
-    ensure_infolog_logging()
+    # G12-07: one logging setup per run (CLI and GUI job child alike)
+    _teardown_logging = setup_run_logging()
     quiet_repeated_library_warnings()
+    from except_fix_counters import reset_except_fix_counters  # noqa: PLC0415
 
-    def _p(msg: str) -> None:
-        LOGGER.info("[NightRun] %s", msg)
-        if params.progress_cb is not None:
-            params.progress_cb(msg)
+    reset_except_fix_counters()  # G12-30: once per run; workers' counts are merged by map_frames
 
-    def _stage(name: str) -> None:
-        """Status line + infolog milestone for one named pipeline process."""
-        from infolog import log_phase_boundary  # noqa: PLC0415
-
-        _p(name)
-        log_phase_boundary(name, status="start")
-
-    def _t(label: str, t0: float) -> None:
-        elapsed = time.time() - t0
-        timings[label] = elapsed
-        LOGGER.info("[NightRun] [OK] %s - %.1fs", label, elapsed)
-        from infolog import log_milestone  # noqa: PLC0415
-
-        log_milestone(f"[PHASE] {label} done {elapsed:.1f}s")
+    stages = _RunStages(timings, params.progress_cb)
+    _p, _stage, _t = stages.progress, stages.stage, stages.done
 
     prog_cb = _make_progress_cb(params.progress_cb)
 
+    pipeline = None
+    fatal: BaseException | None = None
     try:
         t0 = time.time()
-        if params.existing_pipeline is not None:
-            pipeline = params.existing_pipeline
-            cfg = pipeline.config
-        else:
+        if cfg is None:
             cfg = _load_app_config(params.config_path)
-            pipeline = AstroPipeline(cfg)
+        pipeline = AstroPipeline(cfg)
         _t("config", t0)
 
         source = Path(params.source_dir).expanduser().resolve()
-        if not source.is_dir():
-            result.errors.append(f"Invalid source directory: {source}")
-            result.phase_timings = timings
-            return result
-
         eq_id = int(params.equipment_id)
         tel_id = int(params.telescope_id)
-        if params.optics is not None:
-            eq_id = int(params.optics.equipment_id)
-            tel_id = int(params.optics.telescope_id)
-        # Same camera as import/scan (platesolve_equipment_id deprecated alias).
         ps_eq = int(eq_id)
-        _md_days = (
-            int(params.masterdark_validity_days)
-            if params.masterdark_validity_days is not None
-            else int(cfg.masterdark_validity_days)
-        )
-        _mf_days = (
-            int(params.masterflat_validity_days)
-            if params.masterflat_validity_days is not None
-            else int(cfg.masterflat_validity_days)
-        )
+
+        # G12-15: the GUI's preconditions, before anything is imported
+        pre = check_run_preconditions(cfg, params, pipeline.db)
+        if pre.problems:
+            result.preconditions_failed = True
+            result.errors.extend(f"Precondition: {m}" for m in pre.problems)
+            result.phase_timings = timings
+            return result
+        from optics_selection import VyvarOpticsSelection, log_active_optics  # noqa: PLC0415
+
+        # G12-08: the optics line is written by the run (kept until its infolog opens)
+        log_active_optics(pipeline.db, VyvarOpticsSelection(eq_id, tel_id), context="RUN VYVAR (camera / telescope)")
 
         if params.dry_run:
             _p(f"DRY RUN - scan only: {source}")
@@ -1627,8 +1681,8 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             plan = smart_scan_source(
                 source_root=source,
                 calibration_library_root=cfg.calibration_library_root,
-                masterdark_validity_days=_md_days,
-                masterflat_validity_days=_mf_days,
+                masterdark_validity_days=int(cfg.masterdark_validity_days),
+                masterflat_validity_days=int(cfg.masterflat_validity_days),
                 db=pipeline.db,
                 id_equipments=eq_id,
                 id_telescope=tel_id,
@@ -1650,8 +1704,6 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
 
         _stage("Scan source")
         lights_bad, plan = _nr_scan_source(
-            _md_days=_md_days,
-            _mf_days=_mf_days,
             _t=_t,
             cfg=cfg,
             eq_id=eq_id,
@@ -1674,6 +1726,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             pipeline=pipeline,
             plan=plan,
             tel_id=tel_id,
+            site=pre.site,
         )
 
         if getattr(import_result, "draft_id", None) is None:
@@ -1754,28 +1807,15 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             return result
         result.platesolve_job_output = ps_out
 
-        from draft_provenance import draft_dir_for_id  # noqa: PLC0415
-        draft_dir = draft_dir_for_id(cfg.archive_root, int(draft_id)).resolve()
-        if params.post_platesolve_hook is not None:
-            _stage("Post-plate-solve hook")
-            t0 = time.time()
-            try:
-                params.post_platesolve_hook(draft_id, draft_dir, cfg, pipeline)
-            except Exception as hook_exc:  # noqa: BLE001
-                result.errors.append(f"post_platesolve_hook failed: {hook_exc}")
-                result.phase_timings = timings
-                return result
-            _t("post_platesolve_hook", t0)
 
-        # Steps 13-15: Photometry (shared slice)
-        _stage("Discover observation groups")
+        # Steps 13-15: Photometry (shared slice; it starts its own stages, G12-34)
         phot, phot_errors = _nr_photometry(
             cfg=cfg,
             draft_id=draft_id,
             params=params,
             pipeline=pipeline,
             result=result,
-            timings=timings,
+            stages=stages,
         )
         if phot_errors:
             result.errors.extend(phot_errors)
@@ -1812,17 +1852,26 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
         return result
 
     except Exception as exc:  # noqa: BLE001
+        # G12-07: the record carries the traceback into the infolog (and stdout)
         LOGGER.exception("[NightRun] FATAL: %s", exc)
         result.errors.append(str(exc))
         timings["total"] = time.time() - t_run
         result.phase_timings = timings
+        fatal = exc
         return result
     finally:
-        from infolog import end_infolog_session, log_repeated_warnings_summary  # noqa: PLC0415
+        from infolog import end_infolog_session, infolog_session_open, log_repeated_warnings_summary  # noqa: PLC0415
 
         log_repeated_warnings_summary()
+        if not result.success and not infolog_session_open():
+            # N5: no infolog of the field - the failure goes to logs/run_preflight_error_<ts>.log
+            _exc = fatal or RuntimeError("; ".join(result.errors) or "night run failed")
+            result.failure_log = _write_failure_log(
+                cfg, step=stages.current, exc=_exc, db=getattr(pipeline, "db", None)
+            )
         # INFOLOG-ONE-2026-10: the run's single infolog closes after its last line
         end_infolog_session()
+        _teardown_logging()
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -1832,40 +1881,63 @@ def main(argv: list[str] | None = None) -> int:
         from run_job import run_job_file  # noqa: PLC0415
 
         return run_job_file(args.job)
-    cfg = _load_app_config(args.config)
-    eq, tel, loc, missing, loc_source = resolve_night_run_cli_ids(
-        equipment_id=args.equipment_id,
-        telescope_id=args.telescope_id,
-        location_id=args.location_id,
-        draft_dir=args.draft_dir,
-        cfg=cfg,
-    )
-    if missing:
-        print(night_run_missing_message(missing), file=sys.stderr)
-        return 2
-    # Pass only an explicit CLI site as location_id; otherwise pass the
-    # resolved id via manifest_location_id / config through the resolver.
-    _explicit = _positive_id(args.location_id)
-    _manifest = int(loc) if loc_source == "manifest" else None
-    params = NightRunParams(
-        source_dir=Path(args.source),
-        equipment_id=int(eq),
-        telescope_id=int(tel),
-        location_id=_explicit,
-        manifest_location_id=_manifest,
-        location_source_hint="cli_arg" if _explicit is not None else None,
-        config_path=args.config,
-        dry_run=bool(args.dry_run),
-        pre_calibrated_mode=bool(getattr(args, "pre_calibrated", False)),
-        masters_from=str(getattr(args, "masters_from", "lights") or "lights"),
-        progress_cb=lambda msg: LOGGER.info("[Progress] %s", msg),
-    )
-    result = run_night_pipeline(params)
-    if result.success:
-        return 0
-    for err in result.errors:
-        print(f"ERROR: {err}", file=sys.stderr)
-    return 1
+    from infolog import setup_run_logging  # noqa: PLC0415
+    from vyvar_runtime import ensure_data_dir_for_entry  # noqa: PLC0415
+
+    teardown = setup_run_logging()  # G12-07: the CLI logs like the run (stdout + infolog)
+    try:
+        ensure_data_dir_for_entry()  # G12-29: the GUI's data-dir bootstrap
+        cfg = _load_app_config(args.config)  # N4: built once, passed to the run
+        eq, tel, loc, missing, loc_source = resolve_night_run_cli_ids(
+            equipment_id=args.equipment_id,
+            telescope_id=args.telescope_id,
+            location_id=args.location_id,
+            draft_dir=args.draft_dir,
+            cfg=cfg,
+        )
+        if missing:
+            print(night_run_missing_message(missing), file=sys.stderr)
+            return 2
+        # Pass only an explicit CLI site as location_id; otherwise pass the
+        # resolved id via manifest_location_id / config through the resolver.
+        _explicit = _positive_id(args.location_id)
+        _manifest = int(loc) if loc_source == "manifest" else None
+        params = NightRunParams(
+            source_dir=Path(args.source),
+            equipment_id=int(eq),
+            telescope_id=int(tel),
+            location_id=_explicit,
+            manifest_location_id=_manifest,
+            location_source_hint="cli_arg" if _explicit is not None else None,
+            config_path=args.config,
+            dry_run=bool(args.dry_run),
+            pre_calibrated_mode=bool(getattr(args, "pre_calibrated", False)),
+            masters_from=str(getattr(args, "masters_from", "lights") or "lights"),
+        )
+        # S6-FIX RUN-LOCK-2026-10: one run per data directory, like the GUI's jobs (run_job.spawn_job)
+        from run_job import JobBusyError, fail_job, finish_job, params_to_job, register_external_job  # noqa: PLC0415
+
+        try:
+            job_dir = register_external_job(cfg.data_root, spec=params_to_job(params), label="Night run (CLI)",
+                                            prefix="cli")
+        except JobBusyError as exc:
+            print(f"ERROR: not started - {exc}", file=sys.stderr)
+            return 2
+        try:
+            result = run_night_pipeline(params, cfg=cfg)
+        except BaseException as exc:
+            fail_job(job_dir, exc, None)
+            raise
+        finish_job(job_dir, result)
+        if result.success:
+            return 0
+        for err in result.errors:
+            print(f"ERROR: {err}", file=sys.stderr)
+        if result.failure_log:
+            print(f"Preflight log: {result.failure_log}", file=sys.stderr)
+        return 2 if result.preconditions_failed else 1
+    finally:
+        teardown()
 
 
 if __name__ == "__main__":

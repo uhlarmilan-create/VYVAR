@@ -7,6 +7,7 @@ software), combine method, capture date and validity; builds masters from a fold
 
 from __future__ import annotations
 
+import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -31,6 +32,14 @@ _OFFSET_LABEL = {
     "": "",
 }
 _DEL_PENDING = "clib_del_pending"
+
+
+def _delete_master(db: VyvarDatabase, path: Path) -> None:
+    """G14-34: delete the registry row first, then the file. A DB error leaves the file in place
+    (still registered); a file that cannot be removed afterwards is listed as not registered."""
+    db.delete_calibration_library_entry_by_path(path)
+    if path.is_file():
+        path.unlink()
 
 
 def _validity_days(kind: str, dark_days: int, flat_days: int) -> int:
@@ -137,21 +146,19 @@ def _render_table(db: VyvarDatabase, root: Path, dark_days: int, flat_days: int)
             o1, o2 = st.columns(2)
             if o1.button("Yes, delete", key="clib_del_yes", type="primary"):
                 try:
-                    p = Path(pending)
-                    if p.is_file():
-                        p.unlink()
-                    db.delete_calibration_library_entry_by_path(p)
-                    st.success(f"Deleted {p.name}")
-                except OSError as exc:
+                    _delete_master(db, Path(pending))
+                    st.success(f"Deleted {Path(pending).name}")
+                except (OSError, sqlite3.Error) as exc:
                     st.error(f"Could not delete: {exc}")
-                st.session_state.pop(_DEL_PENDING, None)
+                finally:
+                    st.session_state.pop(_DEL_PENDING, None)
                 st.rerun()
             if o2.button("Cancel", key="clib_del_no"):
                 st.session_state.pop(_DEL_PENDING, None)
                 st.rerun()
     registered = {str(Path(m.path).resolve()).casefold() for m in cl.list_masters(db)}
     loose = [
-        p for p in list_fits_files(root, recursive=True)
+        p for p in (list_fits_files(root, recursive=True) if root.is_dir() else [])
         if str(p.resolve()).casefold() not in registered
     ]
     if loose:
@@ -160,7 +167,7 @@ def _render_table(db: VyvarDatabase, root: Path, dark_days: int, flat_days: int)
             st.write(sorted(p.name for p in loose))
 
 
-def _render_build(db: VyvarDatabase, root: Path) -> None:
+def _render_build(db: VyvarDatabase, root: Path, data_root: Path) -> None:
     st.markdown("**Build masters from raw frames (DARK, DARKFLAT, FLAT)**")
     st.caption(
         "Folder with raw frames (subfolders included, recognised by IMAGETYP). Auto: darks with the "
@@ -179,47 +186,19 @@ def _render_build(db: VyvarDatabase, root: Path) -> None:
     what = st.radio("Build", ["Auto (by IMAGETYP / exposure)", "DARK", "DARKFLAT", "FLAT"], index=0,
                     horizontal=True, key="clib_b_what")
     src = st.text_input("Folder with raw calibration frames", key="clib_b_src")
-    if st.button("Build masters", type="primary", key="clib_b_go", disabled=not src.strip()):
+    from ui_session import any_job_running, start_task_job  # noqa: PLC0415
+
+    if st.button("Build masters", type="primary", key="clib_b_go",
+                 disabled=not src.strip() or any_job_running(data_root)):
         p = Path(src.strip())
         if not p.is_dir():
             st.error(f"Folder not found: {p}")
             return
-        by = _collect_fits_by_type(p, db=db)
-        darks = [f for f in by.get("dark", []) if not _looks_like_master(f)]
-        flats = [f for f in by.get("flat", []) if not _looks_like_master(f)]
-        dark_kind = None
-        if what in ("DARK", "DARKFLAT"):
-            dark_kind, flats = what.lower(), []
-            # dark-flat frames may be typed FLAT DARK; they are dark frames here
-            darks = darks + [f for f in by.get("flat", []) if not _looks_like_master(f) and _is_dark_typed(f)]
-        elif what == "FLAT":
-            darks = []
-            flats = [f for f in flats if not _is_dark_typed(f)]
-        if not darks and not flats:
-            st.error(f"No raw {what if what != 'Auto (by IMAGETYP / exposure)' else 'DARK or FLAT'} "
-                     "frames found (IMAGETYP must say dark / flat).")
-            return
-        with st.spinner(f"Building masters from {len(darks)} dark and {len(flats)} flat frames..."):
-            # G14-16: a DB error must not silently build an OSC flat as mono (no Bayer mask) - it surfaces
-            bayer = db.get_equipment_bayermask(int(cam))
-            built, msgs = cp.build_masters_from_source(
-                dark_files=darks, flat_files=flats, light_exposures=[], db=db, camera_id=cam,
-                telescope_id=tel, library_root=root, method=method, equipment_bayer_mask=bayer,
-                dark_kind=dark_kind,
-            )
-        _show_msgs(msgs)
-        if built:
-            st.rerun()
-
-
-def _is_dark_typed(fp: Path) -> bool:
-    try:
-        from astropy.io import fits  # noqa: PLC0415
-
-        with fits.open(fp, memmap=True) as h:
-            return cl.header_kind(h[0].header) in (cl.KIND_DARK, cl.KIND_DARKFLAT)
-    except (OSError, ValueError):
-        return False
+        # G14-14: a job process (task_jobs.task_build_masters -> task_jobs.build_masters_from_folder)
+        _what = {"DARK": "dark", "DARKFLAT": "darkflat", "FLAT": "flat"}.get(what, "auto")
+        start_task_job(data_root, "build_masters", {
+            "src": str(p), "what": _what, "camera_id": int(cam), "telescope_id": int(tel), "method": str(method),
+        }, label="Build masters")
 
 
 def _render_import(db: VyvarDatabase, root: Path) -> None:
@@ -299,19 +278,26 @@ def _render_measure_gain(db: VyvarDatabase) -> None:
     c1, c2 = st.columns([2, 3])
     cam = cams[c1.selectbox("Camera", list(cams), key="clib_g_cam")]
     src = c2.text_input("Folder with raw flats and darks", key="clib_g_src")
-    if st.button("Measure", key="clib_g_go", disabled=not src.strip()):
+    # NEW-4 (Milan 2026-10-31): no assumed 16-bit saturation - the camera's SATURATE_ADU, else asked here
+    sat_adu = db.get_equipment_saturation_adu(int(cam))
+    if sat_adu is None:
+        sat_adu = st.number_input(
+            "Saturation level of this camera [ADU] (not in the database)", min_value=1.0, value=None, step=1.0,
+            key=f"clib_g_sat_{int(cam)}",
+            help="The camera has no SATURATE_ADU in Database Explorer > Cameras. Enter the level at which "
+                 "the raw frames saturate (frames near it are not used for the photon transfer fit).",
+        )
+    if st.button("Measure", key="clib_g_go", disabled=not src.strip() or sat_adu is None):
         p = Path(src.strip())
         if not p.is_dir():
             st.error(f"Folder not found: {p}")
             return
         by = _collect_fits_by_type(p, db=db)
-        flats = [f for f in by.get("flat", []) if not _looks_like_master(f) and not _is_dark_typed(f)]
+        flats = [f for f in by.get("flat", []) if not _looks_like_master(f) and not cp.is_dark_typed(f)]
         darks = [f for f in by.get("dark", []) if not _looks_like_master(f)]
         prof = profile_from_connection(db.conn, int(cam))
-        sat = db.conn.execute("SELECT SATURATE_ADU FROM EQUIPMENTS WHERE ID = ?;", (int(cam),)).fetchone()
-        sat_adu = float(sat[0]) if sat and sat[0] else 65535.0
         with st.spinner(f"Measuring {len(flats)} flats and {len(darks)} darks..."):
-            res = measure_from_files(flats, darks, saturation_adu=sat_adu)
+            res = measure_from_files(flats, darks, saturation_adu=float(sat_adu))
         st.session_state["clib_g_res"] = {"cam": int(cam), "res": res, "adc": prof.adc_bits, "mode": prof.mode_key}
     out = st.session_state.get("clib_g_res")
     if not out or out.get("cam") != int(cam):
@@ -337,18 +323,14 @@ def _render_measure_gain(db: VyvarDatabase) -> None:
         f"gain setting {res.gain_setting if res.gain_setting is not None else '-'}, bin {res.binning}."
     )
     if st.button("Save to camera", type="primary", key="clib_g_save"):
-        db.conn.execute(
-            "INSERT INTO EQUIPMENT_CURVE (EQUIPMENT_ID, READOUT_MODE, GAIN_SETTING, BINNING, E_PER_ADU, "
-            "READNOISE_E, SOURCE, MEASURED_AT, NOTE) VALUES (?, ?, ?, ?, ?, ?, 'measured', ?, ?);",
-            (
-                int(out["cam"]), out["mode"], res.gain_setting, int(res.binning), g_nat, res.read_noise_e,
-                _dt.date.today().isoformat(),
-                f"photon transfer, {res.n_levels} levels, R2 {res.r2 if res.r2 is not None else float('nan'):.4f}",
-            ),
+        db.save_measured_curve_point(  # G14-15 / NEW-1: replaces an earlier measurement at this key
+            int(out["cam"]), readout_mode=out["mode"], gain_setting=res.gain_setting, binning=int(res.binning),
+            e_per_adu=g_nat, readnoise_e=res.read_noise_e, measured_at=_dt.date.today().isoformat(),
+            note=f"photon transfer, {res.n_levels} levels, R2 {res.r2 if res.r2 is not None else float('nan'):.4f}",
         )
-        db.conn.commit()
         st.session_state.pop("clib_g_res", None)
-        st.success("Saved. It now wins over the catalog and the camera default for this setting and binning.")
+        st.success("Saved. It replaces an earlier measurement and wins over the catalog and the camera default "
+                   "for this setting and binning.")
 
 
 def render_calibration_library_dashboard(
@@ -357,6 +339,7 @@ def render_calibration_library_dashboard(
     dark_validity_days: int,
     flat_validity_days: int,
     db: VyvarDatabase | None = None,
+    data_root: Path,
 ) -> None:
     st.subheader("Calibration Library")
     st.caption(
@@ -368,11 +351,14 @@ def render_calibration_library_dashboard(
     if db is None:
         st.warning("Database unavailable.")
         return
-    root.mkdir(parents=True, exist_ok=True)
-    cl.ensure_schema(db)
+    # S6-FIX CLIB-READONLY-2026-10: render is read-only - the folder is created at app start
+    # (AppConfig.ensure_base_dirs) and the table when the database opens (calib_library.ensure_schema)
+    if not root.is_dir():
+        st.warning(f"The library folder `{root}` does not exist (it is created when VYVAR starts; check "
+                   "calibration_library_root in Settings).")
     _render_table(db, root, int(dark_validity_days), int(flat_validity_days))
     st.markdown("---")
-    _render_build(db, root)
+    _render_build(db, root, data_root)
     st.markdown("---")
     _render_import(db, root)
     st.markdown("---")

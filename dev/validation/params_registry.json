@@ -281,20 +281,6 @@
     "scope_key": "none",
     "scope_group": "n/a"
   },
-  "epsf_targets": {
-    "help": "Which targets ePSF measures: ALL, or VSX types, star names or catalogue ids separated by commas; * is a wildcard (for example EA, EB, EW or E*).",
-    "kind": "static",
-    "label": "ePSF targets",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "tier": "basic",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
   "epsf_export_auto": {
     "help": "Write the ePSF light-curve text files (BJD, delta mag, error) when an ePSF run finishes. For your own use, not an AAVSO submission.",
     "kind": "static",

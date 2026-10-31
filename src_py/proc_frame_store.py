@@ -163,7 +163,7 @@ PROC_FRAME_COLS: tuple[str, ...] = (
     "catalog_match_mode",
 )
 
-_FRAME_TABLE_CACHE: dict[str, tuple[int, dict[str, dict[str, object]]]] = {}
+_FRAME_TABLE_CACHE: dict[str, tuple[tuple[int, int], dict[str, dict[str, object]]]] = {}
 
 
 def frame_table_path(proc_dir: Path | str) -> Path:
@@ -217,9 +217,10 @@ def load_frame_table(proc_dir: Path | str) -> dict[str, dict[str, object]]:
     """``{proc_csv_name: {column: value}}``; empty when the directory has no frame table."""
     path = frame_table_path(proc_dir)
     try:
-        mt = path.stat().st_mtime_ns
+        st = path.stat()
     except OSError:
         return {}
+    mt = (int(st.st_mtime_ns), int(st.st_size))  # G05-47: a rewrite within the mtime granularity changes the size
     hit = _FRAME_TABLE_CACHE.get(str(path))
     if hit is not None and hit[0] == mt:
         return hit[1]

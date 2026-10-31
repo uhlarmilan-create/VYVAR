@@ -20,13 +20,10 @@ import plotly.graph_objects as go
 import streamlit as st
 from astropy.time import Time
 
-from config import AppConfig
-from database import VyvarDatabase
-from frame_qc import evaluate_frame_qc, group_key_of, load_frame_qc
+from draft_provenance import light_rows_from_manifest_dir
+from frame_qc import group_key_of, load_frame_qc
 from importer import quicklook_preview_png_bytes
 from pipeline_ui_helpers import _resolve_light_fits_for_quality_inspection
-from ui_components import DRAFT_CENTER_DE_STATE_KEY, DRAFT_CENTER_RA_STATE_KEY
-from ui_session import resolve_draft_dir
 
 X_AXIS_FRAME_TITLE = "Frame number (Frame Index)"
 
@@ -213,27 +210,6 @@ def build_qc_summary_table(df: pd.DataFrame, qc_groups: dict[str, dict[str, Any]
     return pd.DataFrame(recs)
 
 
-def _seed_draft_center(df_rows: pd.DataFrame) -> None:
-    """Seed VARSTREM field centre from the median frame pointing when it is unset."""
-    try:
-        _ra_cur = float(st.session_state.get(DRAFT_CENTER_RA_STATE_KEY, 0.0))
-        _de_cur = float(st.session_state.get(DRAFT_CENTER_DE_STATE_KEY, 0.0))
-    except (TypeError, ValueError):
-        _ra_cur, _de_cur = 0.0, 0.0
-    if abs(_ra_cur) > 1e-9 or abs(_de_cur) > 1e-9:
-        return
-    if "RA" not in df_rows.columns or "DE" not in df_rows.columns:
-        return
-    ra = pd.to_numeric(df_rows.get("RA"), errors="coerce").dropna()
-    de = pd.to_numeric(df_rows.get("DE"), errors="coerce").dropna()
-    if ra.empty or de.empty:
-        return
-    st.session_state["vyvar_pending_center_ra"] = float(ra.median())
-    st.session_state["vyvar_pending_center_de"] = float(de.median())
-    st.session_state["center_ra"] = float(ra.median())
-    st.session_state["center_de"] = float(de.median())
-
-
 @st.cache_data(max_entries=64, show_spinner=False)
 def _preview_png_cached(path: str, stamp: tuple) -> bytes:
     """G14-26: the ZScale preview of a frame once per file state (every channel tab and plot click
@@ -258,42 +234,31 @@ def _show_preview(path: str, caption: str) -> None:
 
 def render_quality_dashboard(
     *,
-    db: VyvarDatabase,
     draft_id: int | None,
-    archive_text: str,
-    cfg: AppConfig,
+    draft_dir: Path | None,
 ) -> None:
-    if draft_id is None or int(draft_id) <= 0:
+    """FITS QA of the loaded processed field (``draft_dir`` and its manifest id, ``app.main``)."""
+    if draft_id is None or draft_dir is None:
         st.info("No processed field loaded - run RUN VYVAR or load one above (Load processed field).")
         return
     did = int(draft_id)
-    default_ap = resolve_draft_dir(draft_id=did, archive_root=cfg.archive_root) or ""
-    ap_str = (archive_text or "").strip() or default_ap
-    ap = Path(ap_str) if ap_str else None
+    ap = Path(draft_dir)
 
-    rows = db.fetch_draft_light_rows_for_quality(did)
+    rows = light_rows_from_manifest_dir(ap, did) or []
     if not rows:
         st.warning("No light frames in manifest files[] for this processed field.")
         return
-    raw_df = pd.DataFrame(rows)
-    _seed_draft_center(raw_df)
     df = build_quality_frame(rows, ap)
 
-    qc_doc = load_frame_qc(ap) if ap is not None else {}
+    qc_doc = load_frame_qc(ap)
     qc_groups: dict[str, dict[str, Any]] = dict(qc_doc.get("groups") or {})
     if not qc_groups:
-        # Draft processed before per-channel QC: compute for display only (nothing is written).
-        qc_groups = {
-            gk: g.to_dict()
-            for gk, g in evaluate_frame_qc(
-                rows, k=float(cfg.auto_fwhm_k_factor), reject=bool(cfg.auto_fwhm_enabled)
-            ).items()
-        }
-        st.caption(
-            "This field was processed before per-channel frame QC - limits and best frames are "
-            "computed here for display only."
+        # G14-19 (Milan 2026-10-31): no recompute - the run's star lists (transparency) are missing
+        st.info(
+            "This field was processed before per-channel frame QC: it has no frame QC result "
+            "(frame_qc.json) and the run's star lists are missing, so limits, rejections and the "
+            "MASTERSTAR source per channel are not shown. Run the field again to get them."
         )
-
     st.dataframe(build_qc_summary_table(df, qc_groups), hide_index=True, width="stretch")
     fwhm_limits = {gk: g.get("fwhm_limit") for gk, g in qc_groups.items()}
     key_fwhm = f"vyvar_qdash_plot_fwhm_{did}"
@@ -330,6 +295,8 @@ def render_quality_dashboard(
     if p_sel:
         _show_preview(p_sel, f"Clicked frame: {Path(p_sel).name}")
 
+    if not qc_groups:
+        return
     st.markdown("**MASTERSTAR source per channel**")
     gks = sorted(qc_groups)
     preview_by_raw = dict(zip(df["FILE_PATH"].astype(str), df["_preview"].astype(str)))

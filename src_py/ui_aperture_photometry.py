@@ -21,7 +21,6 @@ import pandas as pd
 import streamlit as st
 
 from platesolve_ui_paths import find_photometry_setups, setup_label
-from ui_session import resolve_draft_dir_path
 
 if TYPE_CHECKING:
     from config import AppConfig
@@ -58,16 +57,28 @@ def _measured_cids(pages: "TargetPages") -> list[str]:
 
 
 @st.cache_resource(show_spinner="Loading the processed field into memory...", max_entries=4)
-def _group_pages(platesolve_setup_dir: str, stamp: tuple) -> "TargetPages":
-    """All page data of one observation group, read once per state of the summary (``stamp``: its path,
-    mtime_ns and size; a hashed argument - the former ``_stamp`` was left out of the key, so a re-run
-    showed the old pages, G14-26)."""
-    from config import AppConfig  # noqa: PLC0415
+def _group_pages(platesolve_setup_dir: str, stamp: tuple, cfg_key: str, _cfg: Any) -> "TargetPages":
+    """All page data of one observation group, read once per state of every file the pages show
+    (``stamp``: :func:`_pages_stamp`, hashed - G14-26, NEW-2) and of the config (``cfg_key`` =
+    ``ui_cache.config_fingerprint``; ``_cfg`` itself is not hashed)."""
     from target_page import load_target_pages  # noqa: PLC0415
 
-    pages = load_target_pages(Path(platesolve_setup_dir), AppConfig())
+    _ = cfg_key
+    pages = load_target_pages(Path(platesolve_setup_dir), _cfg)
     pages.preload(_measured_cids(pages))
     return pages
+
+
+def _pages_stamp(photometry_dir: Path) -> tuple:
+    """NEW-2: the summary, comparison table, active targets, export manifest, pipeline meta and every file
+    in ``lightcurves/`` (light curves and their check sidecars) - a mid-run cache is not kept after the run."""
+    from ui_cache import dir_stamp, file_stamp  # noqa: PLC0415
+
+    phot = Path(photometry_dir)
+    return (file_stamp(phot / "photometry_summary.csv", phot / "comparison_stars_per_target.csv",
+                       phot / "active_targets.csv", phot / "lightcurves_reports" / "export_manifest.json",
+                       phot / "pipeline_meta.json")
+            + dir_stamp(phot / "lightcurves"))
 
 
 def _ut_ticks(x_rel: np.ndarray, dj: float) -> tuple[list[float], list[str]]:
@@ -294,18 +305,18 @@ def render_aperture_photometry(
     cfg: "AppConfig",
     draft_id: int | None,
     *,
-    draft_dir_override: Path | None = None,
+    draft_dir: Path | None,
 ) -> None:
-    """Aperture Photometry tab: one target page at a time + Field HRD."""
+    """Aperture Photometry tab: one target page at a time + Field HRD (``draft_dir``: the loaded
+    processed field, ``app.main``; G14-12)."""
     import star_page_m3 as m3  # noqa: PLC0415
     from target_page import star_fields  # noqa: PLC0415
 
     st.header("Aperture Photometry")
-    if draft_id is None and draft_dir_override is None:
+    if draft_dir is None:
         st.info("No processed field loaded. Load one above (Load processed field) or run VAR-STREM.")
         return
-    draft_dir = resolve_draft_dir_path(draft_dir_override, draft_id, cfg.archive_root)
-    setups = find_photometry_setups(cfg, draft_id, draft_dir_override=draft_dir) if draft_dir else {}
+    setups = find_photometry_setups(cfg, draft_id, draft_dir_override=draft_dir)
     setups = {k: v for k, v in setups.items() if (Path(v["photometry_dir"]) / "photometry_summary.csv").is_file()}
     if not setups:
         st.warning("Photometry has not been run for this processed field (runs are started by VAR-STREM / the night runner).")
@@ -316,9 +327,9 @@ def render_aperture_photometry(
         setup = st.selectbox("Observation setup", list(setups), format_func=setup_label, key="aperture_setup_select")
     ps_dir = Path(setups[setup]["obs_group_dir"])
     summary_csv = Path(setups[setup]["photometry_dir"]) / "photometry_summary.csv"
-    from ui_cache import file_stamp  # noqa: PLC0415
+    from ui_cache import config_fingerprint  # noqa: PLC0415
 
-    pages = _group_pages(str(ps_dir), file_stamp(summary_csv))
+    pages = _group_pages(str(ps_dir), _pages_stamp(summary_csv.parent), config_fingerprint(cfg), cfg)
     cids = _measured_cids(pages)
     with c_info:
         done = datetime.datetime.fromtimestamp(summary_csv.stat().st_mtime).strftime("%d.%m.%Y %H:%M")

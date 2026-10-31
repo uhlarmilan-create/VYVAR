@@ -426,7 +426,7 @@ def _at_in_frame_targets(
 def _at_match_targets(*, _cfg, in_frame, ms_by_cid, vt, vt_in):
     """Match each in-frame target to its MASTERSTAR detection; count the exclusion reasons."""
     from vsx_type_scope import is_vsx_auto_selected_target  # noqa: PLC0415
-    from vsx_type_scope import vsx_type_is_out_of_scope  # noqa: PLC0415
+    from vsx_type_scope import target_is_out_of_scope  # noqa: PLC0415
 
     no_catalog_id = 0
     no_gaia_id = 0
@@ -509,12 +509,7 @@ def _at_match_targets(*, _cfg, in_frame, ms_by_cid, vt, vt_in):
             skip_ph = True
             skip_reason = "below_snr_min"
         _voos = list(getattr(_cfg, "vsx_out_of_scope_types", []) or [])
-        if (
-            (not skip_ph)
-            and _voos
-            and is_vsx_auto
-            and vsx_type_is_out_of_scope(str(vrow.get("vsx_type", "") or ""), _voos)
-        ):
+        if (not skip_ph) and target_is_out_of_scope(vrow, _voos):
             skip_ph = True
             skip_reason = "vsx_type_out_of_scope"
         rec = {

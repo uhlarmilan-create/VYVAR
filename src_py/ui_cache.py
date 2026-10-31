@@ -31,3 +31,15 @@ def dir_stamp(directory: Path | str, pattern: str = "*") -> tuple[tuple[str, int
     if not d.is_dir():
         return ()
     return file_stamp(*sorted(p for p in d.glob(pattern) if p.is_file()))
+
+
+def config_fingerprint(cfg: object | None) -> str:
+    """Hash of every config value (``AppConfig.to_json``) - a hashed cache argument, so a Settings save is
+    part of the key of a view whose loader reads the config (NEW-2 / NEW-3)."""
+    import hashlib  # noqa: PLC0415
+    import json  # noqa: PLC0415
+
+    if cfg is None:
+        return "none"
+    data = cfg.to_json() if hasattr(cfg, "to_json") else vars(cfg)
+    return hashlib.sha256(json.dumps(data, sort_keys=True, default=str).encode()).hexdigest()[:16]

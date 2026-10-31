@@ -14,30 +14,6 @@ from astropy.io import fits
 from except_fix_counters import get_except_fix_counters, reset_except_fix_counters
 
 
-def test_exc0350_vsx_coord_skip_counted_and_logged(caplog: pytest.LogCaptureFixture) -> None:
-
-    # Minimal path: we only test the skip branch via isolated logic by calling internal pattern.
-    reset_except_fix_counters()
-    caplog.set_level(logging.ERROR)
-    labels: list[str] = []
-    v = pd.DataFrame({"name": ["BAD"], "ra_deg": ["not_a_number"], "dec_deg": ["x"]})
-    for i in range(len(v)):
-        try:
-            float(v.iloc[i]["ra_deg"])
-            float(v.iloc[i]["dec_deg"])
-        except (TypeError, ValueError):
-            labels.append(str(v.iloc[i].get("name") or f"row{i}"))
-    if labels:
-        get_except_fix_counters().vsx_variable_coord_drop += len(labels)
-        logging.error(
-            "[VSX] skipped %d variables (unparsable coords): %s",
-            len(labels),
-            ", ".join(labels),
-        )
-    assert get_except_fix_counters().vsx_variable_coord_drop == 1
-    assert any("unparsable coords" in r.message for r in caplog.records)
-
-
 def test_exc0312_plate_solve_bundle_failure_counted(
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,

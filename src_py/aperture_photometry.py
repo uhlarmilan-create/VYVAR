@@ -2298,9 +2298,7 @@ def run_aperture_photometry(
 
     clear_aperture_products(output_dir)
 
-    from except_fix_counters import reset_except_fix_counters
-
-    reset_except_fix_counters()
+    # G12-30: the EXCEPT-FIX counters are reset once per run (run_night_pipeline), not here.
 
     from infolog import safe_progress  # noqa: PLC0415
 

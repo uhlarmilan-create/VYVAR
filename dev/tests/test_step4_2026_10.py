@@ -805,15 +805,6 @@ def test_g10_13_simbad_star_without_variable_type_is_not_known(monkeypatch):
     assert cc._catalog_check(row, cfg).startswith("SIMBAD: TYC 1-2-3")
 
 
-def test_g09_42_epsf_wildcard_selects_types_only():
-    from epsf_science_set import _token_matches
-
-    assert _token_matches("E*", "EW", ["V1 Cyg"], "1")
-    assert not _token_matches("E*", "RRAB", ["EZ Lyn"], "2")
-    assert _token_matches("EZ Lyn", "RRAB", ["EZ Lyn"], "2")
-    assert not _token_matches("ZTF*", "", ["ZTF J1234"], "3")
-
-
 def test_g11_22_vsx_name_only_for_vsx_targets():
     import pandas as pd
 

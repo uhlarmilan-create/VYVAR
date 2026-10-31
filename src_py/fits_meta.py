@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 import logging
 import math
 import os
@@ -556,7 +556,7 @@ def extract_fits_metadata(
 ) -> dict[str, Any]:
     """Extract key metadata from FITS primary header.
 
-    When ``db`` is set, uses ``FITS_HEADER_CACHE`` when ``FILE_PATH``, ``FILE_SIZE``, and ``MTIME`` match
+    When ``db`` is set, uses ``FITS_HEADER_CACHE`` when ``FILE_PATH``, ``FILE_SIZE``, and ``MTIME_NS`` match
     the file on disk; otherwise reads the FITS header and refreshes the cache row.
 
     ``ra`` / ``dec`` are in decimal degrees. Sources (first match wins): OBJCTRA/OBJCTDEC,
@@ -655,7 +655,7 @@ def extract_fits_metadata(
         db.fits_header_cache_upsert_one(
             fp,
             file_size=int(st.st_size),
-            mtime=float(st.st_mtime),
+            mtime_ns=int(st.st_mtime_ns),
             meta=meta,
             imagetyp=imagetyp,
             date_obs=date_obs,
@@ -803,8 +803,9 @@ def _wcs_centre_radec(header: fits.Header) -> tuple[float, float] | None:
     return None
 
 
-def _draft_centre_radec(db: Any, draft_id: int | None) -> tuple[float, float] | None:
-    """``CENTEROFFIELDRA/DE`` of the draft manifest; 0/0 counts as unset."""
+def _draft_centre_radec(db: Any, draft_id: int | None, header: fits.Header) -> tuple[float, float] | None:
+    """The manifest centre of the frame's own setup (``center_by_setup``; ``frame_setup_name``
+    of the header, ``setup_centre``); 0/0 counts as unset (S6-FIX CENTRE-PER-SETUP)."""
     if db is None or draft_id is None or not hasattr(db, "fetch_obs_draft_by_id"):
         return None
     try:
@@ -814,11 +815,8 @@ def _draft_centre_radec(db: Any, draft_id: int | None) -> tuple[float, float] | 
         return None
     if not row:
         return None
-    r = _finite_float(row.get("CENTEROFFIELDRA"))
-    d = _finite_float(row.get("CENTEROFFIELDDE"))
-    if r is None or d is None or (abs(r) < 1e-9 and abs(d) < 1e-9):
-        return None
-    return r, d
+
+    return setup_centre(row.get("CENTER_BY_SETUP"), frame_setup_name(header))
 
 
 def field_centre_radec(
@@ -835,7 +833,7 @@ def field_centre_radec(
        (aligned frames, MASTERSTAR);
     2. the pointing keywords of :func:`pointing_hint_from_header`: ``VY_TARG`` -> ``RA_DEC``
        (capture-software pairs, decimal or sexagesimal) -> ``OBJCTRA_DEC_hms`` -> ``CRVAL``;
-    3. ``DRAFT_CENTRE`` - ``CENTEROFFIELDRA/DE`` of the draft manifest (``db`` + ``draft_id``).
+    3. ``DRAFT_CENTRE`` - the manifest centre of the frame's setup (``center_by_setup``; ``db`` + ``draft_id``).
 
     Returns ``(ra, dec, source)``; ``(None, None, "none")`` when nothing resolves. Used by the
     frame time columns (HJD/BJD of the field centre), the frame airmass, the lunar context and
@@ -847,7 +845,7 @@ def field_centre_radec(
     ra, dec, src = pointing_hint_from_header(header)
     if ra is not None and dec is not None:
         return ra, dec, src
-    dc = _draft_centre_radec(db, draft_id)
+    dc = _draft_centre_radec(db, draft_id, header)
     if dc is not None:
         return dc[0], dc[1], "DRAFT_CENTRE"
     return None, None, "none"
@@ -861,3 +859,38 @@ def observation_group_folder_name(group_key: str) -> str:
     s = group_key.replace("|", "_").replace("/", "_").replace("\\", "_")
     s = "".join(c if c.isalnum() or c in "._-" else "_" for c in s)
     return s[:120] if len(s) > 120 else s
+
+
+def setup_centre(centres: Mapping[str, Any] | None, setup: str | None) -> tuple[float, float] | None:
+    """``(ra_deg, dec_deg)`` of ``setup`` in a ``center_by_setup`` map; None when the setup has none (0/0 = unset).
+
+    Every setup is its own instrument, so no other setup's centre is used. The one exception is the same frames
+    split into OSC channels: a light folder ``<base>`` and its platesolve channel setups ``<base>_<ch>`` are one
+    camera and one pointing, so a channel setup and its base resolve to each other (exact name first, then the
+    channels in ``osc_align.OSC_CHANNELS`` order)."""
+    if not centres or not setup:
+        return None
+    from osc_extract import OSC_CHANNELS, parse_osc_channel_from_setup  # noqa: PLC0415 - leaf module (no import cycle)
+
+    want_base = parse_osc_channel_from_setup(str(setup))[0]
+    names = [str(setup)] + [want_base] + [f"{want_base}_{ch}" for ch in OSC_CHANNELS]
+    for name in names:
+        c = centres.get(name)
+        if not isinstance(c, Mapping):
+            continue
+        try:
+            ra, de = float(c.get("ra_deg")), float(c.get("de_deg"))
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(ra) and math.isfinite(de) and not (abs(ra) < 1e-9 and abs(de) < 1e-9):
+            return ra, de
+    return None
+
+
+def frame_setup_name(header: Any) -> str:
+    """Setup (light folder / platesolve directory) name of a frame from its header: ``VY_OBSG`` written by the
+    calibration, else the observation group of FILTER / EXPTIME / XBINNING (``fits_meta.observation_group_key``)."""
+    key = str(header.get("VY_OBSG") or "").strip()
+    if not key:
+        key = observation_group_key_from_metadata(fits_metadata_from_primary_header(header))
+    return observation_group_folder_name(key)

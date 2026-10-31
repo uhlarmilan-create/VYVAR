@@ -21,16 +21,24 @@ def _read_df(conn, sql, params=()):
     cur = conn.execute(sql, tuple(params))
     try:
         cols = [d[0] for d in (cur.description or [])]
-        rows = cur.fetchall()  # _LockedCursor.fetchall releases the RLock in finally
+        rows = cur.fetchall()  # rows were fetched under the connection RLock (G13-16)
     except Exception:
         cur.close()  # release the RLock if we failed before fetchall
         raise
     return pd.DataFrame.from_records(rows, columns=cols)
 
 
+#: G14-36: plausibility ceilings of the Database Explorer camera warning (a warning only, nothing is
+#: changed). Amateur CMOS/CCD cameras have about 0.1-10 e-/ADU and 1-15 e- read noise; a value above 50 is
+#: almost always a unit mix-up (ADU/e- entered as e-/ADU, or a read noise in ADU at a high gain setting).
+GAIN_PLAUSIBLE_MAX_E_PER_ADU = 50.0
+READ_NOISE_PLAUSIBLE_MAX_E = 50.0
+
+
 def equipment_detector_warnings(rows: list[dict[str, Any]]) -> list[str]:
-    """Cameras whose gain / read noise is unknown at their default setting or implausible (pure; unit
-    tested). ``rows``: ``ID, CAMERANAME, ALIAS`` plus the resolved ``GAIN`` / ``RN`` (None = unknown)."""
+    """Cameras whose gain / read noise is unknown at their default setting or implausible (pure; tested in
+    ``dev/tests/test_step6_ui_2026_10.py``). ``rows``: ``ID, CAMERANAME, ALIAS`` plus the resolved ``GAIN`` /
+    ``RN`` (None = unknown)."""
     out: list[str] = []
     for r in rows:
         name = str(r.get("CAMERANAME") or r.get("ALIAS") or f"ID={r.get('ID')}").strip()
@@ -49,9 +57,9 @@ def equipment_detector_warnings(rows: list[dict[str, Any]]) -> list[str]:
                 "of this camera. Choose the camera model, or enter GAIN_ADU / READNOISE_E for the setting you use."
             )
             continue
-        if g > 50:
+        if g > GAIN_PLAUSIBLE_MAX_E_PER_ADU:
             out.append(f"{name}: gain {g:g} e-/ADU is unusually high - check the units.")
-        if rn > 50:
+        if rn > READ_NOISE_PLAUSIBLE_MAX_E:
             out.append(f"{name}: read noise {rn:g} e- is unusually high (typical 1-15 e-) - check the units.")
     return out
 

@@ -47,7 +47,7 @@ def _bool(s: pd.Series) -> pd.Series:
 
 
 def load_measurement_quality(setup_dir: str | Path) -> MeasurementQuality:
-    """Data of the view (pure; unit tested)."""
+    """Data of the view (pure; tested in ``dev/tests/test_step6_ui_2026_10.py``)."""
     d = Path(setup_dir)
     q = MeasurementQuality()
     ms_csv = masterstars_csv_in_dir(d)

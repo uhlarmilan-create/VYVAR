@@ -318,11 +318,7 @@ def import_master(
     if cap is None:
         return BuildResult(None, None, msgs + [f"[X] {p.name}: no capture date (DATE-OBS) - validity cannot be checked"])
     sw = origin_software or cl.header_software(hdr) or "unknown"
-    dst = Path(library_root) / ("imported_" + master_filename(k, hdr, camera_id=camera_id, capture=cap))
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    same = dst.is_file() and dst.stat().st_size == p.stat().st_size and _same_bytes(p, dst)
-    if not same:
-        shutil.copy2(p, dst)
+    dst, same = _library_copy(p, Path(library_root) / ("imported_" + master_filename(k, hdr, camera_id=camera_id, capture=cap)))
     oh = None
     if k == cl.KIND_FLAT:
         if flat_offset_removed is None:
@@ -338,6 +334,28 @@ def import_master(
     else:
         msgs.insert(0, f"[OK] imported {k.upper()} {p.name} -> {dst.name} (from {sw})")
     return BuildResult(m, dst, msgs)
+
+
+def _library_copy(src: Path, want: Path) -> tuple[Path, bool]:
+    """(library path, already there). G01-37: an existing library file with the same header-derived
+    name but other bytes is never overwritten - the copy gets the next free ``_2``, ``_3`` ...
+    suffix; an identical file is reused. The copy goes to a temp file first (``os.replace``), so a
+    master in use is never seen half written."""
+    want.parent.mkdir(parents=True, exist_ok=True)
+    n = 1
+    while True:
+        cand = want if n == 1 else want.with_name(f"{want.stem}_{n}{want.suffix}")
+        if not cand.exists():
+            tmp = cand.with_name(f"{cand.name}.{os.getpid()}.tmp")
+            try:
+                shutil.copy2(src, tmp)
+                os.replace(tmp, cand)
+            finally:
+                tmp.unlink(missing_ok=True)
+            return cand, False
+        if cand.is_file() and cand.stat().st_size == src.stat().st_size and _same_bytes(src, cand):
+            return cand, True
+        n += 1
 
 
 def _same_bytes(a: Path, b: Path, chunk: int = 1 << 20) -> bool:
