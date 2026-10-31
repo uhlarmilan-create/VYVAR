@@ -11,12 +11,12 @@ import os
 import warnings
 from pathlib import Path
 from typing import Any, Sequence
-import numpy as np
 from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy.wcs import WCS
 from astropy.wcs import FITSFixedWarning
 import pandas as pd
+from stats_core import coerce_bool_series
 from config import AppConfig
 from catalog_db import query_local_gaia_by_source_ids, query_local_vsx, vsx_amplitude_mag
 from database import DraftTechnicalMetadataError, VyvarDatabase
@@ -24,6 +24,7 @@ from gaia_catalog_id import normalize_gaia_source_id
 from infolog import log_event
 from optics_selection import resolve_optics_ids_for_platesolve
 from optics import optics_hint
+from fits_suffixes import list_fits_files
 from utils import iter_fits_paths_recursive as _iter_fits_recursive, strip_celestial_wcs_keys, strip_vendor_platesolve_metadata
 import fits_meta
 from pipeline_constants import _EXO_HOST_ANNOTATION_COLUMNS
@@ -99,14 +100,9 @@ def _strip_external_platesolve_header(hdr: fits.Header) -> None:
 
     VYVAR establishes astrometry with its own solver only (``astrosolve``, PLATESOLVE-2026-10).
     """
-    strip_celestial_wcs_keys(hdr)
+    strip_celestial_wcs_keys(hdr)  # G03-21: the one WCS key list (incl. WCSAXES / WCSDIM / CROTA / WCSNAME)
     strip_vendor_platesolve_metadata(hdr)
     for _k in (
-        "WCSAXES",
-        "WCSDIM",
-        "CROTA1",
-        "CROTA2",
-        "WCSNAME",
         "VY_PSOLV",
         "VY_SIPRF",
     ):
@@ -661,11 +657,10 @@ def _query_vsx_local_frame_bbox(
     slice). Returns raw VSX rows over the bbox; the caller applies the precise in-frame pixel
     filter (matching ``margin_px``). RA wrap is handled via centre-relative offsets.
     """
-    from catalog_db import count_vsx_rows, require_vsx_db
+    from catalog_db import require_vsx_db_with_count
 
     if require_db:
-        vp = require_vsx_db(vsx_db_path)
-        n_total = count_vsx_rows(vp)
+        vp, n_total = require_vsx_db_with_count(vsx_db_path)
     elif vsx_db_path is None:
         return pd.DataFrame()
     else:
@@ -674,45 +669,26 @@ def _query_vsx_local_frame_bbox(
             return pd.DataFrame()
         n_total = 0
     m = float(margin_px)
-    w = float(width_px)
-    h = float(height_px)
-    # Pixel-space samples covering the frame border + margin (corners + edge midpoints).
-    xs_px = np.asarray([-m, w * 0.5, w + m, -m, w + m, -m, w * 0.5, w + m], dtype=np.float64)
-    ys_px = np.asarray([-m, -m, -m, h * 0.5, h * 0.5, h + m, h + m, h + m], dtype=np.float64)
+    # G03-17: the one frame-bbox box (vsx_gaia_crossmatch.frame_bbox_radec_limits, incl. the pole case)
+    from vsx_gaia_crossmatch import VsxGaiaCrossmatchError, frame_bbox_radec_limits  # noqa: PLC0415
+
     try:
-        world = wcs.all_pix2world(xs_px, ys_px, 0)
-        ras = np.asarray(world[0], dtype=np.float64)
-        decs = np.asarray(world[1], dtype=np.float64)
+        ra_min, ra_max, de_min, de_max = frame_bbox_radec_limits(wcs, width_px, height_px, margin_px=m,
+                                                                 center=center)
+    except VsxGaiaCrossmatchError:  # no finite border sample
+        return pd.DataFrame()
     except Exception as exc:  # noqa: BLE001
         from except_fix_counters import get_except_fix_counters
 
         get_except_fix_counters().vsx_frame_bbox_wcs_fail += 1
         LOGGER.error("[VSX] frame-bbox WCS all_pix2world failed: %s", exc)
         return pd.DataFrame()
-    ok = np.isfinite(ras) & np.isfinite(decs)
-    if not bool(ok.any()):
-        return pd.DataFrame()
-    ras = ras[ok]
-    decs = decs[ok]
-    de_min = float(np.min(decs))
-    de_max = float(np.max(decs))
-    if center is not None:
-        try:
-            ra0 = float(center.icrs.ra.deg)
-        except Exception:  # noqa: BLE001
-            ra0 = float(np.median(ras))
-    else:
-        ra0 = float(np.median(ras))
-    dra = ((ras - ra0 + 180.0) % 360.0) - 180.0
-    ra_min = ra0 + float(np.min(dra))
-    ra_max = ra0 + float(np.max(dra))
-    pad = 1.0 / 3600.0  # 1 arcsec rounding pad
     rows = query_local_vsx(
         vp,
-        ra_min=ra_min - pad,
-        ra_max=ra_max + pad,
-        dec_min=de_min - pad,
-        dec_max=de_max + pad,
+        ra_min=ra_min,
+        ra_max=ra_max,
+        dec_min=de_min,
+        dec_max=de_max,
         max_rows=None,  # frame bbox is tiny -> no cap needed (spatial-first completeness)
     )
     if not rows:
@@ -788,21 +764,20 @@ def select_comparison_stars_spatial_grid(
 
     work = df.copy()
     if "is_usable" in work.columns:
-        work = work[work["is_usable"].fillna(False).astype(bool)]
+        work = work[coerce_bool_series(work["is_usable"])]
     if work.empty:
         return pd.DataFrame(), {"n_selected": 0, "grid_nx": 0, "grid_ny": 0, "reason": "no_rows_after_usable_filter"}
     # Forced-photometry rows (Gaia positions measured without a detection) never enter the pool.
     if "forced_photometry" in work.columns:
-        _fp = work["forced_photometry"].astype(str).str.strip().str.lower()
-        work = work[~_fp.isin(["true", "1", "yes"])]
+        work = work[~coerce_bool_series(work["forced_photometry"])]
     if work.empty:
         return pd.DataFrame(), {"n_selected": 0, "grid_nx": 0, "grid_ny": 0, "reason": "no_rows_after_seed_pool_filter"}
     if "catalog" in work.columns:
         work = work[work["catalog"].fillna("").astype(str).str.strip() != ""]
     if "photometry_ok" in work.columns:
-        work = work[work["photometry_ok"].fillna(True).astype(bool)]
+        work = work[coerce_bool_series(work["photometry_ok"], default=True)]
     if require_non_variable and "catalog_known_variable" in work.columns:
-        work = work[~work["catalog_known_variable"].fillna(False).astype(bool)]
+        work = work[~coerce_bool_series(work["catalog_known_variable"])]
     # Annulus-aware border filter: keep only stars whose centroid is within the safe bbox
     # (intersection of aligned frames shrunk by sky-annulus outer radius).
     if safe_bbox is not None and "x" in work.columns and "y" in work.columns:
@@ -901,7 +876,7 @@ def _plan_safe_bbox(*, _cfg_plan, aligned_files, aligned_ram_frames, hdr, ps, re
         if aligned_files is not None:
             all_aligned = [Path(p) for p in aligned_files if Path(p).is_file()]
         else:
-            all_aligned = sorted(aligned_dir.glob("*.fits"))
+            all_aligned = list_fits_files(aligned_dir)
         ram_headers = [
             (_hdr, tuple(np.asarray(_arr).shape[:2]))
             for _name, _hdr, _arr in (aligned_ram_frames or [])
@@ -969,6 +944,22 @@ def _plan_safe_bbox(*, _cfg_plan, aligned_files, aligned_ram_frames, hdr, ps, re
         log_event(f"[BORDER] safe_bbox computation failed: {_bbox_exc!s} - skipping border filter")
         _safe_bbox = None
     return _r_out, _safe_bbox
+
+
+def _vsx_match_lookups(gdf: pd.DataFrame, ga: pd.DataFrame) -> tuple[dict[str, Any], dict[str, int]]:
+    """G03-11: the VSX match lookups, indexed once (were an iterrows dict over every Gaia row and a
+    full catalog_id scan of the masterstars per accepted match).
+
+    Returns (Gaia ``g_mag`` by catalog_id - the LAST row of a duplicated id, as the former dict
+    comprehension; None when the column is absent) and (position in ``ga`` of the FIRST row of each
+    catalog_id, as ``.iloc[0]`` of the former scan)."""
+    gmag_vals = gdf["g_mag"].tolist() if "g_mag" in gdf.columns else [None] * len(gdf)
+    gmag_by_cid = dict(zip(gdf["catalog_id"].astype(str).tolist(), gmag_vals, strict=True))
+    first_pos: dict[str, int] = {}
+    ga_ids = ga["catalog_id"].astype(str).tolist() if "catalog_id" in ga.columns else []
+    for pos, cid in enumerate(ga_ids):
+        first_pos.setdefault(cid, pos)
+    return gmag_by_cid, first_pos
 
 
 def _plan_vsx_targets(*, _cfg_plan, df, h, hdr, wpx):
@@ -1192,9 +1183,7 @@ def _plan_vsx_targets(*, _cfg_plan, df, h, hdr, wpx):
                             "masterstars_accepted": _cm_diag_obj.masterstars_accepted,
                             "outcome_check": _cm_diag_obj.outcome_check,
                         }
-                        _gaia_by_cid = {
-                            str(r["catalog_id"]): r for _, r in _gdf.iterrows()
-                        }
+                        _gmag_by_cid, _ga_first_pos = _vsx_match_lookups(_gdf, ga)
                         for i, mr in enumerate(_match_rows):
                             if mr.accepted and mr.catalog_id:
                                 cat_id_out[i] = mr.catalog_id
@@ -1202,9 +1191,9 @@ def _plan_vsx_targets(*, _cfg_plan, df, h, hdr, wpx):
                                 quality_out[i] = mr.quality
                                 if mr.catalog_id in _ms_ids:
                                     source_out[i] = "masterstars"
-                                    gro = ga.loc[ga["catalog_id"].astype(str) == mr.catalog_id]
-                                    if not gro.empty:
-                                        gro = gro.iloc[0]
+                                    _gpos = _ga_first_pos.get(mr.catalog_id)
+                                    if _gpos is not None:
+                                        gro = ga.iloc[_gpos]
                                         try:
                                             _mg = gro.get("mag")
                                             mag_out[i] = (
@@ -1221,10 +1210,9 @@ def _plan_vsx_targets(*, _cfg_plan, df, h, hdr, wpx):
                                             zone_out[i] = ""
                                 else:
                                     source_out[i] = "gaia_dr3_direct"
-                                    grow = _gaia_by_cid.get(mr.catalog_id)
-                                    if grow is not None:
+                                    if mr.catalog_id in _gmag_by_cid:
                                         try:
-                                            _gm = grow.get("g_mag")
+                                            _gm = _gmag_by_cid[mr.catalog_id]
                                             mag_out[i] = (
                                                 float(_gm)
                                                 if _gm is not None and str(_gm).strip() != ""

@@ -244,15 +244,14 @@ def run_epsf_psf_merge_job(
 
     # EPSF-MERGE-2026-10: unresolved companions are judged at the night's typical seeing (median of the
     # frames' fwhm_px_for_aperture, NIGHT-FWHM-2026-10), not at the MASTERSTAR (the best frame).
-    from photometry_comp import night_median_fwhm_px
+    from photometry_comp import night_frame_fwhms_px, night_median_fwhm_px
 
-    fwhm_night, fwhm_night_src = night_median_fwhm_px([proc_csv_path_for_aligned_fits(f) for f in files], float("nan"))
+    # G07-16 / G09-27: the per-frame FWHM vector is read once (median and worst-seeing reach)
+    _fw_frames = night_frame_fwhms_px([proc_csv_path_for_aligned_fits(f) for f in files])
+    fwhm_night, fwhm_night_src = night_median_fwhm_px(None, float("nan"), frame_fwhms=_fw_frames)
     if not (math.isfinite(fwhm_night) and fwhm_night > 0):
         raise ValueError("ePSF: no per-frame fwhm_px_for_aperture in the proc sidecars - night FWHM unknown")
     # G09-22: neighbours are collected for the largest fit box of the night (worst-seeing frame)
-    from photometry_comp import night_frame_fwhms_px
-
-    _fw_frames = night_frame_fwhms_px([proc_csv_path_for_aligned_fits(f) for f in files])
     fwhm_reach = max(max(_fw_frames), fwhm_ms) if _fw_frames else fwhm_ms
     fit_stars, neighbours, sources_meta = frame_fit_sources(
         ps, fit_set.catalog_ids, cutout_size=cutout, fwhm_px=fwhm_reach, merge_fwhm_px=fwhm_night

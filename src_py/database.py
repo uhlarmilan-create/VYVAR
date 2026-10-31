@@ -13,6 +13,7 @@ from typing import Any, Iterable
 from astropy.io import fits
 
 from infolog import log_event
+from stats_core import coerce_bool
 
 LOGGER = logging.getLogger(__name__)
 
@@ -217,8 +218,51 @@ def get_observer_locations(db_path: str | Path, *, active_only: bool = False) ->
         conn.close()
 
 
+_DEFAULT_ROW_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "LOCATION"})
+
+
+def _default_rows(conn: sqlite3.Connection, table: str) -> tuple[list[int], list[int]] | None:
+    """(marked IDs, active IDs) of ``table`` in ID order; None without an ``IS_DEFAULT`` column.
+    ``IS_DEFAULT`` / ``ACTIVE`` are read with the one flag vocabulary (stats_core); NULL ACTIVE = active."""
+    if table not in _DEFAULT_ROW_TABLES:
+        raise ValueError(f"default row: table not allowed: {table}")
+    cols = {r[1] for r in conn.execute(f"PRAGMA table_info('{table}');").fetchall()}
+    if "IS_DEFAULT" not in cols:
+        return None
+    act = "ACTIVE" if "ACTIVE" in cols else "NULL"
+    marked: list[int] = []
+    active: list[int] = []
+    for rid, is_def, is_act in conn.execute(f"SELECT ID, IS_DEFAULT, {act} FROM {table} ORDER BY ID;").fetchall():
+        if rid is None or int(rid) <= 0:
+            continue
+        if coerce_bool(is_act, default=True):
+            active.append(int(rid))
+        if coerce_bool(is_def):
+            marked.append(int(rid))
+    return marked, active
+
+
+def default_row_id(conn: sqlite3.Connection, table: str) -> int | None:
+    """G13-44: the ONE "default row" rule (Milan 2026-10-30): the lowest-ID active row marked
+    ``IS_DEFAULT``; when every marked row is inactive, the lowest-ID ACTIVE row with a WARNING;
+    None when no row is marked (or the table has no ``IS_DEFAULT`` column)."""
+    rows = _default_rows(conn, table)
+    if rows is None:
+        return None
+    marked, active = rows
+    for rid in marked:
+        if rid in active:
+            return rid
+    if not marked:
+        return None
+    fallback = active[0] if active else None
+    LOGGER.warning("%s: the default row (ID %s) is inactive; %s", table, ", ".join(map(str, marked)),
+                   f"the lowest active row (ID {fallback}) is used" if fallback is not None else "no active row")
+    return fallback
+
+
 def get_default_observer_location_id(db_path: str | Path) -> int:
-    """``LOCATION.ID`` of the active row with ``IS_DEFAULT = 1`` (0 when none, no DB or an older
+    """``LOCATION.ID`` of the default row (:func:`default_row_id`; 0 when none, no DB or an older
     DB without the column). Read on every ``AppConfig`` load, so plain SQL, read-only."""
     p = Path(db_path).expanduser()
     if not p.is_file():
@@ -228,16 +272,7 @@ def get_default_observer_location_id(db_path: str | Path) -> int:
     except sqlite3.Error:
         return 0
     try:
-        cols = {r[1] for r in conn.execute("PRAGMA table_info('LOCATION');").fetchall()}
-        if "IS_DEFAULT" not in cols:
-            return 0
-        sel = "SELECT ID, ACTIVE FROM LOCATION" if "ACTIVE" in cols else "SELECT ID, NULL FROM LOCATION"
-        for lid, active in conn.execute(f"{sel} WHERE IS_DEFAULT = 1 ORDER BY ID;").fetchall():
-            if str(active).strip().upper() in ("NO", "N", "0", "FALSE"):
-                continue
-            if int(lid or 0) > 0:
-                return int(lid)
-        return 0
+        return default_row_id(conn, "LOCATION") or 0
     except sqlite3.Error:
         return 0
     finally:
@@ -258,8 +293,10 @@ def get_observer_location_by_id(db_path: str | Path, location_id: int) -> dict[s
     conn = sqlite3.connect(str(p))
     conn.row_factory = sqlite3.Row
     try:
+        loc_cols = {r["name"] for r in conn.execute("PRAGMA table_info('LOCATION');").fetchall()}
+        extra = "".join(f", {c}" for c in ("IS_DEFAULT", "ACTIVE") if c in loc_cols)
         row = conn.execute(
-            "SELECT ID, PLACENAME, LATITUDE, LONGITUDE, ALTITUDE FROM LOCATION WHERE ID = ? LIMIT 1;",
+            f"SELECT ID, PLACENAME, LATITUDE, LONGITUDE, ALTITUDE{extra} FROM LOCATION WHERE ID = ? LIMIT 1;",
             (lid,),
         ).fetchone()
         if row is None:
@@ -574,7 +611,7 @@ class VyvarDatabase:
                     CASE
                         WHEN ACTIVE IS NULL THEN 'YES'
                         WHEN typeof(ACTIVE) IN ('integer', 'real') AND CAST(ACTIVE AS INTEGER) = 0 THEN 'NO'
-                        WHEN UPPER(TRIM(CAST(ACTIVE AS TEXT))) IN ('NO', 'N', 'FALSE', '0', '0.0') THEN 'NO'
+                        WHEN UPPER(TRIM(CAST(ACTIVE AS TEXT))) IN ('NO', 'N', 'FALSE', 'F', 'OFF', '0', '0.0') THEN 'NO'
                         ELSE 'YES'
                     END,
                     COALESCE(IS_DEFAULT, 0)
@@ -608,7 +645,7 @@ class VyvarDatabase:
                     CASE
                         WHEN ACTIVE IS NULL THEN 'YES'
                         WHEN typeof(ACTIVE) IN ('integer', 'real') AND CAST(ACTIVE AS INTEGER) = 0 THEN 'NO'
-                        WHEN UPPER(TRIM(CAST(ACTIVE AS TEXT))) IN ('NO', 'N', 'FALSE', '0', '0.0') THEN 'NO'
+                        WHEN UPPER(TRIM(CAST(ACTIVE AS TEXT))) IN ('NO', 'N', 'FALSE', 'F', 'OFF', '0', '0.0') THEN 'NO'
                         ELSE 'YES'
                     END,
                     COALESCE(IS_DEFAULT, 0)
@@ -662,35 +699,14 @@ class VyvarDatabase:
         c = column_ref.strip()
         return f"""(
             ({c}) IS NULL
-            OR UPPER(TRIM(CAST({c} AS TEXT))) NOT IN ('NO', 'N', 'FALSE', '0', '0.0')
+            OR UPPER(TRIM(CAST({c} AS TEXT))) NOT IN ('NO', 'N', 'FALSE', 'F', 'OFF', '0', '0.0')
         )"""
 
 
     @staticmethod
     def normalize_active_db_value(raw: Any) -> int:
         """Normalize UI / DB values to **1** = active, **0** = inactive (soft-delete). Legacy ``YES``/``NO`` supported."""
-        if raw is None:
-            return 1
-        try:
-            if isinstance(raw, float) and math.isnan(raw):
-                return 1
-        except TypeError:
-            pass
-        if raw is True:
-            return 1
-        if raw is False:
-            return 0
-        if isinstance(raw, (int, float)) and not isinstance(raw, bool):
-            try:
-                return 0 if int(raw) == 0 else 1
-            except (TypeError, ValueError):
-                return 1
-        s = str(raw).strip().upper()
-        if s in ("NO", "N", "FALSE", "0", "0.0"):
-            return 0
-        if s in ("YES", "Y", "TRUE", "1", "1.0", ""):
-            return 1
-        return 1
+        return int(coerce_bool(raw, default=True))  # G13-44: the one flag vocabulary; unknown = active
 
     @staticmethod
     def normalize_active_text(raw: Any) -> str:
@@ -1570,35 +1586,26 @@ class VyvarDatabase:
         self._seed_table_defaults()
 
     def _seed_table_defaults(self) -> None:
-        """Keep exactly one ``IS_DEFAULT = 1`` row per reference table. When none is marked, the
-        lowest-ID active row becomes the default (no designated row IDs). Runs before ACTIVE is
-        normalised to YES/NO, so 0 / '0' / 'N' / 'FALSE' count as hidden too."""
-        hidden = "UPPER(TRIM(CAST(COALESCE(ACTIVE, 'YES') AS TEXT))) IN ('NO', 'N', 'FALSE', '0', '0.0')"
+        """Keep exactly one ``IS_DEFAULT = 1`` row per reference table, chosen by :func:`default_row_id`
+        (G13-44); when none is marked, the lowest-ID active row becomes the default (no designated row IDs)."""
         for table in ("EQUIPMENTS", "TELESCOPE", "LOCATION"):
-            marked = [int(r[0]) for r in self.conn.execute(f"SELECT ID FROM {table} WHERE IS_DEFAULT = 1 ORDER BY ID;")]
-            if len(marked) == 1:
+            rows = _default_rows(self.conn, table)
+            if rows is None:
                 continue
-            if marked:  # more than one: keep the lowest marked ID
-                keep: int | None = marked[0]
-            else:
-                row = self.conn.execute(f"SELECT MIN(ID) FROM {table} WHERE NOT ({hidden});").fetchone()
-                keep = int(row[0]) if row is not None and row[0] is not None else None
-            if keep is not None:
+            marked, active = rows
+            keep = default_row_id(self.conn, table) if marked else (active[0] if active else None)
+            if keep is not None and marked != [keep]:
                 self.conn.execute(f"UPDATE {table} SET IS_DEFAULT = CASE WHEN ID = ? THEN 1 ELSE 0 END;", (keep,))
                 self.conn.commit()
 
     def get_default_id(self, table: str) -> int | None:
-        """Return the ``IS_DEFAULT = 1`` row id for ``table``, or ``None`` if unset."""
-        allowed = {"EQUIPMENTS", "TELESCOPE", "LOCATION"}
-        if table not in allowed:
+        """The default row id of ``table`` (:func:`default_row_id`), or ``None`` if unset."""
+        if table not in _DEFAULT_ROW_TABLES:
             raise ValueError(f"get_default_id: table not allowed: {table}")
         try:
-            row = self.conn.execute(
-                f"SELECT ID FROM {table} WHERE IS_DEFAULT = 1 ORDER BY ID LIMIT 1;"
-            ).fetchone()
+            return default_row_id(self.conn, table)
         except sqlite3.Error:  # noqa: BLE001
             return None
-        return int(row["ID"]) if row is not None and row["ID"] is not None else None
 
     def _ensure_equipments_saturate_adu_column(self) -> None:
         """Schema migration: linear saturation ceiling (ADU) per camera/equipment row."""

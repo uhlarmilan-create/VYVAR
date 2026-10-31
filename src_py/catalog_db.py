@@ -108,9 +108,24 @@ def _has_table(con: sqlite3.Connection, table: str) -> bool:
     ).fetchone() is not None
 
 
-def ra_intervals_deg(ra_min: float, ra_max: float) -> list[tuple[float, float]]:
-    """Split an RA range (deg) into sub-intervals within [0, 360) when the box crosses RA 0."""
+def ra_intervals_deg(ra_min: float, ra_max: float, *, wrap: bool = False) -> list[tuple[float, float]]:
+    """Split an RA range (deg) into sub-intervals within [0, 360] when the box crosses RA 0.
+
+    The box runs east from ``ra_min`` to ``ra_max`` with ``ra_min <= ra_max`` in unwrapped degrees (e.g.
+    ``(-5, 5)`` or ``(355, 365)``, as :func:`cone_sky_box` gives it); a box lying wholly outside [0, 360) is
+    shifted by whole turns. G05-49 (Milan 2026-10-30): ``ra_min > ra_max`` raises ``ValueError`` (it used to
+    return no interval, i.e. silently no rows); a caller that means "crossing RA 0" in that form passes
+    ``wrap=True`` explicitly."""
     rm, rM = float(ra_min), float(ra_max)
+    if not (math.isfinite(rm) and math.isfinite(rM)):
+        raise ValueError(f"RA box not finite: ({ra_min}, {ra_max})")
+    if rm > rM:
+        if not wrap:
+            raise ValueError(f"RA box reversed: ra_min {rm} > ra_max {rM} (pass wrap=True for a box crossing RA 0)")
+        rM += 360.0 * math.ceil((rm - rM) / 360.0)
+    if rM - rm < 360.0 and (rM < 0.0 or rm > 360.0):  # wholly outside [0, 360): shift by whole turns
+        k = 360.0 * math.floor(rm / 360.0)
+        rm, rM = rm - k, rM - k
     if rM - rm >= 360.0:
         return [(0.0, 360.0)]
     if rm >= 0.0 and rM <= 360.0 and rm <= rM:
@@ -454,6 +469,12 @@ _BUILD_HINT = "Build it with catalogs/objects_make.py (python catalogs/objects_m
 
 def require_vsx_db(objects_db_path: str | Path | None) -> Path:
     """Resolved objects DB path with a usable ``vsx_data`` table, or VSXCatalogError."""
+    return require_vsx_db_with_count(objects_db_path)[0]
+
+
+def require_vsx_db_with_count(objects_db_path: str | Path | None) -> tuple[Path, int]:
+    """:func:`require_vsx_db` plus the ``vsx_data`` row count it checked (G05-51: callers that
+    report the count reuse it instead of a second COUNT(*) over the whole table)."""
     raw = str(objects_db_path or "").strip()
     if not raw:
         raise VSXCatalogError(f"Objects database path is not set (config key objects_db_path). {_BUILD_HINT}")
@@ -463,9 +484,10 @@ def require_vsx_db(objects_db_path: str | Path | None) -> Path:
     ok, code = validate_vsx_schema(p)
     if not ok:
         raise VSXCatalogError(f"VSX table invalid ({code}) in {p}. {_BUILD_HINT}")
-    if count_vsx_rows(p) <= 0:
+    n_rows = count_vsx_rows(p)
+    if n_rows <= 0:
         raise VSXCatalogError(f"VSX table vsx_data has zero rows in {p}. {_BUILD_HINT}")
-    return p
+    return p, int(n_rows)
 
 
 def require_exoplanet_db(objects_db_path: str | Path | None) -> Path:

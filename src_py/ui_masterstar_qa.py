@@ -54,6 +54,21 @@ def _resolve_draft_path(cfg: AppConfig, draft_id: int | None, draft_dir_override
     return Path(ap_manual.strip())
 
 
+@st.cache_data(max_entries=4, show_spinner=False)
+def _masterstar_qa_cached(setup_dir: str, stamp: tuple) -> dict:
+    """G14-26: ``load_masterstar_qa`` once per setup and file state (``stamp``: the setup's files and
+    pipeline_meta.json); a checkbox or view switch reruns from the cache."""
+    from masterstar_qa_plot import load_masterstar_qa  # noqa: PLC0415
+
+    return load_masterstar_qa(Path(setup_dir))
+
+
+def _masterstar_qa_stamp(setup_dir: Path) -> tuple:
+    from ui_cache import dir_stamp, file_stamp  # noqa: PLC0415
+
+    return dir_stamp(setup_dir) + file_stamp(setup_dir / "photometry" / "pipeline_meta.json")
+
+
 def _fmt(v: float | None, spec: str, unit: str = "") -> str:
     return "-" if v is None else f"{format(v, spec)}{unit}"
 
@@ -89,7 +104,7 @@ def render_masterstar_qa(
         if mp:
             preferred_setup = _infer_setup_name_from_masterstar_candidate_path(Path(str(mp)))
 
-    from masterstar_qa_plot import load_masterstar_qa, render_masterstar_overlay
+    from masterstar_qa_plot import render_masterstar_overlay
 
     names = [p.name for p in bundles]
     pref = default_bundle_dir(ps_root, preferred_name=preferred_setup)
@@ -106,7 +121,7 @@ def render_masterstar_qa(
         )
     setup_dir = ps_root / pick_nm
     try:
-        qa = load_masterstar_qa(setup_dir)
+        qa = _masterstar_qa_cached(str(setup_dir), _masterstar_qa_stamp(setup_dir))
     except ValueError as exc:
         st.warning(str(exc))
         return

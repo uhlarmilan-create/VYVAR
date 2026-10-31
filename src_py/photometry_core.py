@@ -60,13 +60,9 @@ def run_full_photometry_pipeline(
     _cfg = cfg
 
 
-    def _p(msg: str) -> None:
-        if progress_cb is None:
-            return
-        try:
-            progress_cb(str(msg))
-        except UnicodeEncodeError:
-            progress_cb(str(msg).encode("ascii", "backslashreplace").decode("ascii"))
+    from infolog import safe_progress  # noqa: PLC0415
+
+    _p = safe_progress(progress_cb)
 
     # FWHM: MASTERSTAR header VY_FWHM, otherwise the config default.
     from pipeline_constants import DAO_FWHM_FALLBACK_PX  # noqa: PLC0415
@@ -108,6 +104,16 @@ def run_full_photometry_pipeline(
         draft_id=draft_id,
         db=db,
     )
+
+    # SAT-LIN-2026-10 / G07-18: the linearity check (report only) runs after the selection, which it does
+    # not feed; same frames and the same sat_diag.json update as before
+    if p01.get("proc_store") is not None:
+        from sat_diag import record_linearity_check, sat_diag_json_for_photometry  # noqa: PLC0415
+
+        record_linearity_check(
+            sat_diag_json_for_photometry(per_frame_csv_dir, output_dir),
+            [Path(k) for k in p01["proc_store"].keys()],
+        )
 
     active_targets_csv = Path(str(p01.get("active_targets_csv") or ""))
     comparison_stars_csv = Path(str(p01.get("comparison_stars_csv") or ""))
@@ -210,7 +216,6 @@ from aperture_photometry import (  # noqa: E402,F401
     _resolve_aperture_equipment_id,
     _draft_dir_from_aperture_paths,
     _require_comparison_stars_per_target_schema,
-    _resolve_photometric_aperture_px_for_gs11,
     read_flux_from_csv,
     apply_reporting_postprocess,
     build_rms_mag_model,
@@ -223,7 +228,6 @@ from aperture_photometry import (  # noqa: E402,F401
 )
 from band_classify import resolve_apply_color_term  # noqa: E402,F401
 from photometry_gate_helpers import (  # noqa: E402,F401
-    _howell_variance_adu2,
     _photometric_error,
     _photometric_error_with_bkg_mode,
 )
@@ -251,7 +255,6 @@ from photometry_gate_helpers import (
     _clamp_err_empty_apertures_n,
     _labbe_content_seed_from_header,
     measure_empty_aperture_sigma_bkg,
-    _howell_bkg_variance_adu2,
     _clamp_bkg_scale_r,
     bkg_scale_ratio_empirical_over_howell,
     compute_setup_bkg_scale_r,
@@ -281,7 +284,6 @@ from photometry_comp import (
     _enrich_comp_bp_rp,
     _normalize_id_value,
     _normalize_id_series,
-    _bool_col,
     _resolve_frame_hw_px_from_masterstar,
     select_active_targets,
     _bprp_tier_ladder_for_selection,

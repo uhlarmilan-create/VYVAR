@@ -15,6 +15,8 @@ LOGGER = logging.getLogger("photometry_core")
 
 # Explicit annulus sky (ADU/px) for the Howell error.
 SKY_ADU_PER_PX_ANNULUS_COL = "sky_adu_per_px_annulus"
+#: CCD-ONE-2026-10: number of sky pixels of that sky median (n_sky of the CCD equation, ``ccd_noise``).
+SKY_N_PX_COL = "sky_n_px"
 
 # F-BINGAIN-1: empirical background noise (empty-aperture scatter) + provenance.
 SIGMA_BKG_AP_COL = "sigma_bkg_ap"
@@ -82,6 +84,13 @@ def flux_k_column(k: float) -> str:
     return f"flux_k{int(round(float(k) * 100)):03d}"
 
 
+def flux_k_radius_px(k: float, fwhm_px: float) -> float:
+    """Radius [px] of the proc grid flux ``flux_k_column(k)`` in a frame of FWHM ``fwhm_px``
+    (``fwhm_px_for_aperture``): r = k x FWHM, at least 0.5 px. The one definition for the writer
+    (``photometry_shared``) and for the CCD-equation error of that flux (COMP-CEIL-FIELDK-2026-10)."""
+    return max(0.5, float(k) * float(fwhm_px))
+
+
 def blend_k_column(k: float) -> str:
     """Column of the neighbour-light fraction at r = k x FWHM (BLEND-K-2026-10)."""
     return f"blend_k{int(round(float(k) * 100)):03d}"
@@ -97,6 +106,7 @@ PHASE_USECOLS_PERFRAME: tuple[str, ...] = (
     "bjd_tdb_mid",
     "dao_flux",
     "sky_adu_per_px_annulus",
+    SKY_N_PX_COL,
     "aperture_r_px",
     "is_saturated",
     "is_noisy",

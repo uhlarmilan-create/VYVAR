@@ -150,26 +150,41 @@ def gaia_radec_map_from_table(
 
     from gaia_catalog_id import normalize_gaia_source_id
 
-    out: dict[str, tuple[float, float]] = {}
     if df is None or getattr(df, "empty", True):
-        return out
+        return {}
     cid = df[id_col] if id_col in df.columns else df.get("source_id")
     if cid is None:
-        return out
+        return {}
     ra = pd.to_numeric(df[ra_col] if ra_col in df.columns else df.get("ra"), errors="coerce")
     de = pd.to_numeric(df[dec_col] if dec_col in df.columns else df.get("dec"), errors="coerce")
-    for i in range(len(df)):
-        k = normalize_gaia_source_id(str(cid.iloc[i] if hasattr(cid, "iloc") else ""))
-        if not k:
-            continue
-        try:
-            rv = float(ra.iloc[i])
-            dv = float(de.iloc[i])
-        except Exception:  # noqa: BLE001
-            continue
-        if math.isfinite(rv) and math.isfinite(dv):
-            out[k] = (rv, dv)
-    return out
+    # G02-44: vectorised (was a per-row .iloc loop); later rows win on a repeated id, as before
+    keys = [normalize_gaia_source_id(str(c)) for c in cid.tolist()]
+    rv = pd.Series(ra).to_numpy(dtype=np.float64, na_value=np.nan)
+    dv = pd.Series(de).to_numpy(dtype=np.float64, na_value=np.nan)
+    ok = np.isfinite(rv) & np.isfinite(dv) & np.array([bool(k) for k in keys], dtype=bool)
+    idx = np.flatnonzero(ok)
+    return {keys[i]: (float(rv[i]), float(dv[i])) for i in idx}
+
+
+def gaia_radec_by_ids(gaia_db_path: str, ids: list[str]) -> dict[str, tuple[float, float]]:
+    """G02-44: normalised Gaia source_id -> (ra, dec) from the local Gaia DB, queried in chunks of 400 ids.
+    Raises on a DB error (callers decide); the connection is always closed."""
+    from contextlib import closing  # noqa: PLC0415
+
+    from catalog_db import gaia_table  # noqa: PLC0415
+    from gaia_catalog_id import normalize_gaia_source_id  # noqa: PLC0415
+
+    coords: dict[str, tuple[float, float]] = {}
+    with closing(connect_ro(gaia_db_path)) as con:
+        table = gaia_table(con)
+        for i0 in range(0, len(ids), 400):
+            part = ids[i0 : i0 + 400]
+            ph = ",".join("?" * len(part))
+            for sid, ra, de in con.execute(f"SELECT source_id, ra, dec FROM {table} WHERE source_id IN ({ph})", part):
+                key = normalize_gaia_source_id(str(sid))
+                if key:
+                    coords[key] = (float(ra), float(de))
+    return coords
 
 
 def resolve_det_fallback_name(
@@ -220,8 +235,12 @@ def finalize_masterstar_sky_coords(
     *,
     gaia_db_path: str | None = None,
     log_fn: Any | None = None,
+    gaia_coords_out: dict[str, tuple[float, float]] | None = None,
 ) -> Any:
-    """Set ra_deg/dec_deg from Gaia (matched) or final WCS pix2world (unmatched); add coord_source."""
+    """Set ra_deg/dec_deg from Gaia (matched) or final WCS pix2world (unmatched); add coord_source.
+
+    ``gaia_coords_out`` (optional) receives the Gaia lookup (source_id -> (ra, dec)) when the DB query
+    succeeded, so the identity QA can reuse it instead of querying the same ids again (G02-44)."""
     import pandas as pd
 
     from gaia_catalog_id import normalize_gaia_source_id
@@ -246,21 +265,9 @@ def finalize_masterstar_sky_coords(
     gdb = str(gaia_db_path or "").strip()
     if gdb and ids:
         try:
-            from catalog_db import gaia_table  # noqa: PLC0415
-
-            con = connect_ro(gdb)
-            table = gaia_table(con)
-            for i0 in range(0, len(ids), 400):
-                part = ids[i0 : i0 + 400]
-                ph = ",".join("?" * len(part))
-                for sid, ra, de in con.execute(
-                    f"SELECT source_id, ra, dec FROM {table} WHERE source_id IN ({ph})",
-                    part,
-                ):
-                    key = normalize_gaia_source_id(str(sid))
-                    if key:
-                        gaia_coords[key] = (float(ra), float(de))
-            con.close()
+            gaia_coords = gaia_radec_by_ids(gdb, ids)
+            if gaia_coords_out is not None:
+                gaia_coords_out.update(gaia_coords)
         except Exception as exc:  # noqa: BLE001
             if log_fn:
                 log_fn(f"finalize_masterstar_sky_coords: Gaia DB lookup skipped ({exc!s})")
@@ -370,21 +377,7 @@ def evaluate_matched_world2pix_identity_px(
         missing = [i for i in ids if i not in coords]
         if missing:
             try:
-                from catalog_db import gaia_table  # noqa: PLC0415
-
-                con = connect_ro(gdb)
-                table = gaia_table(con)
-                for i0 in range(0, len(missing), 400):
-                    part = missing[i0 : i0 + 400]
-                    ph = ",".join("?" * len(part))
-                    for sid, ra, de in con.execute(
-                        f"SELECT source_id, ra, dec FROM {table} WHERE source_id IN ({ph})",
-                        part,
-                    ):
-                        key = normalize_gaia_source_id(str(sid))
-                        if key:
-                            coords[key] = (float(ra), float(de))
-                con.close()
+                coords.update(gaia_radec_by_ids(gdb, missing))
             except Exception as exc:  # noqa: BLE001
                 if log_fn:
                     log_fn(f"matched_world2pix_identity_px: Gaia DB lookup skipped ({exc!s})")

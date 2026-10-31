@@ -160,7 +160,6 @@ from pipeline_calibrate import (
     _match_and_crop_pair,
     _qc_enrich_calibrated_in_place,
     _qc_enrich_one_frame,
-    _qc_fwhm_elongation,
     _saturate_limit_adu_from_header,
     _sync_obs_calibration_state_with_retry,
     apply_perf10_dao_qc_to_obs_files,
@@ -209,7 +208,6 @@ from pipeline_catalog import (
     _compute_airmass_from_altaz,
     _dao_convolved_background_rms_adu,
     _dao_detection_threshold_adu,
-    _dao_noise_sigma_adu,
     _effective_field_catalog_cone_radius_deg,
     _exo_host_annotation_arrays,
     _extract_airmass_from_header,
@@ -217,7 +215,6 @@ from pipeline_catalog import (
     _init_export_per_frame_worker,
     _lock_matched_centroids_to_master_grid,
     _masterstar_zone_linear_threshold,
-    _pixel_noise_sigma_pp_adu,
     _proc_deduplicate_matched_catalog_rows,
     _query_exoplanet_local,
     _query_vsx_local,
@@ -231,7 +228,6 @@ from masterstar_build import generate_masterstar_and_catalog  # noqa: E402,F401
 
 from pipeline_ui_helpers import (  # noqa: E402,F401
     _resolve_light_fits_for_quality_inspection,
-    resolve_masterstars_metadata_csv,
 )
 
 

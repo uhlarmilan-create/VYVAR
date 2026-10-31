@@ -12,7 +12,9 @@ from typing import Any, Callable, Literal
 import numpy as np
 from astropy.io import fits
 
+import calib_library as cl
 from calibration import DarkResampleMode, get_processed_master
+from fits_suffixes import list_fits_files
 from infolog import log_event
 
 LOGGER = logging.getLogger(__name__)
@@ -23,7 +25,7 @@ CAL_PED_CONSISTENCY_REL = 0.05
 CAL_CONV_SUM_SCALE = 0.85
 CAL_SKY_HARD_SIGMA = 5.0
 CAL_SKY_SAT_WARN_FRAC = 0.90
-CAL_MAD_SIGMA = 1.4826
+CAL_MAD_SIGMA = cl.MAD_SIGMA
 CAL_DARK_CURRENT_NEGLIGIBLE_FRAC = 0.05
 
 CalDiagConvention = Literal["SUM", "MEAN", "NONE", "PASSTHROUGH"]
@@ -75,6 +77,8 @@ class CalDiagGateResult:
     block_factor: int = 1
     pedestal_p: float | None = None
     pedestal_sigma_p: float | None = None
+    #: G01-11: pedestal estimator (INTERCEPT, SINGLE_MASTER_MEDIAN = shortest dark, NONE)
+    pedestal_method: str | None = None
     delta_dark: float | None = None
     delta_pred: float | None = None
     ratio_r: float | None = None
@@ -131,79 +135,28 @@ def _mad_sigma_r(arr: np.ndarray) -> float:
     return CAL_MAD_SIGMA * mad
 
 
-def _read_dark_median_and_exptime(path: Path) -> tuple[float, float, float] | None:
-    """(median, exposure time, standard error of the median) of a master dark.
-
-    G01-46: the standard error of the median of N pixels is sqrt(pi/2) x sigma / sqrt(N) (sigma = 1.4826 x MAD);
-    integer-valued masters whose MAD is 0 (Brno 534: every pixel 512 ADU) give 0 - the median is exact there.
-    """
-    try:
-        with fits.open(path, memmap=False) as hdul:
-            data = hdul[0].data
-            hdr = hdul[0].header
-        if data is None:
-            return None
-        ex = float(hdr.get("EXPTIME") or hdr.get("EXPOSURE") or 0.0)
-        arr = np.asarray(data, dtype=np.float64)
-        arr = arr[np.isfinite(arr)]
-        if arr.size == 0:
-            return None
-        med = float(np.median(arr))
-        se = math.sqrt(math.pi / 2.0) * CAL_MAD_SIGMA * float(np.median(np.abs(arr - med))) / math.sqrt(arr.size)
-        return med, ex, se
-    except (OSError, TypeError, ValueError):
-        return None
-
-
-def _pedestal_intercept_fit(items: list[tuple[float, float, float]]) -> tuple[float, float, float, str]:
-    """Pedestal P (intercept), dark current k (slope) and sigma_P of median = P + k x t (G01-46).
-
-    Ordinary least squares over all darks. sigma_P: with 3 or more exposure times the residual-based standard
-    error of the intercept, s x sqrt(1/n + t_mean^2 / S_tt) (it also holds systematics such as a non-linear
-    dark current), combined in quadrature with the propagated standard errors of the medians; with 2
-    exposure times the line passes through both points, so only the propagated standard errors are known
-    (Milan 2026-10-30, option a) - the returned note says so.
-    """
-    t = np.array([i[0] for i in items], dtype=float)
-    m = np.array([i[1] for i in items], dtype=float)
-    se = np.array([i[2] for i in items], dtype=float)
-    n = t.size
-    tm = float(t.mean())
-    stt = float(np.sum((t - tm) ** 2))
-    k = float(np.sum((t - tm) * (m - m.mean())) / stt)
-    p = float(m.mean() - k * tm)
-    # propagated: P = sum_i w_i m_i with w_i = 1/n - tm (t_i - tm) / S_tt
-    w = 1.0 / n - tm * (t - tm) / stt
-    var_stat = float(np.sum((w * se) ** 2))
-    n_exp = len(set(t.tolist()))
-    if n_exp >= 3:
-        resid = m - (p + k * t)
-        s2 = float(np.sum(resid**2) / (n - 2))
-        var_fit = s2 * (1.0 / n + tm * tm / stt)
-        return p, k, math.sqrt(var_fit + var_stat), ""
-    return p, k, math.sqrt(var_stat), (
-        f"{n_exp} exposure times - sigma_P is the statistical error of the dark medians only "
-        "(a systematic deviation from the line is not measurable with 2 exposure times)"
-    )
-
-
 def derive_pedestal_from_masters(
     dark_paths: list[Path],
     *,
     light_exptime: float | None = None,
 ) -> PedestalResult:
-    """Check P: derive per-bin1-pixel pedestal from master dark(s)."""
+    """Check P: per-bin1-pixel pedestal from master dark(s) with the one estimator ``calib_library.fit_pedestal``.
+
+    One exposure time: the median of the shortest dark (method SINGLE_MASTER_MEDIAN; ``fit_pedestal`` logs
+    the WARNING; the gate result records the method).
+    """
     uniq: dict[Path, tuple[float, float, float]] = {}
     for p in dark_paths:
         pp = Path(p)
         if not pp.is_file():
             continue
-        got = _read_dark_median_and_exptime(pp)
+        got = cl.dark_median_level(pp)
         if got is None:
             continue
         uniq[pp.resolve()] = got
 
-    if not uniq:
+    fit = cl.fit_pedestal([(ex, med, se, str(pth)) for pth, (med, ex, se) in uniq.items()])
+    if fit is None:
         return PedestalResult(
             p_adu=0.0,
             sigma_p=0.0,
@@ -215,34 +168,31 @@ def derive_pedestal_from_masters(
             check_p_consistent=False,
         )
 
-    items = sorted((ex, med, se) for med, ex, se in uniq.values() if ex > 0)
-    exps = sorted({ex for ex, _m, _s in items})
-    if len(exps) >= CAL_PED_INTERCEPT_MIN_EXPTIMES:
-        p, k, sigma_p, note = _pedestal_intercept_fit(items)
-        if note:
-            log_event(f"CAL-DIAG pedestal: {note}")
+    if fit.method == cl.PEDESTAL_INTERCEPT:
+        if fit.note:
+            log_event(f"CAL-DIAG pedestal: {fit.note}")
         k_status: Literal["FITTED", "NEGLIGIBLE", "UNKNOWN"] = "FITTED"
+        exps = sorted({ex for _m, ex, _s in uniq.values() if ex > 0})
         t0, t1 = exps[0], exps[-1]
         t_ref = float(light_exptime or t0)
-        if abs(k) * max(t_ref, t0, t1) < CAL_DARK_CURRENT_NEGLIGIBLE_FRAC * max(abs(p), 1e-6):
+        if abs(fit.k_adu_per_s) * max(t_ref, t0, t1) < CAL_DARK_CURRENT_NEGLIGIBLE_FRAC * max(abs(fit.p_adu), 1e-6):
             k_status = "NEGLIGIBLE"
         return PedestalResult(
-            p_adu=float(p),
-            sigma_p=float(sigma_p),
-            k_adu_per_s=float(k),
+            p_adu=float(fit.p_adu),
+            sigma_p=float(fit.sigma_p),
+            k_adu_per_s=float(fit.k_adu_per_s),
             k_status=k_status,
             method="INTERCEPT",
-            n_exptimes=len(exps),
+            n_exptimes=fit.n_exptimes,
             pedestal_measurable=True,
             check_p_consistent=True,
         )
 
-    # Single-exposure fallback.
-    pth = next(iter(uniq.keys()))
-    med, ex, _se = uniq[pth]
+    # One exposure time: shortest dark (upper bound).
+    med = float(fit.p_adu)
     return PedestalResult(
-        p_adu=float(med),
-        sigma_p=max(float(med) * 1e-4, 0.01),
+        p_adu=med,
+        sigma_p=max(med * 1e-4, 0.01),
         k_adu_per_s=0.0,
         k_status="UNKNOWN",
         method="SINGLE_MASTER_MEDIAN",
@@ -403,6 +353,7 @@ def cal_diag_gate_for_obs_group(
             block_factor=bf,
             pedestal_p=ped.p_adu,
             pedestal_sigma_p=ped.sigma_p,
+            pedestal_method=ped.method,
             delta_dark=delta_dark,
             delta_pred=delta_pred,
             ratio_r=ratio_r,
@@ -424,17 +375,8 @@ def cal_diag_gate_for_obs_group(
                 "WRONG_MASTER",
                 f"bf=1 dark median {m_D_sum:.4g} > light {m_L:.4g}",
             )
-        light_u, dark_u = match_and_crop_pair(
-            light,
-            _load_resampled_dark(
-                dark_path=dark_path,
-                light_binning=light_binning,
-                master_binning=master_binning,
-                light_shape=light_shape,
-                light_filename=repr_light_path.name,
-                dark_resample_mode="sum",
-            )[0],
-        )
+        # G01-44: the SUM dark loaded above (get_processed_master is deterministic; was read again)
+        light_u, dark_u = match_and_crop_pair(light, dark_sum)
         st_b, sky, sig = _check_b_sky(
             diff=light_u - dark_u,
             hard_sigma=CAL_SKY_HARD_SIGMA,
@@ -468,6 +410,7 @@ def cal_diag_gate_for_obs_group(
             block_factor=bf,
             pedestal_p=ped.p_adu,
             pedestal_sigma_p=ped.sigma_p,
+            pedestal_method=ped.method,
             delta_dark=delta_dark,
             delta_pred=delta_pred,
             ratio_r=ratio_r,
@@ -519,15 +462,8 @@ def cal_diag_gate_for_obs_group(
             f"R={ratio_r:.4g} bf={bf}",
         )
 
-    mode = convention_to_dark_mode(convention)
-    dark_use, _ = _load_resampled_dark(
-        dark_path=dark_path,
-        light_binning=light_binning,
-        master_binning=master_binning,
-        light_shape=light_shape,
-        light_filename=repr_light_path.name,
-        dark_resample_mode=mode,
-    )
+    # G01-44: the dark of the chosen convention is one of the two loaded above (was read a third time)
+    dark_use = dark_mean if convention_to_dark_mode(convention) == "mean" else dark_sum
     light_c, dark_c = match_and_crop_pair(light, dark_use)
     st_b, sky, sig = _check_b_sky(
         diff=light_c - dark_c,
@@ -586,6 +522,7 @@ def cal_diag_gate_for_obs_group(
         block_factor=bf,
         pedestal_p=ped.p_adu,
         pedestal_sigma_p=ped.sigma_p,
+        pedestal_method=ped.method,
         delta_dark=delta_dark,
         delta_pred=delta_pred,
         ratio_r=ratio_r,
@@ -702,8 +639,8 @@ def discover_pedestal_dark_paths(dark_path: Path, *, temp_tol_c: float) -> list[
     ref = fits.getheader(dp, 0)
     ref_setup, ref_t = _setup(ref), header_temp(ref)
     out: list[Path] = [dp]
-    for f in sorted(dp.parent.iterdir()):
-        if f.resolve() == dp or not f.is_file() or f.suffix.lower() not in (".fits", ".fit", ".fts"):
+    for f in list_fits_files(dp.parent):
+        if f.resolve() == dp:
             continue
         try:
             hdr = fits.getheader(f, 0)

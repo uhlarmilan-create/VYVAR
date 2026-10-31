@@ -16,6 +16,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from stats_core import coerce_bool
 from scipy.optimize import curve_fit
 from scipy.special import erf, erfinv
 
@@ -1129,8 +1130,7 @@ def classify_dao_only_dataframe(
             else:
                 indet = True
             if sat is not None:
-                sv = str(sat.loc[idx]).strip().lower()
-                if sv in ("true", "1", "t", "yes"):
+                if coerce_bool(sat.loc[idx]):
                     indet = True
             if peak is not None and (not pd.notna(peak.loc[idx])):
                 indet = True

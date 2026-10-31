@@ -6,38 +6,16 @@ Kept separate from ``photometry_core`` because of size and circular imports.
 from __future__ import annotations
 
 import logging
-import math
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from stats_core import coerce_bool_series
 
 from gaia_catalog_id import normalize_gaia_source_id as _norm_id_val  # GAIA-ID-2026-10: one exact normaliser
 from pipeline_constants import LINEARITY_FRAC
 
 LOGGER = logging.getLogger(__name__)
-
-
-def sort_per_frame_csv_paths(
-    per_frame_csv_paths: list[Path],
-    csv_cache: dict[str, pd.DataFrame],
-) -> list[Path]:
-    """Sort frames by median ``bjd_tdb_mid`` per CSV, then path (deterministic time order).
-
-    ``bjd_tdb_mid`` is the field-centre frame time (G02-18); only the frame order is used, which a
-    per-star light-time difference (< 1 min, the same sign for all frames of a night) cannot change.
-    """
-
-    def _key(p: Path) -> tuple[float, str]:
-        bjd = float("inf")
-        df = csv_cache.get(str(p))
-        if df is not None and not getattr(df, "empty", True) and "bjd_tdb_mid" in df.columns:
-            med = float(pd.to_numeric(df["bjd_tdb_mid"], errors="coerce").median())
-            if math.isfinite(med):
-                bjd = med
-        return (bjd, str(p).casefold())
-
-    return sorted(per_frame_csv_paths, key=_key)
 
 
 def comp_frame_stats(
@@ -57,7 +35,7 @@ def comp_frame_stats(
     out: dict[str, dict[str, int]] = {str(c): {"n_frames": 0, "n_peak": 0, "n_over": 0} for c in cand_ids}
     if not cand_ids:
         return out
-    for csv_path in sort_per_frame_csv_paths(per_frame_csv_paths, csv_cache):
+    for csv_path in per_frame_csv_paths:  # counts: the frame order does not enter (G07-31)
         df = csv_cache.get(str(csv_path))
         if df is None or df.empty:
             continue
@@ -74,7 +52,7 @@ def comp_frame_stats(
             for cid, n in ids[ok_f].value_counts().items():
                 out[str(cid)]["n_frames"] += int(n)
         flagged = (
-            sub["likely_saturated"].map(lambda v: str(v).strip().lower() in ("true", "1", "1.0", "yes"))
+            coerce_bool_series(sub["likely_saturated"])
             if "likely_saturated" in sub.columns else pd.Series(False, index=sub.index)
         )
         over = flagged.copy()

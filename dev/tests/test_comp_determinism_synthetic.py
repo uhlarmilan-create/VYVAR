@@ -92,6 +92,9 @@ def _build_synthetic_dataset(
                     "mag": float(star["mag"]),
                     "noise_floor_adu": 40.0,
                     "aperture_r_px": 7.0,
+                    # COMP-CEIL-FIELDK-2026-10: CCD-equation inputs of the comp_rms ceiling
+                    "sky_adu_per_px_annulus": 200.0,
+                    "sky_n_px": 500,
                     "is_usable": True,
                     "is_saturated": False,
                     "is_noisy": False,
@@ -118,7 +121,7 @@ def _run_comp_selection(
 
     pool = build_global_comp_pool(
         masterstars, per_frame_paths, csv_cache, frozenset({_TARGET_ID}), None, 800, 600, 0, cfg,
-        min_frames_frac=0.3, fwhm_px=3.7,
+        min_frames_frac=0.3, fwhm_px=3.7, gain=1.0, read_noise=10.0, scint_params=_NO_SCINT,
     )
     out = select_comparison_stars_per_target(
         target,
@@ -153,3 +156,10 @@ def test_comp_selection_invariant_to_masterstars_row_order():
     out_shuffled = _run_comp_selection(target, masterstars_shuf, paths2, cache2)
 
     assert set(out_ordered["catalog_id"]) == set(out_shuffled["catalog_id"])
+
+
+# COMP-CEIL-NOISEMODEL-2026-10: build_global_comp_pool requires the rig scintillation parameters; none here
+# (no telescope diameter / site altitude -> scintillation 0, as sigma_budget does for such a rig)
+from sigma_budget import RigScintillationParams  # noqa: E402
+
+_NO_SCINT = RigScintillationParams(None, "test", float("nan"), float("nan"), 60.0, 1.5, [])

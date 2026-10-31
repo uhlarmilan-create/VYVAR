@@ -2,7 +2,7 @@
 
 Production entry: ``run_night_pipeline``. UI RUN VYVAR
 (``app._run_vyvar_full_pipeline``) resolves optics / location / flats into
-``NightRunParams`` and starts ``python -m night_run --job`` (run_job), so the
+``NightRunParams`` and starts ``python -m run_job --job`` (run_job), so the
 GUI and the night runner run the same code (INV-ONE-ENTRY-01).
 
 No Streamlit dependencies. Progress via ``logging`` and optional callback.
@@ -715,7 +715,8 @@ def audit_psf_lc_completeness(
     n_dropped = 0
     n_no_reason = 0
     for cid in ap_ids:
-        psf_path = lc_dir / f"lightcurve_{cid}_psf.csv"
+        from report_methods import lc_csv_path  # noqa: PLC0415
+        psf_path = lc_csv_path(lc_dir, cid, "psf")
         if not psf_path.is_file():
             missing += 1
             continue
@@ -930,8 +931,8 @@ def run_night_photometry(
         ms_csv = (og_dir / "masterstars_full_match.csv") if og_dir is not None else None
         vt_csv = (og_dir / "variable_targets.csv") if og_dir is not None else None
         pf_dir = Path(p["per_frame_csv_dir"]) if p.get("per_frame_csv_dir") else None
-        dt_dir = Path(p["detrended_aligned_dir"]) if p.get("detrended_aligned_dir") else None
-        out_d = Path(p["output_dir"]) if p.get("output_dir") else None
+        dt_dir = pf_dir  # G03-34: the per-frame CSVs live next to the aligned frames (one key)
+        out_d = Path(p["photometry_dir"]) if p.get("photometry_dir") else None
 
         missing: list[str] = []
         if ms_fits is None or not ms_fits.exists():
@@ -1274,6 +1275,43 @@ def _nr_calibrate(
     return _cal_out, ap, ap_root, dm_obs, draft_id, lights_root, mf_map, mf_obs
 
 
+def _ui_pointing(qsum: Any, lights_root: Path) -> tuple[dict[str, Any], float | None, float | None]:
+    """Field pointing for the UI: the RAM-QC medians, else the first calibrated light with display
+    coordinates (``scan_calibrated_lights_pointing``). Returns (scan result or {}, ra, dec)."""
+    from pipeline_calibrate import scan_calibrated_lights_pointing  # noqa: PLC0415
+
+    ra_q: float | None = None
+    de_q: float | None = None
+    try:
+        mra_q = qsum.get("median_ra_deg")
+        mde_q = qsum.get("median_de_deg")
+        if mra_q is not None and math.isfinite(float(mra_q)):
+            ra_q = float(mra_q)
+        if mde_q is not None and math.isfinite(float(mde_q)):
+            de_q = float(mde_q)
+    except (TypeError, ValueError):
+        pass
+    # G12-38: the header pointing scan (every calibrated light, header + WCS) is needed only when
+    # the RAM-QC medians do not give both coordinates; its rows were not read otherwise.
+    pointing: dict[str, Any] = {}
+    ra_ui: float | None = ra_q
+    de_ui: float | None = de_q
+    if ra_q is None or de_q is None:
+        pointing = scan_calibrated_lights_pointing(lights_root, max_files=None)
+        r_pref = next(
+            (
+                r
+                for r in pointing["rows"]
+                if r.get("display_ra_deg") is not None and r.get("display_dec_deg") is not None
+            ),
+            None,
+        )
+        if r_pref:
+            ra_ui = ra_q if ra_q is not None else float(r_pref["display_ra_deg"])
+            de_ui = de_q if de_q is not None else float(r_pref["display_dec_deg"])
+    return pointing, ra_ui, de_ui
+
+
 def _nr_frame_qc(
     *,
     _cal_out,
@@ -1296,10 +1334,7 @@ def _nr_frame_qc(
     """Frame QC of the calibrated lights (RAM QC, per-group best frame, rejections) and the QC provenance."""
     qsum: dict[str, Any] = dict(_cal_out.get("perf10_qsum") or {})
 
-    from pipeline_calibrate import (
-        run_draft_ram_calibration_qc_to_obs_files,
-        scan_calibrated_lights_pointing,
-    )
+    from pipeline_calibrate import run_draft_ram_calibration_qc_to_obs_files
 
 
     # RAM QC (skipped when PERF-10: DAO QC already done in calibration)
@@ -1321,6 +1356,7 @@ def _nr_frame_qc(
             equipment_id=eq_id,
             progress_cb=prog_cb,
             pedestal_temp_tol_c=float(pipeline.config.calibration_master_ccd_temp_tolerance_c),
+            flat_substitute_by_obs_key=dict(getattr(result.plan, "flat_substitute_by_obs_key", None) or {}),
         )
         _t("ram_qc", t0)
     else:
@@ -1330,29 +1366,7 @@ def _nr_frame_qc(
 
     # Pointing
     t0 = time.time()
-    pointing = scan_calibrated_lights_pointing(lights_root, max_files=None)
-    r_pref = next(
-        (
-            r
-            for r in pointing["rows"]
-            if r.get("display_ra_deg") is not None and r.get("display_dec_deg") is not None
-        ),
-        None,
-    )
-    ra_ui: float | None = None
-    de_ui: float | None = None
-    if r_pref:
-        ra_ui = float(r_pref["display_ra_deg"])
-        de_ui = float(r_pref["display_dec_deg"])
-    try:
-        mra_q = qsum.get("median_ra_deg")
-        mde_q = qsum.get("median_de_deg")
-        if mra_q is not None and math.isfinite(float(mra_q)):
-            ra_ui = float(mra_q)
-        if mde_q is not None and math.isfinite(float(mde_q)):
-            de_ui = float(mde_q)
-    except (TypeError, ValueError):
-        pass
+    pointing, ra_ui, de_ui = _ui_pointing(qsum, lights_root)
     result.pointing = pointing if isinstance(pointing, dict) else {}
     result.ra_ui = ra_ui
     result.de_ui = de_ui

@@ -16,9 +16,10 @@ import pytest
 # ---------------------------------------------------------------------------
 def test_snr_formula_howell1989():
     """
-    Validate _photometric_error() against Howell (1989) PASP 101:616, eq. 2.
-    Known values: flux=10000 ADU, sky=100 ADU/px, area=28px, gain=3.17, RN=7.6
-    variance = flux/g + sky/g*area + (RN/g)^2 * area
+    Validate _photometric_error() against Merline & Howell (1995) with the sky-estimation term of a
+    median sky (CCD-ONE-2026-10). Known values: flux=10000 ADU, sky=100 ADU/px, area=28px, n_sky=400 px,
+    gain=3.17, RN=7.6:
+    variance = flux/g + area (1 + (pi/2) area/n_sky) (sky/g + (RN/g)^2)
     """
     from photometry_core import _photometric_error
 
@@ -28,10 +29,11 @@ def test_snr_formula_howell1989():
     gain = 3.17
     rn = 7.6
 
-    err = _photometric_error(flux, sky, area, gain, rn)
+    n_sky = 400.0
+    err = _photometric_error(flux, sky, area, n_sky, gain=gain, read_noise=rn)
 
     # manual calculation - relative flux error sqrt(variance) / flux
-    variance = flux / gain + sky / gain * area + (rn / gain) ** 2 * area
+    variance = flux / gain + area * (1.0 + (math.pi / 2.0) * area / n_sky) * (sky / gain + (rn / gain) ** 2)
     expected_err = math.sqrt(variance) / flux
 
     assert math.isfinite(err), "Error must be finite"
@@ -44,8 +46,8 @@ def test_snr_zero_flux():
     """Zero or negative flux must return NaN, not crash."""
     from photometry_core import _photometric_error
 
-    assert not math.isfinite(_photometric_error(0.0, 100.0, 28.0, 3.17, 7.6))
-    assert not math.isfinite(_photometric_error(-100.0, 100.0, 28.0, 3.17, 7.6))
+    assert not math.isfinite(_photometric_error(0.0, 100.0, 28.0, 400.0, gain=3.17, read_noise=7.6))
+    assert not math.isfinite(_photometric_error(-100.0, 100.0, 28.0, 400.0, gain=3.17, read_noise=7.6))
 
 
 def test_snr_sky_dominated():
@@ -54,8 +56,8 @@ def test_snr_sky_dominated():
     """
     from photometry_core import _photometric_error
 
-    err_low_sky = _photometric_error(100.0, 10.0, 28.0, 3.17, 7.6)
-    err_high_sky = _photometric_error(100.0, 500.0, 28.0, 3.17, 7.6)
+    err_low_sky = _photometric_error(100.0, 10.0, 28.0, 400.0, gain=3.17, read_noise=7.6)
+    err_high_sky = _photometric_error(100.0, 500.0, 28.0, 400.0, gain=3.17, read_noise=7.6)
     assert err_high_sky > err_low_sky, "Higher sky must produce larger error"
 
 

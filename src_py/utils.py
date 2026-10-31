@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import contextlib
-import glob
 import math
 import os
 import re
@@ -16,7 +15,7 @@ from astropy.io import fits
 from astropy.wcs import FITSFixedWarning, WCS
 
 from aperture_policy import fwhm_from_header_vy_fwhm
-from fits_suffixes import path_suffix_is_fits
+from fits_suffixes import list_fits_files
 
 # Shared deterministic RNG seed (solver RANSAC uses 42; astroalign patched below).
 VYVAR_RANDOM_SEED: int = 42
@@ -46,62 +45,41 @@ def seeded_numpy_default_rng(seed: int | None = None):
 
 
 def iter_fits_paths_recursive(root: Path | str) -> list[Path]:
-    """Return sorted FITS paths under ``root`` (recursive), including nested layouts (e.g. ``filter_exp_binning``).
+    """Return sorted, resolved FITS paths under ``root`` (recursive), including nested layouts (e.g. ``filter_exp_binning``).
 
-    Uses :func:`glob.glob` with ``**`` so behavior matches explicit recursive globbing (not only top-level).
+    G13-31: one walk with the shared suffix rule (:func:`fits_suffixes.list_fits_files`); paths that resolve to
+    the same file (symlinks) are listed once, keyed by ``os.path.normcase`` (case-insensitive only where the OS
+    is), never by case-folding the names.
     """
     root = Path(root)
     if not root.exists():
         return []
-    root_s = os.path.normpath(str(root.resolve()))
-    patterns = (
-        os.path.join(root_s, "**", "*.fits"),
-        os.path.join(root_s, "**", "*.fit"),
-        os.path.join(root_s, "**", "*.fts"),
-        os.path.join(root_s, "**", "*.FITS"),
-        os.path.join(root_s, "**", "*.FIT"),
-        os.path.join(root_s, "**", "*.FTS"),
-    )
     seen: set[str] = set()
     out: list[Path] = []
-    for pat in patterns:
-        for p in glob.glob(pat, recursive=True):
-            fp = Path(p)
-            if not fp.is_file():
-                continue
-            if not path_suffix_is_fits(fp):
-                continue
-            key = str(fp.resolve()).casefold()
-            if key in seen:
-                continue
-            seen.add(key)
-            out.append(fp.resolve())
+    for fp in list_fits_files(root.resolve(), recursive=True):
+        rp = fp.resolve()
+        key = os.path.normcase(str(rp))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(rp)
     return sorted(out)
 
 
-# Prefixes for celestial WCS keywords (avoid bare "PC" - would match PCOUNT).
-_CELESTIAL_WCS_PREFIXES: tuple[str, ...] = (
-    "CRPIX",
-    "CRVAL",
-    "CDELT",
-    "CTYPE",
-    "CUNIT",
-    "CD1_",
-    "CD2_",
-    "PC1_",
-    "PC2_",
-    "PC3_",
-    "PV1_",
-    "PV2_",
-    "A_",
-    "B_",
-    "AP_",
-    "BP_",
-    "RADESYS",
-    "EQUINOX",
-    "LONPOLE",
-    "LATPOLE",
+# G03-21: the ONE list of WCS keywords (astrosolve, utils, pipeline_astrometry, alignment, OSC).
+# Exact patterns, not prefixes: the former "A_" / "B_" prefixes also deleted user keys such as B_V or A_MAG,
+# and bare "PC" would match PCOUNT. [A-Z]? = alternate-WCS letter (Greisen & Calabretta 2002, Paper I).
+# Celestial solution keys: copied from a reference header and stripped before a new solution; SIP
+# (A/B/AP/BP_ORDER, _DMAX, _p_q; Shupe et al. 2005) and TPV / PV distortion terms included.
+_CELESTIAL_WCS_KEY_RE = re.compile(
+    r"^(?:(?:CRPIX|CRVAL|CDELT|CTYPE|CUNIT)\d+[A-Z]?|(?:CD|PC|PV|PS)\d+_\d+[A-Z]?"
+    r"|(?:A|B|AP|BP)_(?:ORDER|DMAX|\d+_\d+)|(?:RADESYS|RADECSYS|EQUINOX|LONPOLE|LATPOLE)[A-Z]?)$"
 )
+# Structural / legacy keys of a solution: stripped with it but never copied (WCSAXES must precede the other
+# WCS keys of a header, so it is not appended to another header; a stale CROTA2 next to a new CD matrix makes
+# the WCS ambiguous). Time keys (MJDREF, DATEREF, DATE-OBS, MJD-OBS, ...) are not WCS solution keys and stay
+# (Rots et al. 2015, WCS Paper IV).
+_WCS_STRUCTURAL_KEY_RE = re.compile(r"^(?:WCSAXES[A-Z]?|WCSDIM|WCSNAME[A-Z]?|CROTA\d+)$")
 
 
 def set_float_image_data_in_place(hdu: Any, data: Any) -> None:
@@ -121,9 +99,9 @@ def set_float_image_data_in_place(hdu: Any, data: Any) -> None:
 
 
 def strip_celestial_wcs_keys(hdr: fits.Header) -> None:
-    """Remove common celestial WCS keywords before merging a new solution."""
+    """Remove the WCS solution (celestial + structural keys, :func:`header_key_is_wcs`) before a new one."""
     for k in list(hdr.keys()):
-        if any(k.startswith(p) for p in _CELESTIAL_WCS_PREFIXES):
+        if header_key_is_wcs(k):
             try:
                 del hdr[k]
             except KeyError:
@@ -146,8 +124,13 @@ def strip_vendor_platesolve_metadata(hdr: fits.Header) -> None:
 
 
 def header_key_is_celestial_wcs(k: str) -> bool:
-    """True if FITS keyword ``k`` belongs to the celestial WCS block we strip/copy."""
-    return any(k.startswith(p) for p in _CELESTIAL_WCS_PREFIXES)
+    """True if FITS keyword ``k`` belongs to the celestial WCS solution block (copied between headers)."""
+    return bool(_CELESTIAL_WCS_KEY_RE.match(str(k)))
+
+
+def header_key_is_wcs(k: str) -> bool:
+    """True if FITS keyword ``k`` is stripped before a new solution: celestial + structural keys."""
+    return header_key_is_celestial_wcs(k) or bool(_WCS_STRUCTURAL_KEY_RE.match(str(k)))
 
 
 def fits_header_has_celestial_wcs(header: fits.Header) -> bool:
@@ -333,3 +316,26 @@ def exposure_seconds(hdr: Any) -> float | None:
         if math.isfinite(sec) and sec >= 0.0:
             return sec
     return None
+
+
+def json_finite(o: Any) -> Any:
+    """``o`` with numpy scalars as Python numbers and non-finite floats as None (strict JSON)."""
+    if isinstance(o, dict):
+        return {k: json_finite(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [json_finite(v) for v in o]
+    if isinstance(o, (np.floating, float)):
+        return float(o) if math.isfinite(float(o)) else None
+    if isinstance(o, np.integer):
+        return int(o)
+    if isinstance(o, np.bool_):
+        return bool(o)
+    return o
+
+
+def write_json_finite(path: Path | str, obj: Any) -> None:
+    """Write ``obj`` as indented JSON (UTF-8) after :func:`json_finite`. G10-35: the one meta writer of
+    the variability and transient field products."""
+    import json  # noqa: PLC0415
+
+    Path(path).write_text(json.dumps(json_finite(obj), indent=2), encoding="utf-8")

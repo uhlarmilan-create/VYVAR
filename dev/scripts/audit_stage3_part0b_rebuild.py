@@ -312,7 +312,7 @@ def main() -> int:
 
     # threshold ADU diagnostic from first aligned frame if available
     try:
-        from pipeline import _dao_convolved_background_rms_adu, _mean_bin2d_for_dao, _dao_auto_binning_factor
+        from pipeline_catalog import _dao_convolved_background_rms_adu, _bin2d_mean, _dao_auto_binning_factor
         from astropy.stats import sigma_clipped_stats
 
         al_dir = scratch / "detrended_aligned" / "lights" / SETUP
@@ -323,7 +323,7 @@ def main() -> int:
             _, med, _ = sigma_clipped_stats(arr, sigma=3.0, maxiters=3)
             data0 = np.nan_to_num((arr - med).astype(np.float32))
             bfac = _dao_auto_binning_factor(*data0.shape)
-            data_dao, _ = _mean_bin2d_for_dao(data0, bfac)
+            data_dao, _ = _bin2d_mean(data0, bfac)
             rms_conv, rel = _dao_convolved_background_rms_adu(data_dao, fwhm_px=3.2 / max(1, bfac))
             thr_sigma = float(AppConfig().detection_threshold_sigma)
             results["threshold_adu_at_sigma"] = {

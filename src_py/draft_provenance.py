@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+import functools
+import inspect
 import json
+import os
 import re
 import hashlib
 import logging
 import math
+import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -263,11 +269,10 @@ def apply_pre_calibrated_import_plan(plan: SmartImportPlan) -> None:
         plan.warnings.append(msg)
 
 
-_FITS_SUFFIXES = (".fits", ".fit", ".fts")
-
-
 def _has_fits(root: Path) -> bool:
-    return root.is_dir() and any(p.is_file() and p.suffix.lower() in _FITS_SUFFIXES for p in root.rglob("*"))
+    from fits_suffixes import list_fits_files  # noqa: PLC0415
+
+    return bool(list_fits_files(root, recursive=True))
 
 
 def purge_calibrated_light_frames(archive_path: Path | str, *, draft_id: int) -> dict[str, Any]:
@@ -290,12 +295,13 @@ def purge_calibrated_light_frames(archive_path: Path | str, *, draft_id: int) ->
             or _has_fits(root / "non_calibrated" / "lights")):
         out["skipped"] = "no source frames in the draft - calibrated frames kept"
         return out
-    for fp in sorted(cal.rglob("*")):
-        if fp.is_file() and fp.suffix.lower() in _FITS_SUFFIXES:
-            size = fp.stat().st_size
-            fp.unlink()
-            out["n_files"] += 1
-            out["bytes"] += int(size)
+    from fits_suffixes import list_fits_files  # noqa: PLC0415
+
+    for fp in list_fits_files(cal, recursive=True):
+        size = fp.stat().st_size
+        fp.unlink()
+        out["n_files"] += 1
+        out["bytes"] += int(size)
     manifest = load_draft_manifest(root)
     if manifest:
         manifest["calibrated_frames_purged"] = {
@@ -426,7 +432,13 @@ def write_draft_manifest(
 
 
 def load_draft_manifest(archive_path: Path | str) -> dict[str, Any]:
-    path = Path(archive_path).expanduser().resolve() / _MANIFEST_NAME
+    root = Path(archive_path).expanduser().resolve()
+    batch = _MANIFEST_BATCHES.get(str(root))
+    if batch is not None:
+        # G01-13: inside a manifest batch the stage's manifest lives in memory; a reader gets a
+        # fresh copy, exactly what reading the file back would give.
+        return batch.copy_manifest()
+    path = root / _MANIFEST_NAME
     if not path.is_file():
         return {}
     try:
@@ -451,17 +463,11 @@ def resolve_draft_dir_for_id(db: Any, draft_id: int) -> Path | None:
         archive_root = Path(resolver()).expanduser().resolve()
     except Exception:  # noqa: BLE001
         return None
-    did = int(draft_id)
-    found = draft_dir_for_id(archive_root, did)
+    # G12-42 (Milan 2026-10-30): processed fields live only under Archive/Drafts
+    # (iter_draft_archive_dirs); the archive-wide rglob fallback over all FITS trees is gone.
+    found = draft_dir_for_id(archive_root, int(draft_id))
     if found.is_dir():
         return found.resolve()
-    for mf in archive_root.rglob(_MANIFEST_NAME):
-        try:
-            raw = json.loads(mf.read_text(encoding="utf-8"))
-            if int(raw.get("draft_id", -1)) == did:
-                return mf.parent.resolve()
-        except Exception:  # noqa: BLE001
-            continue
     return None
 
 
@@ -535,15 +541,145 @@ def _persist_manifest(
     draft_id: int,
     manifest: dict[str, Any],
 ) -> Path:
-    """Write full manifest dict to ``draft_manifest.json``."""
+    """Write full manifest dict to ``draft_manifest.json`` (atomic: temp file + ``os.replace``).
+
+    Inside a :func:`manifest_batch` for this folder the manifest is kept in memory and written once
+    when the batch ends (G01-13)."""
     payload = dict(manifest)
     payload["schema_version"] = int(payload.get("schema_version") or MANIFEST_SCHEMA_VERSION)
     payload["draft_id"] = int(draft_id)
     payload["updated_utc"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    path = Path(root).expanduser().resolve() / _MANIFEST_NAME
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    root_r = Path(root).expanduser().resolve()
+    path = root_r / _MANIFEST_NAME
+    batch = _MANIFEST_BATCHES.get(str(root_r))
+    if batch is not None:
+        batch.replace_manifest(payload)
+        return path
+    _write_manifest_file(path, payload)
     return path
+
+
+#: G01-13 atomic manifest write: retries of ``os.replace`` while another process (GUI) holds the
+#: file open on Windows (sharing violation); then the error is raised.
+_MANIFEST_REPLACE_RETRIES = 20
+_MANIFEST_REPLACE_WAIT_S = 0.05
+
+
+def _write_manifest_file(path: Path, payload: dict[str, Any]) -> None:
+    """Write ``payload`` to ``path`` atomically (temp file in the same folder + ``os.replace``)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
+    tmp.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    for attempt in range(_MANIFEST_REPLACE_RETRIES):
+        try:
+            os.replace(tmp, path)
+            return
+        except PermissionError:
+            if attempt == _MANIFEST_REPLACE_RETRIES - 1:
+                raise
+            time.sleep(_MANIFEST_REPLACE_WAIT_S)
+
+
+class _ManifestBatch:
+    """One processed field's manifest held in memory for one stage (G01-13)."""
+
+    def __init__(self, root: Path, draft_id: int, manifest: dict[str, Any]) -> None:
+        self.root = root
+        self.draft_id = int(draft_id)
+        self.manifest = manifest
+        self.dirty = False
+        self._by_id: dict[int, int] | None = None
+        self._by_path: dict[str, int] | None = None
+
+    def copy_manifest(self) -> dict[str, Any]:
+        return json.loads(json.dumps(self.manifest))
+
+    def replace_manifest(self, payload: dict[str, Any]) -> None:
+        # the same values a write + read of the file would give (JSON round trip)
+        self.manifest = json.loads(json.dumps(payload))
+        self.dirty = True
+        self._by_id = self._by_path = None
+
+    def files(self) -> list[Any]:
+        files = self.manifest.get("files")
+        if not isinstance(files, list):
+            files = []
+            self.manifest["files"] = files
+            self._by_id = self._by_path = None
+        return files
+
+    def find_index(self, *, file_path: str | None, obs_file_id: int | None) -> int | None:
+        """Same entry as :func:`_find_manifest_file_index` (the first entry matching the id or the
+        resolved path), from indexes built once per batch."""
+        files = self.files()
+        if self._by_id is None or self._by_path is None:
+            self._by_id, self._by_path = {}, {}
+            for i, entry in enumerate(files):
+                if not isinstance(entry, dict):
+                    continue
+                oid = _optional_int(entry.get("obs_file_id"))
+                if oid is not None:
+                    self._by_id.setdefault(int(oid), i)
+                fp = _optional_str(entry.get("file_path")) or ""
+                self._by_path.setdefault(str(Path(fp).resolve()), i)
+        hits: list[int] = []
+        if obs_file_id is not None and int(obs_file_id) in self._by_id:
+            hits.append(self._by_id[int(obs_file_id)])
+        want_fp = _optional_str(file_path)
+        if want_fp:
+            i_fp = self._by_path.get(str(Path(want_fp).resolve()))
+            if i_fp is not None:
+                hits.append(i_fp)
+        return min(hits) if hits else None
+
+    def flush(self) -> None:
+        if not self.dirty:
+            return
+        payload = dict(self.manifest)
+        payload["updated_utc"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        _write_manifest_file(self.root / _MANIFEST_NAME, payload)
+        self.dirty = False
+
+
+#: Active manifest batches of this process, by resolved field folder.
+_MANIFEST_BATCHES: dict[str, _ManifestBatch] = {}
+
+
+@contextmanager
+def manifest_batch(db: Any, draft_id: int | None) -> Iterator[None]:
+    """Hold the field's manifest in memory for one stage and write it once at the end (G01-13).
+
+    Every manifest read / write of this process for the field goes through the in-memory copy while
+    the batch is open (readers get a fresh copy); per-frame ``files[]`` updates use indexes by
+    ``obs_file_id`` and resolved path. The file is written once, atomically, when the batch ends -
+    also when the stage raises (the updates made so far are kept, as with per-call writes). Nested
+    batches of the same field join the outer one. The stage must be the only writer of the manifest
+    (other processes do not see the batch). No-op without a database / draft id / field folder."""
+    root = resolve_draft_dir_for_id(db, int(draft_id)) if (db is not None and draft_id is not None) else None
+    key = str(root) if root is not None else ""
+    if root is None or key in _MANIFEST_BATCHES:
+        yield
+        return
+    batch = _ManifestBatch(root, int(draft_id), load_or_init_manifest(root, int(draft_id)))
+    _MANIFEST_BATCHES[key] = batch
+    try:
+        yield
+    finally:
+        del _MANIFEST_BATCHES[key]
+        batch.flush()
+
+
+def manifest_batched(fn: Any) -> Any:
+    """Decorator: run ``fn`` inside :func:`manifest_batch` for its ``db`` and ``draft_id`` arguments."""
+    sig = inspect.signature(fn)
+
+    @functools.wraps(fn)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        bound = sig.bind_partial(*args, **kwargs).arguments
+        with manifest_batch(bound.get("db"), bound.get("draft_id")):
+            return fn(*args, **kwargs)
+
+    return wrapper
 
 
 def load_or_init_manifest(root: Path | str, draft_id: int) -> dict[str, Any]:
@@ -702,11 +838,16 @@ def update_manifest_file_entry(
     root = resolve_draft_dir_for_id(db, int(draft_id))
     if root is None:
         return False
-    manifest = load_or_init_manifest(root, int(draft_id))
-    files = manifest.get("files")
-    if not isinstance(files, list):
-        files = []
-    idx = _find_manifest_file_index(files, file_path=file_path, obs_file_id=obs_file_id)
+    batch = _MANIFEST_BATCHES.get(str(root))
+    if batch is not None:
+        files = batch.files()
+        idx = batch.find_index(file_path=file_path, obs_file_id=obs_file_id)
+    else:
+        manifest = load_or_init_manifest(root, int(draft_id))
+        files = manifest.get("files")
+        if not isinstance(files, list):
+            files = []
+        idx = _find_manifest_file_index(files, file_path=file_path, obs_file_id=obs_file_id)
     if idx is None:
         return False
     entry = dict(files[idx]) if isinstance(files[idx], dict) else {}
@@ -740,6 +881,9 @@ def update_manifest_file_entry(
             except (TypeError, ValueError):
                 pass
     files[idx] = entry
+    if batch is not None:
+        batch.dirty = True
+        return True
     patch_draft_manifest(root, int(draft_id), files=files)
     return True
 
@@ -898,7 +1042,8 @@ def iter_draft_archive_dirs(archive_root: Path | str) -> list[tuple[int, Path]]:
             try:
                 raw = json.loads(mf.read_text(encoding="utf-8"))
                 did = int(raw.get("draft_id"))
-            except Exception:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001
+                logging.warning("[MANIFEST] unreadable %s (folder skipped unless named draft_NNNNNN): %s", mf, exc)
                 did = None
         if did is None and child.name.lower().startswith("draft_"):
             try:
@@ -918,10 +1063,46 @@ def draft_dir_for_id(archive_root: Path | str, draft_id: int) -> Path:
     legacy = root / "Drafts" / f"draft_{int(draft_id):06d}"
     if legacy.is_dir():
         return legacy
+    key = (str(root), int(draft_id))
+    hit = _DRAFT_DIR_CACHE.get(key)
+    if hit is not None:
+        mtime_now = _draft_dir_still_holds(hit[0], int(draft_id), hit[1])
+        if mtime_now is not None:
+            _DRAFT_DIR_CACHE[key] = (hit[0], mtime_now)
+            return hit[0]
+    _DRAFT_DIR_CACHE.pop(key, None)
     for found_id, path in iter_draft_archive_dirs(root):
         if found_id == int(draft_id):
+            _DRAFT_DIR_CACHE[key] = (path, _manifest_mtime_ns(path))
             return path
     return legacy
+
+
+#: G12-20: (archive root, draft id) -> (field folder, manifest mtime_ns) of this process. A hit is
+#: checked against the folder (manifest still there; when the file changed, its draft_id is read
+#: again), so a deleted or re-used folder name is never returned for another id.
+_DRAFT_DIR_CACHE: dict[tuple[str, int], tuple[Path, int | None]] = {}
+
+
+def _manifest_mtime_ns(folder: Path) -> int | None:
+    try:
+        return int((folder / _MANIFEST_NAME).stat().st_mtime_ns)
+    except OSError:
+        return None
+
+
+def _draft_dir_still_holds(folder: Path, draft_id: int, mtime_ns: int | None) -> int | None:
+    """The manifest's current mtime_ns when ``folder`` still holds field ``draft_id``, else None."""
+    now = _manifest_mtime_ns(folder)
+    if now is None:
+        return None
+    if mtime_ns is not None and now == mtime_ns:
+        return now
+    try:
+        raw = json.loads((folder / _MANIFEST_NAME).read_text(encoding="utf-8"))
+        return now if int(raw.get("draft_id")) == int(draft_id) else None
+    except Exception:  # noqa: BLE001
+        return None
 
 
 def obs_draft_row_from_manifest(manifest: dict[str, Any], draft_id: int) -> dict[str, Any]:

@@ -44,8 +44,9 @@ def test_target_correction_skipped_too_low() -> None:
 def test_dilution_disabled_no_effect() -> None:
     cfg = AppConfig()
     cfg.gs11_dilution_enabled = False
-    with patch("dilution.query_gaia_neighbors", return_value=[{"g_mag": 10.0, "sep_arcsec": 0.0}]):
-        r = compute_dilution_factor(0.0, 0.0, 10.0, 4.0, "dummy.db")
+    with patch("dilution.query_gaia_neighbors", return_value=[{"g_mag": 10.0, "ra": 0.0, "dec": 0.0, "sep_arcsec": 0.0}]):
+        r = compute_dilution_factor(0.0, 0.0, 10.0, 4.0, "dummy.db", fwhm_arcsec=3.0, beta=2.7,
+                                    annulus_arcsec=(8.1, 15.6))
     assert r["dilution_factor"] < 1.0
     mag = np.array([10.0])
     out2, res = apply_target_dilution_to_mag_calib(mag, r, cfg)

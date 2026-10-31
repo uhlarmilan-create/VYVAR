@@ -28,6 +28,23 @@ def _handler_already_attached() -> bool:
     return any(isinstance(h, InfologHandler) for h in lg.handlers)
 
 
+def safe_progress(progress_cb: Any) -> Any:
+    """Progress reporter ``msg -> None`` around an optional callback (None: no-op). G06-22: the one copy.
+
+    Some Windows consoles use legacy encodings (cp1252) and raise UnicodeEncodeError on diacritics;
+    the message is then passed with ASCII backslash escapes so reporting never raises."""
+
+    def _p(msg: str) -> None:
+        if progress_cb is None:
+            return
+        try:
+            progress_cb(str(msg))
+        except UnicodeEncodeError:
+            progress_cb(str(msg).encode("ascii", "backslashreplace").decode("ascii"))
+
+    return _p
+
+
 def log_event(message: str) -> None:
     """Append one line to the run infolog (no-op outside a run; collected inside ``capture_events``)."""
     try:

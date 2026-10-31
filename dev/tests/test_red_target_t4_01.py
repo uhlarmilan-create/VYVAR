@@ -35,7 +35,7 @@ def _row(cid: str, bp_rp: float, rms: float, dist: float = 0.2) -> dict:
         "comp_rms": rms,
         "_dist_deg": dist,
         "_nn_dist_fwhm": 5.0,
-        "snr_ap_pixscaled": 80.0,
+        "comp_sigma_ref_fieldk": 1.0857362047581294 / 80.0,
     }
 
 

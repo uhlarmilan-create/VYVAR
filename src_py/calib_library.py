@@ -9,6 +9,7 @@ A master with capture date D and validity V days is valid for a LIGHT dated L wh
 """
 from __future__ import annotations
 
+import logging
 import math
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -19,6 +20,8 @@ import numpy as np
 from astropy.io import fits
 
 from infolog import log_event
+
+LOGGER = logging.getLogger(__name__)
 
 KIND_DARK = "dark"
 KIND_DARKFLAT = "darkflat"
@@ -56,7 +59,12 @@ _NEW_COLUMNS: dict[str, str] = {
 # schema
 # ---------------------------------------------------------------------------
 def ensure_schema(db: Any) -> None:
-    """Create/migrate CALIBRATION_LIBRARY (idempotent). Legacy rows keep NULLs."""
+    """Create/migrate CALIBRATION_LIBRARY (idempotent). Legacy rows keep NULLs.
+
+    G01-38: runs once per database connection (``db`` object); the listing / lookup calls used to
+    repeat the DDL, a commit and the migrations on every call."""
+    if getattr(db, "_calib_library_schema_ok", False):
+        return
     db._ensure_calibration_library_table()
     cols = {str(r[1]).upper() for r in db.conn.execute("PRAGMA table_info('CALIBRATION_LIBRARY');")}
     for name, typ in _NEW_COLUMNS.items():
@@ -64,6 +72,34 @@ def ensure_schema(db: Any) -> None:
             db.conn.execute(f"ALTER TABLE CALIBRATION_LIBRARY ADD COLUMN {name} {typ};")
     db.conn.commit()
     _migrate_exact_gain(db)
+    _backfill_capture_date(db)
+    try:
+        db._calib_library_schema_ok = True
+    except AttributeError:  # an object without attributes: check again next time
+        pass
+
+
+def _backfill_capture_date(db: Any) -> None:
+    """G01-38: legacy rows without CAPTURE_DATE get the capture time of their master's header once
+    (the value every listing computed by opening the FITS; stored as register_master stores it).
+    Rows whose file is missing or whose header has no capture time stay NULL (read on listing)."""
+    rows = db.conn.execute("SELECT ID, FILE_PATH FROM CALIBRATION_LIBRARY WHERE CAPTURE_DATE IS NULL;").fetchall()
+    n = 0
+    for r in rows:
+        p = Path(str(r["FILE_PATH"]))
+        if not p.is_file():
+            continue
+        try:
+            with fits.open(p, memmap=True) as h:
+                cap = header_capture_utc(h[0].header)
+        except (OSError, ValueError):
+            continue
+        if cap is None:
+            continue
+        db.conn.execute("UPDATE CALIBRATION_LIBRARY SET CAPTURE_DATE = ? WHERE ID = ?;", (cap.isoformat(), int(r["ID"])))
+        n += 1
+    if n:
+        db.conn.commit()
 
 
 def _migrate_exact_gain(db: Any) -> None:
@@ -693,12 +729,107 @@ class OffsetEstimate:
     method: str
     n_darks: int = 0
     darks: list[str] = field(default_factory=list)
+    sigma_adu: float | None = None
 
 
-def _robust_level(path: str) -> float:
-    with fits.open(path, memmap=True) as h:
-        a = np.asarray(h[0].data, dtype=np.float64)
-    return float(np.nanmedian(a))
+#: robust sigma from the median absolute deviation (Gaussian)
+MAD_SIGMA = 1.4826
+
+PEDESTAL_INTERCEPT = "INTERCEPT"
+PEDESTAL_SHORTEST_DARK = "SHORTEST_DARK"
+
+
+@dataclass
+class PedestalFit:
+    """The one pedestal estimator (G01-11): OLS intercept of the dark median against the exposure time.
+
+    ``method`` is INTERCEPT (two or more exposure times) or SHORTEST_DARK (one exposure time: the median
+    of the shortest dark, an upper bound that holds its dark current; logged as a WARNING).
+    """
+
+    p_adu: float
+    sigma_p: float | None
+    k_adu_per_s: float
+    method: str
+    n_exptimes: int
+    note: str = ""
+    darks: list[str] = field(default_factory=list)
+
+
+def dark_median_level(path: str | Path) -> tuple[float, float, float] | None:
+    """(median, standard error of the median, header EXPTIME) of a master dark's finite pixels, or None."""
+    try:
+        with fits.open(path, memmap=False) as hdul:
+            data = hdul[0].data
+            hdr = hdul[0].header
+        if data is None:
+            return None
+        ex = float(hdr.get("EXPTIME") or hdr.get("EXPOSURE") or 0.0)
+        arr = np.asarray(data, dtype=np.float64)
+        arr = arr[np.isfinite(arr)]
+        if arr.size == 0:
+            return None
+        med = float(np.median(arr))
+        se = math.sqrt(math.pi / 2.0) * MAD_SIGMA * float(np.median(np.abs(arr - med))) / math.sqrt(arr.size)
+        return med, ex, se
+    except (OSError, TypeError, ValueError):
+        return None
+
+
+def pedestal_intercept_fit(items: list[tuple[float, float, float]]) -> tuple[float, float, float, str]:
+    """Pedestal P (intercept), dark current k (slope) and sigma_P of median = P + k x t (G01-46).
+
+    Ordinary least squares over all darks. sigma_P: with 3 or more exposure times the residual-based standard
+    error of the intercept, s x sqrt(1/n + t_mean^2 / S_tt) (it also holds systematics such as a non-linear
+    dark current), combined in quadrature with the propagated standard errors of the medians; with 2
+    exposure times the line passes through both points, so only the propagated standard errors are known
+    (Milan 2026-10-30, option a) - the returned note says so.
+    """
+    t = np.array([i[0] for i in items], dtype=float)
+    m = np.array([i[1] for i in items], dtype=float)
+    se = np.array([i[2] for i in items], dtype=float)
+    n = t.size
+    tm = float(t.mean())
+    stt = float(np.sum((t - tm) ** 2))
+    k = float(np.sum((t - tm) * (m - m.mean())) / stt)
+    p = float(m.mean() - k * tm)
+    # propagated: P = sum_i w_i m_i with w_i = 1/n - tm (t_i - tm) / S_tt
+    w = 1.0 / n - tm * (t - tm) / stt
+    var_stat = float(np.sum((w * se) ** 2))
+    n_exp = len(set(t.tolist()))
+    if n_exp >= 3:
+        resid = m - (p + k * t)
+        s2 = float(np.sum(resid**2) / (n - 2))
+        var_fit = s2 * (1.0 / n + tm * tm / stt)
+        return p, k, math.sqrt(var_fit + var_stat), ""
+    return p, k, math.sqrt(var_stat), (
+        f"{n_exp} exposure times - sigma_P is the statistical error of the dark medians only "
+        "(a systematic deviation from the line is not measurable with 2 exposure times)"
+    )
+
+
+def fit_pedestal(points: Sequence[tuple[float, float, float, str]]) -> PedestalFit | None:
+    """Pedestal from (exptime, median, se, path) points of darks of ONE sensor setup (G01-11).
+
+    The intercept uses the points with exptime > 0. With fewer than two such exposure times the pedestal is
+    the median of the shortest dark (a dark without a known exposure time only when no dark has one).
+    None when there is no point. The caller selects the darks.
+    """
+    allp = sorted((float(e), float(m), float(s), str(pa)) for e, m, s, pa in points)
+    if not allp:
+        return None
+    pts = [p for p in allp if p[0] > 0]
+    exps = sorted({p[0] for p in pts})
+    if len(exps) >= 2:
+        p, k, sigma_p, note = pedestal_intercept_fit([(e, m, s) for e, m, s, _pa in pts])
+        return PedestalFit(p, sigma_p, k, PEDESTAL_INTERCEPT, len(exps), note, [pa for *_x, pa in pts])
+    e0, m0, _s0, pa0 = pts[0] if pts else min(allp, key=lambda q: q[3])
+    t_txt = f"{e0:g} s" if e0 > 0 else "unknown exposure time"
+    note = (f"pedestal from ONE exposure time: median of the shortest dark {Path(pa0).name} ({t_txt}) "
+            "is an upper bound (it holds the dark current)")
+    log_event(f"WARNING pedestal: {note}")
+    LOGGER.warning("pedestal: %s", note)
+    return PedestalFit(m0, None, 0.0, PEDESTAL_SHORTEST_DARK, len(exps), note, [pa0])
 
 
 def measure_offset_adu(
@@ -711,32 +842,34 @@ def measure_offset_adu(
     temp: float | None = None,
     temp_tol: float | None = None,
 ) -> OffsetEstimate:
-    """Constant offset P from DARK/DARKFLAT masters of the same camera/gain/offset/binning.
+    """Constant offset P from DARK masters of the same camera/gain/offset/binning (``fit_pedestal``).
 
-    >= 2 distinct exposures: intercept at t=0 of median level vs exposure (least squares).
-    1 exposure: median of that dark (upper bound: includes dark current).
-    No dark: None.
+    DARKFLAT masters are not pedestal points (Milan 2026-10-30: no dark-flats). No dark: None.
     """
     darks = [
         m
-        for kind in (KIND_DARK, KIND_DARKFLAT)
-        for m in list_masters(db, kind=kind, camera_id=camera_id)
+        for m in list_masters(db, kind=KIND_DARK, camera_id=camera_id)
         if m.gain == gain_key(gain) and _same_offset(m.offset, offset) and m.binning == int(binning)
         and Path(m.path).is_file()
         and (temp is None or temp_tol is None or m.temp is None or abs(m.temp - float(temp)) <= float(temp_tol) + 1e-9)
     ]
     if not darks:
         return OffsetEstimate(None, "no dark of this camera/gain/offset/binning")
-    pts = [(m.exptime, _robust_level(m.path), m.path) for m in darks]
-    exps = sorted({p[0] for p in pts})
-    if len(exps) >= 2:
-        t = np.array([p[0] for p in pts], dtype=np.float64)
-        y = np.array([p[1] for p in pts], dtype=np.float64)
-        slope, icpt = np.polyfit(t, y, 1)
-        return OffsetEstimate(float(icpt), f"intercept of {len(pts)} darks ({', '.join(f'{e:g}s' for e in exps)}); "
-                              f"dark current {slope:.4g} ADU/s", len(pts), [p[2] for p in pts])
-    p0 = min(pts, key=lambda p: p[0])
-    return OffsetEstimate(float(p0[1]), f"median of shortest dark {p0[0]:g}s (upper bound)", 1, [p0[2]])
+    pts = []
+    for m in darks:
+        lvl = dark_median_level(m.path)
+        if lvl is None:
+            raise ValueError(f"master dark {m.path} has no finite pixels - cannot measure the pedestal")
+        pts.append((float(m.exptime), lvl[0], lvl[2], m.path))
+    fit = fit_pedestal(pts)
+    assert fit is not None  # pts is not empty
+    if fit.method == PEDESTAL_INTERCEPT:
+        exps = sorted({p[0] for p in pts if p[0] > 0})
+        how = (f"intercept of {len(fit.darks)} darks ({', '.join(f'{e:g}s' for e in exps)}); "
+               f"dark current {fit.k_adu_per_s:.4g} ADU/s")
+    else:
+        how = f"median of shortest dark {Path(fit.darks[0]).name} (upper bound)"
+    return OffsetEstimate(fit.p_adu, how, len(fit.darks), fit.darks, fit.sigma_p)
 
 
 def iter_light_dates(paths: Iterable[str | Path]) -> list[datetime]:

@@ -395,6 +395,9 @@ def resolve_read_noise(
 def _draft_location(db: Any, draft_id: int | None) -> tuple[float, float, float] | None:
     if db is None or draft_id is None or not hasattr(db, "get_draft_location_id"):
         return None
+    if isinstance(db, DraftSiteFacts):
+        db.check_draft(draft_id)
+        return db.location
     try:
         eff_loc_id = db.get_draft_location_id(int(draft_id))
         if eff_loc_id is None:
@@ -415,6 +418,51 @@ def _draft_location(db: Any, draft_id: int | None) -> tuple[float, float, float]
     if not (math.isfinite(la) and math.isfinite(lo)):
         return None
     return la, lo, al
+
+
+@dataclass(frozen=True)
+class DraftSiteFacts:
+    """The draft facts of the frame site / centre rules, resolved once (G05-31, G13-15).
+
+    Stands in for the database in :func:`resolve_site` and ``fits_meta.field_centre_radec`` where
+    only the draft's site (``ID_LOCATION`` -> LOCATION row) and the manifest field centre are read.
+    Built in the run process by :meth:`from_db` with the same lookups, so every frame gets the
+    values a per-frame database open gave, without the per-frame open (schema DDL, migrations,
+    manifest scans) in the worker processes. Picklable; used for one draft only."""
+
+    draft_id: int
+    location: tuple[float, float, float] | None
+    location_id: int | None
+    centre_row: dict[str, Any] | None
+    centre_error: str | None = None
+
+    @classmethod
+    def from_db(cls, db: Any, draft_id: int) -> "DraftSiteFacts":
+        did = int(draft_id)
+        centre_row: dict[str, Any] | None = None
+        centre_error: str | None = None
+        if hasattr(db, "fetch_obs_draft_by_id"):
+            try:
+                row = db.fetch_obs_draft_by_id(did)
+                if row:
+                    centre_row = {k: row.get(k) for k in ("CENTEROFFIELDRA", "CENTEROFFIELDDE")}
+            except Exception as exc:  # noqa: BLE001  (re-raised per frame, as the per-frame lookup did)
+                centre_error = str(exc)
+        return cls(did, _draft_location(db, did), _draft_id_location(db, did), centre_row, centre_error)
+
+    def check_draft(self, draft_id: int) -> None:
+        if int(draft_id) != self.draft_id:
+            raise ValueError(f"DraftSiteFacts of draft {self.draft_id} asked for draft {draft_id}")
+
+    def get_draft_location_id(self, draft_id: int) -> int | None:
+        self.check_draft(draft_id)
+        return self.location_id
+
+    def fetch_obs_draft_by_id(self, draft_id: int) -> dict[str, Any] | None:
+        self.check_draft(draft_id)
+        if self.centre_error is not None:
+            raise RuntimeError(self.centre_error)
+        return dict(self.centre_row) if self.centre_row is not None else None
 
 
 def _header_site(header: Any) -> tuple[float, float, float] | None:

@@ -18,6 +18,11 @@ def lc_csv_path(lc_dir: Path | str, catalog_id: str, method: str = "aperture") -
     return base / f"lightcurve_{cid}_{m}.csv"
 
 
+def check_kmag_sidecar_path(lc_dir: Path | str, target_cid: str) -> Path:
+    """Check-star K-magnitude sidecar of a target's light curve."""
+    return Path(lc_dir) / f"check_kmag_{str(target_cid).strip()}.csv"
+
+
 def aavso_export_path(reports_dir: Path | str, safe_name: str, date_tag: str) -> Path:
     return Path(reports_dir) / "aavso" / f"{safe_name}_{date_tag}.txt"
 

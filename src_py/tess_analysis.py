@@ -55,6 +55,8 @@ if TYPE_CHECKING:
 
 import numpy as np
 
+from stats_core import flux_to_mag
+
 LOGGER = logging.getLogger(__name__)
 
 #: RELIABLE needs the contamination (neighbours / target in the aperture) below this fraction.
@@ -207,13 +209,17 @@ def _segments(t: np.ndarray) -> np.ndarray:
     return seg
 
 
-def frequency_grid(t: np.ndarray, cadence_d: float) -> np.ndarray:
-    """From 2 / (median segment length) to the Nyquist frequency, oversampled 5x."""
+def frequency_limits(t: np.ndarray, cadence_d: float) -> tuple[float, float]:
+    """(f_min, f_max) of the searched grid: 2 / (median segment length) and the Nyquist frequency."""
     seg = _segments(t)
     lens = [float(np.ptp(t[seg == s])) for s in np.unique(seg) if (seg == s).sum() > 10]
     t_seg = float(np.median(lens)) if lens else float(np.ptp(t))
-    f_min = 2.0 / max(t_seg, 1e-3)
-    f_max = 0.5 / max(cadence_d, 1e-4)
+    return 2.0 / max(t_seg, 1e-3), 0.5 / max(cadence_d, 1e-4)
+
+
+def frequency_grid(t: np.ndarray, cadence_d: float) -> np.ndarray:
+    """From 2 / (median segment length) to the Nyquist frequency, oversampled 5x."""
+    f_min, f_max = frequency_limits(t, cadence_d)
     df = 1.0 / (_OVERSAMPLE * max(float(np.ptp(t)), 1e-3))
     n = int(min(2_000_000, max(100, (f_max - f_min) / df)))
     return np.linspace(f_min, f_max, n)
@@ -340,27 +346,19 @@ def aov_multiharmonic(t: np.ndarray, m: np.ndarray, e: np.ndarray, freq: np.ndar
     return theta, n
 
 
-def aov_fap(theta: float, n: int, freq: np.ndarray, t: np.ndarray) -> float:
-    """FAP of the highest of M independent frequencies, M = frequency range x baseline."""
+def n_independent_frequencies(f_min: float, f_max: float, baseline_d: float) -> float:
+    """M = (f_max - f_min) x baseline of the grid actually searched (Horne & Baliunas 1986 style), >= 1."""
+    return max(1.0, (float(f_max) - float(f_min)) * float(baseline_d))
+
+
+def aov_fap(theta: float, n: int, n_independent: float) -> float:
+    """FAP of the highest of M = ``n_independent`` frequencies: 1 - (1 - p1)^M with p1 the F(2N, n-2N-1) tail
+    of the multi-harmonic AoV statistic (Schwarzenberg-Czerny 1996). G09-26: the one FAP of the sector and the
+    combined-sector solutions."""
     from scipy.stats import f as fdist  # noqa: PLC0415
 
     p1 = float(fdist.sf(theta, 2 * _N_HARM, n - 2 * _N_HARM - 1))
-    m_ind = max(1.0, (freq[-1] - freq[0]) * float(np.ptp(t)))
-    return float(-np.expm1(m_ind * np.log1p(-min(p1, 1 - 1e-16))))
-
-
-def pdm_theta(t: np.ndarray, m: np.ndarray, period: float, nbins: int = 10) -> float:
-    """Stellingwerf (1978) PDM statistic (binned variance / total variance)."""
-    ph = (t / period) % 1.0
-    b = np.minimum((ph * nbins).astype(int), nbins - 1)
-    s_tot = float(np.var(m, ddof=1))
-    num = den = 0.0
-    for k in range(nbins):
-        x = m[b == k]
-        if x.size > 1:
-            num += float(np.var(x, ddof=1)) * (x.size - 1)
-            den += x.size - 1
-    return float((num / den) / s_tot) if den > 0 and s_tot > 0 else float("nan")
+    return float(-np.expm1(float(n_independent) * np.log1p(-min(p1, 1 - 1e-16))))
 
 
 def _fold_minima(
@@ -412,7 +410,7 @@ def analyse_periods(t: np.ndarray, m: np.ndarray, e: np.ndarray, cadence_d: floa
     fa, tha, sfa = _zoom_peak(t, m, e, float(freq[i]), 3.0 * df, f_lo, f_hi)
     p_aov = 1.0 / fa
     out["AoV"] = PeriodSolution(
-        "AoV (multi-harmonic, n=3)", p_aov, sfa / (fa * fa), aov_fap(float(tha), n, freq, t), float(tha)
+        "AoV (multi-harmonic, n=3)", p_aov, sfa / (fa * fa), aov_fap(float(tha), n, n_independent_frequencies(freq[0], freq[-1], float(np.ptp(t)))), float(tha)
     )
     plots["AoV"] = theta
 
@@ -433,7 +431,9 @@ def analyse_periods(t: np.ndarray, m: np.ndarray, e: np.ndarray, cadence_d: floa
     for k in np.argsort(-theta)[:200]:
         cand.add(round(1.0 / freq[k], 8))
     cand |= {round(2 * p_aov, 8), round(0.5 * p_aov, 8)}
-    pdm = {p: pdm_theta(t, m, p) for p in cand}
+    from variability_store import pdm_theta, phase_of  # noqa: PLC0415
+
+    pdm = {p: pdm_theta(phase_of(t, p, 0.0), m, n_bins=10) for p in cand}
     p_pdm = min(pdm, key=lambda p: pdm[p] if math.isfinite(pdm[p]) else 9)
     out["PDM"] = PeriodSolution("PDM (10 bins)", float(p_pdm), float("nan"), float("nan"), float(pdm[p_pdm]))
 
@@ -495,7 +495,7 @@ def analyse_periods(t: np.ndarray, m: np.ndarray, e: np.ndarray, cadence_d: floa
         "AoV refined at LS" + (f" x{mult}" if mult > 1 else "") + ("/BLS" if p0 != out["LS"].period_d else ""),
         float(p_ref),
         float(sfr / (fr * fr)),
-        aov_fap(float(thr), n, freq, t),
+        aov_fap(float(thr), n, n_independent_frequencies(freq[0], freq[-1], float(np.ptp(t)))),
         float(thr),
         note=(
             why
@@ -646,7 +646,7 @@ def sector_light_curve(
     e_ap = np.sqrt(np.nansum(ferr[:, mask] ** 2, axis=1))
     ok = np.isfinite(f_ap) & (f_ap > 0) & np.isfinite(e_ap)
     t, f_ap, e_ap = t[ok], f_ap[ok], e_ap[ok]
-    m = -2.5 * np.log10(f_ap)
+    m = flux_to_mag(f_ap)  # f_ap > 0 and finite here
     e = 1.0857 * e_ap / f_ap
     seg = _segments(t)
     for s in np.unique(seg):
@@ -776,11 +776,14 @@ def combine_sectors(
         note_alias = f"; sectors {span:.0f} d apart: cycle count ambiguous within +-3 sigma ({n_teeth:.0f} alias peaks)"
     else:
         err = float(sf_ref / (f_ref * f_ref))
-    from scipy.stats import f as fdist  # noqa: PLC0415
+    # G09-26: M of the sector grids that found the peak (their union) over the combined baseline
+    def _sector_limits(s: TessSector, a: dict[str, Any]) -> tuple[float, float]:
+        ts, ms, es = (np.asarray(a[c], float) for c in ("t", "m", "e"))
+        ok = np.isfinite(ts) & np.isfinite(ms) & np.isfinite(es) & (es > 0)  # as analyse_periods
+        return frequency_limits(ts[ok], float(s.cadence_s) / 86400.0)
 
-    p1 = float(fdist.sf(float(th_ref), 2 * _N_HARM, n - 2 * _N_HARM - 1))
-    m_ind = max(1.0, (1.0 / (2 * np.median([s.cadence_s for s, _ in secs]) / 86400.0)) * span)
-    fap = float(-np.expm1(m_ind * np.log1p(-min(p1, 1 - 1e-16))))
+    lims = [_sector_limits(s, a) for s, a in secs]
+    fap = aov_fap(float(th_ref), n, n_independent_frequencies(min(lo for lo, _ in lims), max(hi for _, hi in lims), span))
     amps = [s.period.amplitude_mag for s, _ in secs if math.isfinite(s.period.amplitude_mag)]
     base_note = secs[0][0].period.note if secs[0][0].period is not None else ""
     best = PeriodSolution(
@@ -877,6 +880,10 @@ def run_tess(
                                     "g_mag": float(target_mag) if target_mag is not None and math.isfinite(float(target_mag)) else None}]
 
     all_t, all_m, all_e, auxs = [], [], [], []
+    # G09-48: the background-subtracted cube is used only for the sector with the most points (the first
+    # such sector, as max() picks it below); the others drop theirs at once
+    cube_aux: dict[str, Any] | None = None
+    cube_n = -1
     for i, tpf in enumerate(tpfs):
         _p(f"Sector {getattr(tpf, 'sector', '?')}", 0.3 + 0.4 * i / max(1, len(tpfs)))
         try:
@@ -890,6 +897,12 @@ def run_tess(
             sec.period = sols.get("best")
             aux["mult"] = int(pl_sec.get("mult", 2 if tp_sec else 1))
             all_t.append(aux["t"]); all_m.append(aux["m"]); all_e.append(aux["e"]); auxs.append((sec, aux))
+            if sec.n_points > cube_n:
+                if cube_aux is not None:
+                    cube_aux.pop("cube", None)
+                cube_aux, cube_n = aux, sec.n_points
+            else:
+                aux.pop("cube", None)
         res.sectors.append(sec)
     if not all_t:
         res.error = res.error or "no usable sector"

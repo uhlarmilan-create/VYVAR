@@ -430,18 +430,10 @@ def rotation_180_guess(shape_hw: tuple[int, int]) -> np.ndarray:
     return np.array([[-1.0, 0.0, w - 1.0], [0.0, -1.0, h - 1.0], [0.0, 0.0, 1.0]])
 
 
-def _similarity_estimate(src: np.ndarray, dst: np.ndarray) -> Any:
-    from skimage.transform import SimilarityTransform  # noqa: PLC0415
-
-    if hasattr(SimilarityTransform, "from_estimate"):  # scikit-image >= 0.26
-        tt = SimilarityTransform.from_estimate(src, dst)
-        ok = bool(tt)
-    else:
-        tt = SimilarityTransform()
-        ok = bool(tt.estimate(src, dst))
-    if not ok or not np.all(np.isfinite(np.asarray(tt.params, dtype=np.float64))):
-        return None
-    return tt
+def poly_min_pairs(order: int) -> int:
+    """Fewest star pairs for an order-``order`` 2-D polynomial fit: 3 x the coefficient count per axis
+    ((order+1)(order+2)/2 per axis; G02-26: one definition for the fit and the BIC model test)."""
+    return 3 * ((int(order) + 1) * (int(order) + 2) // 2)
 
 
 def fit_similarity_from_stars(
@@ -452,6 +444,8 @@ def fit_similarity_from_stars(
     (10, 4, 2 FWHM; at least 20 px first) and a least-squares fit on the mutual pairs; a fit from
     a wider radius is kept when a tighter radius finds too few pairs. Returns the best
     (skimage SimilarityTransform | None, RegistrationCheck)."""
+    from skimage.transform import SimilarityTransform  # noqa: PLC0415
+
     src, ref = _finite_xy(src_xy), _finite_xy(ref_xy)
     fw = float(fwhm_px)
     best: tuple[Any, RegistrationCheck] = (None, _NO_CHECK)
@@ -468,7 +462,7 @@ def fit_similarity_from_stars(
             si, ri, _d = _mutual_pairs(_apply_matrix_3x3(m, src), ref, r)
             if len(si) < 6:
                 break
-            tt = _similarity_estimate(src[si], ref[ri])
+            tt = _estimate(SimilarityTransform, src[si], ref[ri])
             if tt is None:
                 break
             t, m = tt, np.asarray(tt.params, dtype=np.float64)
@@ -513,7 +507,7 @@ def fit_polynomial_from_stars(
     if not np.all(np.isfinite(m)):
         return None
     order = int(ALIGN_POLY_ORDER)
-    n_min = 3 * (order + 1) * (order + 2) // 2
+    n_min = poly_min_pairs(order)
     r = ALIGN_MATCH_FWHM * float(fwhm_px)
     mapped = _apply_matrix_3x3(m, src)
     si = ri = np.zeros(0, dtype=int)
@@ -546,7 +540,7 @@ def registration_model_dbic(src_xy: Any, ref_xy: Any, seed_matrix: Any, *, fwhm_
     ALIGN_MATCH_FWHM x FWHM). BIC = n ln(RSS / n) + k ln n, n = 2 x pairs (x and y residuals), k = 4 for
     the similarity, 6 per axis for the 2nd-order polynomial. Positive = the polynomial is preferred.
     None when the pairs are too few for the polynomial."""
-    from skimage.transform import PolynomialTransform  # noqa: PLC0415
+    from skimage.transform import PolynomialTransform, SimilarityTransform  # noqa: PLC0415
 
     from pipeline_constants import ALIGN_MATCH_FWHM, ALIGN_POLY_ORDER  # noqa: PLC0415
 
@@ -559,10 +553,10 @@ def registration_model_dbic(src_xy: Any, ref_xy: Any, seed_matrix: Any, *, fwhm_
     order = int(ALIGN_POLY_ORDER)
     k_poly = (order + 1) * (order + 2)  # coefficients of x and y together
     si, ri, _d = _mutual_pairs(_apply_matrix_3x3(m, src), ref, ALIGN_MATCH_FWHM * float(fwhm_px))
-    if len(si) < 3 * k_poly // 2:
+    if len(si) < poly_min_pairs(order):
         return None
     a, b = src[si], ref[ri]
-    sim = _similarity_estimate(a, b)
+    sim = _estimate(SimilarityTransform, a, b)
     poly = _estimate(PolynomialTransform, a, b, order=order)
     if sim is None or poly is None:
         return None

@@ -18,6 +18,7 @@ from config import AppConfig
 from infolog import log_event
 from pipeline_calibrate import _archive_preprocess_lights_root
 from pipeline_preprocess import _partition_detrended_by_subfolder, filter_files_by_qc_metrics_allowlist
+from fits_suffixes import list_fits_files
 from utils import iter_fits_paths_recursive as _iter_fits_recursive
 from pipeline_astrometry import (
     LOGGER,
@@ -415,7 +416,7 @@ def astrometry_align_and_build_masterstar(
         equipment_bayermask=_bayermask,
         meta={"invariants": []},
     )
-    _n_root_only = len(list(det_top.glob("*.fits"))) if det_top.exists() else 0
+    _n_root_only = len(list_fits_files(det_top))
     _n_all = len(files_all)
     if _n_root_only != _n_all:
         log_event(

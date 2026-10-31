@@ -7,11 +7,14 @@ measure stars or sky on that fill.
 
 from __future__ import annotations
 
+import logging
 import math
 from pathlib import Path
 from typing import Any
 
 import numpy as np
+
+LOGGER = logging.getLogger(__name__)
 
 
 def has_alignment_transform(header: Any) -> bool:
@@ -42,6 +45,22 @@ def stamp_alignment_transform(header: Any, registration: dict[str, Any], raw_sha
     header["VY_RAWNY"] = (int(raw_shape[0]), "frame height before alignment (px)")
 
 
+def alignment_matrix(header: Any) -> np.ndarray:
+    """Frame->reference 3x3 transform stored as ``VY_AM0..8`` (row-major, float64).
+
+    G02-33: the one reader of VY_AM. Raises ValueError when a key is missing, not a number or not
+    finite; callers that tolerate a frame without a transform catch it (e.g. ``sat_diag`` -> None)."""
+    try:
+        mat = np.array([float(header[f"VY_AM{k}"]) for k in range(9)], dtype=np.float64).reshape(3, 3)
+    except KeyError as exc:
+        raise ValueError(f"aligned frame has no frame->reference transform ({exc.args[0]}) - re-run the alignment") from exc
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"aligned frame has an unreadable frame->reference transform VY_AM0..8: {exc}") from exc
+    if not np.all(np.isfinite(mat)):
+        raise ValueError("aligned frame has a non-finite frame->reference transform VY_AM0..8")
+    return mat
+
+
 def _transform_raw_size_margin(header: Any, shape: tuple[int, int]) -> tuple[np.ndarray, int, int, float]:
     """VY_AM matrix, the frame's own size and the footprint margin (px).
 
@@ -50,10 +69,7 @@ def _transform_raw_size_margin(header: Any, shape: tuple[int, int]) -> tuple[np.
     has the reference's size (one camera / binning, as every alignment before 2026-10-29).
     Margin: 1 px plus ``VY_AMERR`` (G02-24: the projective VY_AM of a polynomial registration is off by
     up to VY_AMERR px; the 1 px margin alone assumed that error < 1 px)."""
-    try:
-        mat = np.array([float(header[f"VY_AM{k}"]) for k in range(9)], dtype=np.float64).reshape(3, 3)
-    except KeyError as exc:
-        raise ValueError(f"aligned frame has no frame->reference transform ({exc.args[0]}) - re-run the alignment") from exc
+    mat = alignment_matrix(header)
     h, w = int(shape[0]), int(shape[1])
     if "VY_RAWNX" in header and "VY_RAWNY" in header:
         wr, hr = int(header["VY_RAWNX"]), int(header["VY_RAWNY"])
@@ -154,18 +170,26 @@ def _frame_footprints(frames_dir: Path, stems: list[str]) -> list[np.ndarray]:
     from astropy.io import fits  # noqa: PLC0415
 
     out = []
+    skipped: list[str] = []
     for st in stems:
         fp = Path(frames_dir) / f"{st}.fits"
         if not fp.is_file():
             continue
+        h = fits.getheader(fp)
         try:
-            h = fits.getheader(fp)
             mat, w, hh, _margin = _transform_raw_size_margin(h, (int(h["NAXIS2"]), int(h["NAXIS1"])))
-        except Exception:  # noqa: BLE001
+        except ValueError as exc:
+            # G02-33: a frame without a usable transform is left out of the common footprint - loudly
+            skipped.append(f"{st}: {exc}")
             continue
         c = np.array([[0, 0, 1], [w - 1, 0, 1], [w - 1, hh - 1, 1], [0, hh - 1, 1]], float).T
         q = mat @ c
         out.append((q[:2] / q[2]).T)
+    if skipped:
+        LOGGER.warning(
+            "[FOOTPRINT] %d frame(s) without a usable VY_AM transform left out of the common footprint: %s",
+            len(skipped), "; ".join(skipped[:5]),
+        )
     return out
 
 

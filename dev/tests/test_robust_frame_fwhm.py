@@ -1,11 +1,20 @@
-"""VY_FWHM = frame QC FWHM (FWHM-ONE-2026-10): robust to hot pixels, no clipping."""
+"""VY_FWHM = frame QC FWHM (FWHM-ONE-2026-10, FWHM-ONCE-2026-10): robust to hot pixels, no clipping.
+
+G01-16: the one measurement is the calibration QC (``_quality_inspection_dao_metrics_array``); the
+preprocess copy ``_qc_fwhm_elongation`` is gone, these tests run on the one function."""
 from __future__ import annotations
 
 from pathlib import Path
 
 import numpy as np
+from astropy.io import fits
 
-from pipeline import _qc_fwhm_elongation
+from pipeline_calibrate import _quality_inspection_dao_metrics_array
+
+
+def _qc_fwhm_elongation(data: np.ndarray) -> dict:
+    m = _quality_inspection_dao_metrics_array(data, fits.Header())
+    return {"fwhm_px": m.get("fwhm_mean"), "n_sources": int(m.get("n_fit") or 0)}
 
 _FIXTURE = Path(__file__).resolve().parent / "fixtures" / "robust_fwhm_frame62.npz"
 

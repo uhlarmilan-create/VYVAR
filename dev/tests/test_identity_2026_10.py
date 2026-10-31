@@ -260,7 +260,7 @@ def test_pool_keeps_binaries_drops_per_frame_saturated(monkeypatch: pytest.Monke
         masterstars_df=_pool_df(), per_frame_csv_paths=[tmp_path / "proc_001.csv"], csv_cache={},
         variable_target_catalog_ids=frozenset(), safe_bbox=None, chip_fw=1000, chip_fh=1000,
         chip_interior_margin_px=0, cfg=cfg,
-        min_frames_frac=0.3, fwhm_px=3.7,
+        min_frames_frac=0.3, fwhm_px=3.7, gain=1.0, read_noise=10.0, scint_params=_NO_SCINT,
     )
     ids = set(pool["catalog_id"].astype(str))
     assert "2001" in ids, "a non-variable binary stays a comparison candidate"
@@ -375,3 +375,10 @@ def test_gaia_variable_flag_by_identity(tmp_path: Path) -> None:
     var = df["gaia_dr3_variable_catalog"].astype(bool)
     assert set(cid[var]) == {"1", "1003"}
     assert meta["n_gaia_variable_in_field"] == 2
+
+
+# COMP-CEIL-NOISEMODEL-2026-10: build_global_comp_pool requires the rig scintillation parameters; none here
+# (no telescope diameter / site altitude -> scintillation 0, as sigma_budget does for such a rig)
+from sigma_budget import RigScintillationParams  # noqa: E402
+
+_NO_SCINT = RigScintillationParams(None, "test", float("nan"), float("nan"), 60.0, 1.5, [])

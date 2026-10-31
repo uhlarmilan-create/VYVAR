@@ -334,7 +334,7 @@ def objects_status(path: str | Path) -> list[CatalogStatus]:
 
 def blind_index_status(index_dir: str | Path | None, gaia_db: str | Path | None) -> CatalogStatus:
     """Blind plate-solve index card: bands present, their pattern sizes and the folder size."""
-    from astro_index import N_BANDS  # noqa: PLC0415
+    from astro_index import N_BANDS, band_size  # noqa: PLC0415
     from astrosolve import default_index_dir  # noqa: PLC0415
     from catalog_db import resolve_catalog_path  # noqa: PLC0415
 
@@ -353,7 +353,7 @@ def blind_index_status(index_dir: str | Path | None, gaia_db: str | Path | None)
             k = int(b.name.split("_")[1])
         except (IndexError, ValueError):
             continue
-        hi = 0.15 * 2 ** k
+        hi = band_size(k)
         sizes.append(f"{hi / 2:g}-{hi:g} deg")
     facts = [("Scales", f"{len(bands)} of {N_BANDS}"), ("Size", _size_txt(size))]
     if sizes:

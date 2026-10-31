@@ -2038,6 +2038,8 @@ anchor re-cut. Registry: `INV-ANCHOR-00` in `VYVAR_INVARIANTS.md`.
 `scale_threshold=False`, `threshold = N x rms_conv`, where `rms_conv` is the robust RMS of
 the FIND-kernel convolved detection image. `_pixel_noise_sigma_pp_adu` / `_dao_noise_sigma_adu`
 remain **diagnostic only** (not wired to threshold).
+(Step 5, G05-07, 2026-10-30: both retired - their only consumer was a DEBUG log line, and they cost
+~0.8 s and ~0.9 GB peak per frame.)
 
 **Literature basis.** photutils `DAOStarFinder` (`scale_threshold=False`); Fruchter & Hook
 (2002) resampling correlation; Casertano et al. (2000) AJ 120, 2747 App. A undersampled noise.
@@ -6943,3 +6945,307 @@ medians (sqrt(pi/2) x 1.4826 MAD / sqrt(N)). With 2 exposure times only the prop
 a; option b, "not measurable", would stop BO CVn, dark bin 1 / lights bin 2) and the log says so. BO CVn:
 P 24.471, sigma_P 0.0014 ADU (convention SUM unchanged, Delta 73.6 >> limit 1 ADU); Brno: P 512.000 (was
 24.47), bf = 1. ``samples_p`` and the RNG are gone.
+
+## CCD-ONE-2026-10 (Milan 2026-10-30, code review 2 G06-20 / G08-28 / G10-20) - one CCD equation, median sky, real n_sky, no default gain
+
+**Finding.** The CCD equation existed in 7 copies plus an area fallback: the per-frame proc error fallback
+(``_howell_variance_adu2``), its "mirror" in aperture_pertarget (k* S/N), the hybrid background scaling, the LC
+error (``apply_grid_fluxes_to_frames``), the night systematic floor (``sigma_floor_core``), the field
+variability search and the transient search; check_star_kmag recomputed a missing error with gain 1, read
+noise 10 e- and area pi x 9 px. Copies 1-3 had no sky-estimation term (variance -5 to -44 %), copies 6-7 a
+different annulus area, and gain / read noise defaulted to 1 / 10. An LC row whose grid flux or sky was
+missing kept the per-frame proc error (another aperture and, for Labbe rows, another error model).
+
+**Decision.** One leaf function ``ccd_noise.ccd_variance_adu2(F, S, A, n_sky, gain=, read_noise=)``,
+Merline & Howell (1995, Exp. Astron. 6, 163) eq. 1 with the sky-estimation term (Howell 2006, sec. 4.4):
+var = F/g + A (1 + c A/n_sky) (S/g + (RN/g)^2). c = pi/2 because VYVAR's sky is a median: the asymptotic
+variance of the median of n normal deviates is (pi/2) sigma^2/n (Kendall & Stuart 1977, The Advanced Theory of
+Statistics vol. 1, ch. 10: var = 1/(4 n f(m)^2)); c = 1 for a mean. n_sky is the real number of pixels the
+sky median used (``sky_estimation.annulus_sky_medians_n``: after the source mask, the footprint cut and the
+r_in >= r_ap(k_max) + 0.5 rule; the box fallback counts its own pixels) - stored per star on the aperture
+grid (``ApertureGridNight.sky_n``) and in the proc CSV (new column ``sky_n_px``). No default gain / read
+noise (ValueError); a missing area / n_sky gives NaN. Dark-current shot noise and ADC quantisation stay out
+(not known at the call sites, < 1 % of the per-pixel variance for cooled cameras). G08-28: an LC row without
+grid flux or grid sky gets err = NaN with mag_inst = NaN (a grid sky is missing only together with the flux,
+flux = sum - sky x area, so there is no flux to give an error to; a row with a flux but no sky is flagged
+``no_data``) - never the proc error of another aperture. check_star_kmag uses the row's err (NaN if none).
+The variability search needs ``sky_n_px`` in the proc CSVs (older drafts: re-run the per-frame photometry;
+it stops with that message instead of guessing an annulus).
+
+**Verification.** Monte Carlo (``dev/tests/test_step5_sci_2026_10.py``): Poisson + Gaussian read noise,
+median sky of n_sky pixels, 6000 trials per case - pull width 1.00 +- 0.035 for typical, small-annulus and
+photon-limited cases; without the pi/2 factor the small-annulus pull is > 1.07, with the old proc form > 1.3.
+
+**Numbers that change (synthetic, gain 0.8, RN 3.5 e-, sky 800 ADU, annulus 2.7-5.2 FWHM, isolated star).**
+LC point error (photon part, before scintillation / floor / ensemble terms): +0.5 % (FWHM 3, k 1.0,
+F = 5e4 ADU) to +2.9 % (k 1.5, F = 2000 ADU, sky limited); more where the source mask removes annulus
+pixels. Proc ``howell_fallback`` / ``howell_scaled`` errors and the hybrid r_setup: +1 to +8.5 % in sigma
+against the old proc form. Night floor sigma_sys: slightly lower (the predicted photon part is larger).
+k* S/N fallback (only without comp scatter): S/N slightly lower. Variability / transient errors: the real
+n_sky and the pi/2 factor (about +1 to +3 % in sigma). Check-star photon sigma: NaN where the row had no err
+(was a gain-1 recomputation).
+
+**G10-20 transient fluxes.** ``transient_field._measure_one`` now measures with the production engine
+``aperture_pertarget.measure_flux_on_f_grid`` (exact aperture, annulus outside r_ap(k) + 0.5 px, detected
+sources and pixels off the aligned footprint masked - SKY-SRC-MASK-2026-10) and the error with
+``ccd_noise`` and the real n_sky; the private photutils copy (median of the unmasked annulus) is deleted.
+Synthetic test (5000 ADU star, three 3e5 ADU neighbours 11-13 px away in the 2.7-5.2 FWHM annulus): old flux
+-4.1 % against the isolated star, new -0.4 %; isolated star: identical apart from the r_in >= r_ap + 0.5 rule.
+Transient fluxes, S/N and candidate lists change in crowded fields (the transient magnitudes are on the
+production zero point, so the crowded-star bias of -0.015 to -0.04 mag against that scale is gone).
+
+## COMP-P2P-ROBUST-2026-10 (Milan 2026-10-30, code review 2 G08-55) - robust point-to-point scatter in the comparison-star stability test
+
+**Finding.** ``photometry_lightcurve.check_comparison_stability`` measured the comp point-to-point scatter
+as std(diff)/sqrt(2). The verdict is not diagnostic: ``comp_smart`` removes the worst suspect iteratively and
+replaces suspects from the reserve. One outlier frame of 2 mag (200 frames, 5 mmag noise) gave 0.142 >
+the 0.1 threshold (``phase01_comparison_max_comp_rms``) and ejected a good comp; the robust value was 0.004.
+A second, robust copy of the estimator lived in ``epsf_lc_compare.p2p_scatter``.
+
+**Decision (option b of the triage).** One helper ``stats_core.robust_p2p_scatter``: 1.4826 MAD(diff)/sqrt(2),
+no clipping - the von Neumann (1941) successive-difference estimator of the white-noise sigma with the
+standard deviation of the differences replaced by the MAD (Rousseeuw & Croux 1993, J. Am. Stat. Assoc. 88,
+1273: 50 % breakdown). Used by the stability test and by the ePSF comparison (bit-identical there). Per-frame
+outliers belong to the frame / point flags; Broeg weights down-weight a noisy comp; slow trends are caught by
+the slope test and the night floor (LOO total scatter).
+
+**Numbers that change.** ``rms_p2p`` of every comp (comp_quality JSON, PNG table and its order within
+"good"): for Gaussian noise the two estimators agree on average (efficiency of the MAD 37 %, so single
+values differ by a few % at 200 frames). Comp sets (hence ensemble, LC mags / errors) change on nights where a
+comp has a few outlier frames: such a comp is no longer "suspect" by p2p, so comp_smart keeps it instead
+of replacing it from the reserve. Synthetic test: one 2-mag frame, comp kept (old: replaced by the reserve).
+
+## TESS-FAP-ONE-2026-10 (Milan 2026-10-30, code review 2 G09-26) - one AoV FAP for sector and combined solutions
+
+``tess_analysis.combine_sectors`` computed its own FAP with M = f_Nyquist(median cadence) x span, while the
+sector solutions used ``aov_fap`` with M = (f_max - f_min) x baseline of their grid. Now one
+``aov_fap(theta, n, n_independent)`` (F(2N, n-2N-1) tail of the multi-harmonic AoV, Schwarzenberg-Czerny 1996;
+FAP = 1 - (1 - p1)^M) and one ``n_independent_frequencies(f_min, f_max, baseline)`` (Horne & Baliunas 1986:
+the number of independent frequencies of the grid actually searched). Sector FAPs: bit-identical. Combined:
+M = (union f_max - union f_min) of the sector grids (``frequency_limits``, the same limits the sector search
+used) x combined span. Numbers: the combined-sector FAP (report / export field) changes by the M ratio -
+x1.000 for equal cadences, x2-3 for mixed cadences (120 s + 600 s: the old median cadence was 360 s; the
+fastest sector searched up to its own Nyquist frequency); FAP ~ M p1 for small p1. The TESS verdict tests
+this FAP (< 0.01), so a marginal multi-sector period can move between RELIABLE and AMBIGUOUS.
+
+## DILUTION-ONE-2026-10 (Milan 2026-10-30, code review 2 G07-33) - one neighbour-light model: GS11 uses the comparison-star blend model
+
+**Finding.** Two neighbour-light models: ``dilution.compute_dilution_factor`` (GS11 target correction) used a
+circular Gaussian of the frame FWHM (Rice / ncx2 enclosed fraction) with no sky-annulus term and the proc
+aperture of ``state.apertures_px`` (not the light-curve aperture); ``comp_blend.contamination_fractions``
+(comparison-star gate, target blend) uses a Moffat PSF with the beta measured on the MASTERSTAR and models the
+annulus median. Equal neighbour, aperture 1.5 FWHM, annulus 2.7-5.2 FWHM, beta 2.7: Gaussian 0.444 / 0.097 /
+0.0001 at 1.5 / 2 / 3 FWHM, Moffat with annulus 0.458 / 0.153 / 0.0129 - GS11 under-corrected by ~0.06 mag at 2
+FWHM and ~0.014 mag at 3 FWHM.
+
+**Decision (merge).** ``compute_dilution_factor`` calls ``contamination_fractions`` (geometry in arcsec:
+tangent-plane offsets of the Gaia neighbours) with the target's light-curve aperture r = k* x FWHM_night (x
+PSF-LOCAL scale, ``state.per_target_aperture``), the production annulus of that FWHM
+(``resolve_aperture_geometry`` at the largest grid k) and the Moffat profile of the target blend
+(``state.blend_psf``). c = extra measured light / own measured light; D = 1/(1+c); the flux correction
+(``apply_target_dilution_to_mag_calib``) removes F_contam = c x F_target in flux as before. Gaussian
+``enclosed_fraction`` and the "FWHM = aperture / 1.35" fallback are deleted; missing PSF / annulus is a
+ValueError; a target without a per-target aperture or without the measured PSF is skipped with the reason
+recorded (``dilution_skip_reason``) instead of using the proc aperture.
+
+**Numbers that change.** Only with ``gs11_dilution_enabled`` (off by default): the GS11 mag_calib correction
+and summary (D, delta_mag, n_neighbours) - larger corrections for neighbours at 1.5-4 FWHM (table above), a
+neighbour inside the annulus can now give a smaller net correction (its light raises the sky).
+
+## DAO-P2-CENTROID-2026-10 (Milan 2026-10-30, code review 2 G04-26) - per-frame DAO pass 2: one detection per centroid
+
+The per-frame targeted pass 2 (``pipeline_catalog._dao_targeted_pass2_unmatched_gaia``) seeds a local DAO at every
+MASTERSTAR row without a pass-1 neighbour; two seeds closer than the centre tolerance (2 px) can accept the
+same centroid, and the merge only dropped pass-2 rows within 3 px of pass 1 - so one star became two proc rows at
+one pixel (its flux twice). The MASTERSTAR pass 2 had the fix (G04-07). Now one function
+``masterstar_gaia_accounting.one_detection_per_centroid`` serves both: pass-2 centroids within
+``MS_DAO_PASS1_DEDUP_PX`` (0.75 px) of a kept one are the same detection, owned by the brightest seed (catalogue
+mag, ties by id, then seed order). MASTERSTAR: bit-identical (test). Seed rule, depth / edge cut and the 2 px
+centre tolerance of the per-frame pass stay as they are (a different job: re-find the MASTERSTAR stars).
+Numbers: per-frame proc rows / detection flags and counts where two seeds shared a centroid (one row less each,
+logged); LC mags come from the aperture grid at catalogue positions and do not move.
+
+## FWHM-ONCE-2026-10 (Milan 2026-10-30, code review 2 G01-16; extends FWHM-ONE-2026-10) - each light is measured once
+
+**Finding.** Every light was measured three times: Layer A after calibration (``_post_calibration_qc_eval``:
+DAO HFR on the central crop + full-frame plain stats -> VY_QCHFR / VY_QCNS / VY_QCBG / VY_QCRMS, manifest
+``qc``), PERF-10 (``frame_metrics.measure_frame`` on the calibrated frame -> manifest ``inspection``, the values
+frame QC uses) and the preprocess (``_qc_fwhm_elongation``: ``measure_frame`` again after the sky surface ->
+VY_FWHM, the aperture FWHM, and the badpix-repair FWHM). ~0.75 s of CPU per frame wasted; two FWHM authorities.
+
+**Decision (triage option a).** The one measurement is the calibration QC (``_quality_inspection_dao_metrics_array``,
+``measure_frame`` on the central crop), because frame QC - which decides the frames the preprocess works on -
+needs it before the preprocess runs. It goes to the manifest (frame QC) and, new, into the calibrated frame's
+header (``stamp_frame_qc_headers``: VY_FWHM, VY_ELONG, VY_NSTAR, VY_QCBG = its sky outside the star mask, so
+the report's header-to-QC-row match is exact). The preprocess reads it (header, else the manifest frame QC of
+pre-calibrated lights measured by the RAM QC); a frame never measured (QC after calibration off, OSC channel
+frames) is measured there once and stamped; ``qc_metrics.csv`` gets ``fwhm_source``. The badpix repair, the
+aperture radii and every later reader use that value. Deleted: Layer A (HFR, its DAO pass, VY_QCHFR / VY_QCNS /
+VY_QCRMS, manifest ``qc`` writes; G01-14's HFR sign flip goes with it) and ``_qc_fwhm_elongation``.
+``qc_after_calibrate_enabled`` now gates the calibration-time measurement (it gated Layer A).
+
+Measured before instead of after the sky surface: ``measure_frame`` fits each star with an elliptical Gaussian plus
+a constant over a 2.5 FWHM stamp, so a low-order sky surface is a constant there. Synthetic 1000 x 1000 frame, 300
+stars, FWHM 3 px, quadratic sky gradient 0 / 300 / 1000 ADU: FWHM before vs after the surface differs by
+0.00001 / -0.009 / -0.018 %, elongation by < 2e-4. **Numbers that change:** VY_FWHM by that amount (aperture radii
+and LC mags at the 1e-4 relative level); VY_NSTAR / VY_ELONG now the calibration values; VY_QCBG is the
+star-masked sky of the crop (was the full-frame plain median); headers lose VY_QCHFR / VY_QCNS / VY_QCRMS.
+Check on BO CVn / Brno at the next A/B: |manifest FWHM - old VY_FWHM| < 1 %.
+
+## STEP5-DUP2-2026-10 (Milan 2026-10-30, triage T11a / T16b follow-up) - one pedestal, one flat normaliser, Gaia colour precedence, dedup NaN
+
+- **G01-11 one pedestal estimator.** ``calib_library.fit_pedestal``: OLS intercept of the master-dark median
+  against the exposure time (with sigma_P), used by CAL-DIAG (``derive_pedestal_from_masters``) and the FLAT
+  offset (``measure_offset_adu``). One exposure time: the median of the shortest dark (upper bound), logged as a
+  WARNING; the CAL-DIAG gate result records ``pedestal_method``. DARKFLAT masters are not pedestal points (Milan
+  takes no dark-flats: flats < 1 s). Flat offsets change in the last bits only (np.polyfit -> the OLS formula).
+- **G01-23 one flat normaliser.** ``calib_masters.normalise_flat`` everywhere (build, VYFLNRD after the resample,
+  flats without VYFLNRD), median over the valid pixels (finite and > 0). Calibrated ADU move by one factor per
+  channel where a flat has pixels <= 0 (~0.1-0.5 %); differential magnitudes stay equal within float noise
+  (synthetic: 1e-8 mag mono, 3e-7 mag OSC with 0.5 % dead pixels).
+- **G07-07 "DB wins".** A finite BP-RP of the local Gaia DB replaces any other value (CSV column); other sources
+  fill only ids the DB lacks. One lookup (``photometry_comp.gaia_bp_rp``; the prefetch is its cached result).
+- **G03-43.** Non-finite pass-1 centroids are ignored in the pass-1/pass-2 DAO dedup (one NaN centroid used to make
+  no pass-2 detection a duplicate).
+
+## COMP-CEIL-FIELDK-2026-10 (Milan 2026-10-30) - comp_rms ceiling at the field k; field k by the one-SE rule
+
+**Finding (Brno 534 g_120_4, A = s5abc vs B = s5all, a 0.1 % flux shift between them).**
+(1) ``comp_rms_loo.choose_field_aperture_k`` took the largest k whose median LOO RMS was within a fixed 1 % of
+the minimum (a magic constant): the ratio score(0.875) / score(0.75) went from 1.0087 (A, k = 0.875) to 1.0103
+(B, k = 0.75). (2) The per-star ceiling of ``photometry_comp._select_comps_by_rms_then_color`` (INV-COMP-RMS-01)
+was ``min(abs cap, 5 x 1.0857 / snr_ap_pixscaled)``: comp_rms is the night LOO MAD at the FIELD k (r = k x frame
+FWHM, all frames), but ``snr_ap_pixscaled`` is the MASTERSTAR S/N (one frame, r = 1.9 FWHM), so the ceiling did
+not move with k. At k = 0.75 five good bright comps were dropped (e.g. 2172314026471975296, G = 11.83: ceiling
+0.00395, LOO 0.00370 at 0.875, 0.00488 at 0.75); 41 / 59 targets in g changed comps, two went 8 -> 4 comps
+(GREEN -> YELLOW).
+
+**Decision A (root fix).** The photon reference of the ceiling comes from the same aperture and frames as
+comp_rms: per pool star the median over the night frames of the CCD-equation relative error
+(``ccd_noise.ccd_rel_error``: proc ``flux_kNNN``, ``sky_adu_per_px_annulus``, ``sky_n_px``, area
+pi r^2 with r = ``photometry_defs.flux_k_radius_px(k, fwhm_px_for_aperture)`` - the radius the proc writer uses;
+``aperture_r_px`` for the legacy ``dao_flux`` path) x 2.5 / ln 10 (``comp_rms_loo.photon_mag_err_map``), pool
+column ``comp_photon_mag_fieldk``. Gain / read noise: the GAIN-ONE authority the light-curve errors use
+(``rig_photometry.photometric_gain_read_noise`` on the MASTERSTAR header and the draft equipment), passed to
+``build_global_comp_pool`` (required, no default). Factor ``COMP_RMS_LOO_PHOTON_K_DEFAULT`` (5) and the absolute
+cap stay. Fail loud: proc CSVs without ``sky_n_px`` / sky / ``fwhm_px_for_aperture`` -> RuntimeError (same
+message as the variability search: made before CCD-ONE-2026-10, re-run the per-frame photometry); candidates
+without the column -> ValueError. ``snr_ap_pixscaled`` no longer enters this gate (it stays the MASTERSTAR S/N
+of the COMP-SNR-20 pool gate, D3 and the target S/N cut). No other user of this ceiling exists.
+Meta: ``comp_pool_admission`` rule ``COMP_PHOTON_REF`` (flux column, gain, read noise, stars without a value).
+
+**Decision B.** ``choose_field_aperture_k`` uses the AP-BRIGHT-K rule through one shared helper
+``comp_rms_loo.k_within_one_se`` (moved there from ``aperture_pertarget.field_k_by_brightness``, which calls it
+bit-identically; ``BRIGHT_K_BOOT`` = 200 lives next to it): each star's LOO RMS divided by its own minimum over
+k (the same stars at every k - a paired statistic), median over the common stars, the LARGEST k within one
+bootstrap SE (``default_rng(0)``) of the curve minimum. ``comp_pool_admission`` / ``COMP_RMS_APERTURE_K`` records
+``scores`` (median RMS, as before), ``ratio_curve``, ``se``, ``n_stars`` and ``rule``. An SE of the raw median
+RMS was rejected: it measures the brightness spread of the pool (~3.7 % of the score), not the k difference.
+
+**Offline check (approximate pool, golden proc CSVs; A lacks ``sky_n_px`` - B's per-star count used).**
+Field k by the new rule: 0.75 in g and r, A and B alike (SE of the ratio 0.0056-0.0064; the 0.875 ratio is
++0.020 (g) / +0.029 (r) above the minimum). New ceiling for the comps of target 2172308696409863040 and the five dropped
+comps (k 0.75 / 0.875): g - at 0.875 all 10 admitted; at 0.75 three of the five return (2172337283712176256,
+2172318630677490176, 2172317462445956096), 2172314026471975296 (0.00480-0.00488 vs 0.00473) and
+2172338147008960640 (A 0.00549 vs 0.00547; B 0.00541 passes) stay out by < 2 %. r - 10 / 11 at 0.75
+(2172338147008960640: 0.00728 vs 0.00712), 11 / 11 at 0.875. Pool-wide pass count +15 to +25 stars per
+filter. The bright comps scatter ~5 x their CCD-equation error (0.0009-0.0012 mag at G 11.8-12.3): their LOO is
+dominated by noise outside the CCD equation (scintillation, flat / pixel-phase terms), so the 5 x photon ceiling is
+tight for them at every k - an open science question (scintillation term), not handled here.
+
+**Numbers that change:** field k (Brno 534 r: 0.875 -> 0.75 expected), comparison-star admission and therefore
+comps, LCs and trust of the targets; ``comp_pool_admission`` meta gains the SE fields and ``COMP_PHOTON_REF``.
+
+## COMP-CEIL-NOISEMODEL-2026-10 (Milan 2026-10-30) - comparison RMS ceiling against a fitted field noise model
+
+**Finding (S5b analysis, golden s5all_527 BO CVn and s5all_534 Brno g / r, offline).** The photon-only reference of
+COMP-CEIL-FIELDK-2026-10 (option c) is the wrong model for bright stars: the ratio LOO scatter / reference of the
+constant pool stars falls with brightness (Theil-Sen slope of ln ratio per mag: BO CVn -0.164, g -0.184, r -0.147;
+brightest 20 % at 1.39 / 2.70 / 2.30 x, faintest at 0.81 / 1.10 / 1.18 x), so the 5 x ceiling rejected good
+bright comps by model error (g k 0.75: 41 of 277 bright constant stars; r k 0.875: 32 of 243). Adding the
+scintillation of the light-curve errors (option a) helps only the 7 cm rig (4 mmag; 0.5-2 mmag for 0.8 m: Brno
+still 4-5 x). Adding sigma_sys_night (option b) flattens the ratio only by coincidence (it is measured on the final
+comps at another k; the floor depends strongly on k: g 8.7 / 7.3 / 5.4 / 3.7 mmag at k 0.6 / 0.75 / 1.0 / 1.5).
+The bright-star excess is mostly aperture-loss noise of small apertures and a spatial zero-point gradient, common
+to the field at the field k (Everett & Howell 2001: an empirical floor beyond photon + scintillation).
+
+**Decision (option d).** Per pool star at the field k
+``sigma_ref^2 = (a e_photon)^2 + e_scint^2 + floor^2``:
+- ``e_photon``: the CCD-equation error of COMP-CEIL-FIELDK-2026-10 (pool column ``comp_photon_mag_fieldk``).
+- ``e_scint``: median over the star's comp_rms frames of the per-frame scintillation the light-curve errors use
+  (``sigma_floor_core.frame_scintillation_mag`` at the frame airmass - one function, also used by
+  ``aperture_photometry._frame_scintillation_mag``; rig parameters ``aperture_photometry.rig_scint_params_for_run``
+  = ``sigma_budget.resolve_rig_scintillation_params``, the path of the light-curve errors); pool column
+  ``comp_scint_mag_fieldk``. A frame without an airmass contributes 0 (as in the light-curve errors), counted in meta.
+- ``a``, ``floor``: fitted per night and obs group on the constant pool stars (not VSX / Gaia DR3 variable, not
+  saturated; finite positive comp_rms and photon error) with the robust log fit the field variability search uses
+  (``stats_core.fit_scatter_noise_model``, soft_l1, f_scale 0.1; NOISE-FIT-ONE-2026-10: ``variability_field``
+  calls the same function, bit-identical - equality test). Each star is judged against the field population
+  (Collier Cameron et al. 2006: per-star and per-frame variance terms fitted on the data; Sokolovsky et al. 2017:
+  field-fitted noise model).
+- Ceiling unchanged in form: ``min(abs cap, COMP_RMS_LOO_PHOTON_K_DEFAULT (5) x sigma_ref)``; pool column
+  ``comp_sigma_ref_fieldk`` (the selector reads it; missing -> ValueError).
+- Without a fit (fewer than ``COMP_CEIL_FIT_MIN_STARS`` = 30 constant stars - the population of an AP-BRIGHT-K
+  group - or no convergence): WARNING and the unfitted model a = 1, floor = 0 (photon + scintillation); the reason
+  is in ``status``.
+- Meta: ``comp_pool_admission`` rule ``COMP_CEIL_NOISE_MODEL`` (model, fit, a, floor_mag, n_stars, n_min, status,
+  multiplier as ``threshold_value``, scintillation frame counts / median / rig values). ``build_global_comp_pool``
+  requires ``scint_params`` (no default).
+
+**Evidence (analysis table 1.1 / 1.3, option d).** Fitted a / floor: BO CVn (k 1.0) 0.807 / 5.61 mmag, g (k 0.75)
+1.104 / 7.26, r (k 0.875) 1.206 / 5.78, r (k 0.75) 1.171 / 6.81. Ratio slope -0.001 / -0.003 / -0.002 per mag,
+bright / faint median 0.99 / 0.99, 0.99 / 0.99, 1.00 / 0.97. Constant stars admitted 587 / 587, 1110 / 1123,
+1269 / 1282 (r k 0.75: 1272) - no bright constant star rejected (c: 587, 1069, 1236); catalogued variables admitted
+43 / 48, 44 / 46, 57 / 59; night-detected variables 6 / 11, 2 / 4, 1 / 3 (at most one more than c per group).
+Ratio q99.9 under (d) 1.84 / 3.27 / 4.00 - no constant star reaches 5 x; MAD sampling alone (N 97-146) gives
+P(> 5) = 0. The free scale a is needed: the CCD equation is 19 % high on BO CVn (gain 0.7925 e-/ADU to be checked)
+and 10-20 % low on Brno.
+
+**Offline check of the implementation (2026-10-30).** ``comp_ceiling_reference`` on the analysis pools reproduces
+table 1.1 (d) and 1.3 (d) exactly (a, floor to 4 digits; admitted constant / catalogued-variable counts identical in
+all four groups). On the real ``build_global_comp_pool`` (current code, golden proc CSVs, golden gain / rig): field k
+0.75 in all three groups (``k_within_se`` = [0.75] each; BO CVn had k 1.0 in the golden run); a / floor BO CVn 0.782 /
+7.68 mmag, g 1.105 / 7.33, r 1.173 / 6.86 (analysis floor-vs-k at 0.75: 7.5 / 7.3 / 6.8); constant pool stars
+admitted 607 / 607, 1223 / 1235, 1385 / 1396 (photon-only c on the same pools: 607, 1178, 1340). The pools are
+larger than the analysis pools (607 / 1235 / 1396 vs 587 / 1123 / 1282: analysis pool = MASTERSTAR S/N >= 20 +
+variability gates, the pipeline pool = its own gates).
+
+**AP-BRIGHT-K (Part 2, same day).** The one-SE rule stays (edge-k flips are decision noise, mean RMS cost
+0.3-0.7 %; no tested alternative is more stable). Diagnostic only: every k within one SE of the minimum is recorded
+per brightness group (``k_within_se`` in aperture_per_target.json, ``comp_rms_loo.ks_within_one_se``) and for the
+field k (``COMP_RMS_APERTURE_K.k_within_se`` in comp_pool_admission).
+
+**Not done here (follow-ups of the analysis):** a field-FAP multiplier instead of 5 x (1.68 / 2.21 / 2.44 x here);
+a planar / local LOO reference (one x,y plane per frame removes ~60 % of the bright excess variance); colour-ladder
+non-monotonicity of the selector; BO CVn gain check (a 0.78-0.81).
+
+**Numbers that change:** comparison-star admission (more good bright comps), therefore comps, LCs and trust of the
+targets; pool columns ``comp_scint_mag_fieldk`` / ``comp_sigma_ref_fieldk``; meta rule ``COMP_CEIL_NOISE_MODEL``;
+``k_within_se`` keys in aperture_per_target.json and comp_pool_admission. variability_field results unchanged.
+
+References: Collier Cameron et al. 2006, MNRAS 373, 799; Sokolovsky et al. 2017, A&A 598, A108; Everett & Howell
+2001, PASP 113, 1428; Osborn et al. 2015, MNRAS 452, 1707 (Young 1967 scintillation, C_Y); Rousseeuw & Croux 1993.
+
+## COMP-SELECT-STUDY-2026-10-31 - comparison selection kept; per-frame field plane studied, not adopted (Milan 2026-10-31)
+
+Trigger: after COMP-CEIL-NOISEMODEL the Brno r target Gaia DR3 2172308696409863040 (ZTF J211949.50+514341.5) went
+3.61 -> 4.70 mmag: the |dBP-RP| <= 0.15 rung now holds 7 under-ceiling comps (5-15 mmag) and the ladder stops there,
+while the 0.30 rung has 3-7 mmag comps (ensemble 2.97 vs 1.68 mmag).
+
+Offline study (real VYVAR selector and Broeg ensemble on the golden proc tables; S0 reproduces the night selection for
+150 / 150 targets, harness LC rms / pipeline lc_rms median 1.01, Spearman 0.96). Sets: BO CVn NoFilter, Brno g, Brno r;
+real targets plus 300 constant pool stars per set as targets. Variants against today's rule (S0):
+- rung chosen by predicted ensemble noise incl. k'' x dC x sigma_X (one-SE rule); per-star effective variance without
+  a ladder (greedy); 20-star Broeg ensemble; nearest comps inside the rung (Astrokit-like); FAP gate on rms/sigma_ref
+  (1.44-1.86 x instead of 5 x): constant stars median ratio 0.99-1.01, about as many better as worse by > 5 %.
+- selection stability (comp_rms from odd vs even frames, Jaccard): S0 0.60 median, the alternatives 0.14-0.48.
+- a per-frame colour term adds nothing (also NoFilter); colour matching by the tiers works.
+- per-frame field plane (robust LS of dmag = a + b x + c y on the constant pool stars, target excluded): gradient
+  median 15-18 mmag edge to edge on Brno (max 56), 10 on BO CVn, drifts with airmass; constant stars rms ratio
+  0.957 / 0.973 / 0.987 (g / r / BO CVn), brightest quarter 0.83 / 0.83 / 0.93, faint quarter 1.00; airmass trend
+  14 -> 11, 18 -> 16, 41 -> 30 mmag/X; 13-20 % of constant stars worse by > 5 %. Quadratic / cubic terms add nothing.
+  Literature: Honeycutt 1992 with x,y polynomial (M11), VaST plane, WASP SysRem.
+
+Decision (Milan): the comparison selection stays as it is (COMP-ASSIGN-03 + COMP-CEIL-NOISEMODEL). The field plane is
+not adopted now (light curves shown, Milan 2026-10-31: close step 5 without it). Scripts and results:
+container /root/scr/s6 (eval.py, stab.py, fmvar.py, loc.py, plane.py, lcplot.py, survey_comp_selection.md).

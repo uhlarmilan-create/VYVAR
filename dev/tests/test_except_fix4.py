@@ -207,14 +207,16 @@ def test_fix4_8_check_star_ensemble_filter_skip_counts(
         {"catalog_id": ["1", "2"], "is_ensemble": [False, True]},
     )
 
-    _orig_fillna = pd.Series.fillna
+    import check_star_kmag
 
-    def _boom(self, *args, **kwargs):
-        if self.name == "is_ensemble":
+    _orig_cast = check_star_kmag.coerce_bool_series
+
+    def _boom(series, *args, **kwargs):  # G02-39: the bool cast is stats_core.coerce_bool_series
+        if series.name == "is_ensemble":
             raise RuntimeError("bool cast boom")
-        return _orig_fillna(self, *args, **kwargs)
+        return _orig_cast(series, *args, **kwargs)
 
-    monkeypatch.setattr(pd.Series, "fillna", _boom)
+    monkeypatch.setattr(check_star_kmag, "coerce_bool_series", _boom)
 
     reset_except_fix_counters()
     caplog.set_level(logging.ERROR)

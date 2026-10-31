@@ -77,6 +77,11 @@ def pair_variance(f1: np.ndarray, f2: np.ndarray, dark: np.ndarray | float = 0.0
     """(mean level above the dark, var(F1 - F2) / 2) on the central region, in ADU."""
     a, b = _roi(np.asarray(f1, dtype=np.float64)), _roi(np.asarray(f2, dtype=np.float64))
     dk = _roi(np.asarray(dark, dtype=np.float64)) if np.ndim(dark) else float(dark)
+    return _pair_variance_roi(a, b, dk)
+
+
+def _pair_variance_roi(a: np.ndarray, b: np.ndarray, dk: np.ndarray | float) -> tuple[float, float]:
+    """:func:`pair_variance` on frames already cut to the central region (float64)."""
     level = float(np.median((a + b) / 2.0 - dk))
     sig = _mad_sigma(a - b)
     return level, sig * sig / 2.0
@@ -84,7 +89,11 @@ def pair_variance(f1: np.ndarray, f2: np.ndarray, dark: np.ndarray | float = 0.0
 
 def read_noise_adu(d1: np.ndarray, d2: np.ndarray) -> float:
     """Read noise in ADU from two darks of the same (short) exposure."""
-    a, b = _roi(np.asarray(d1, dtype=np.float64)), _roi(np.asarray(d2, dtype=np.float64))
+    return _read_noise_adu_roi(_roi(np.asarray(d1, dtype=np.float64)), _roi(np.asarray(d2, dtype=np.float64)))
+
+
+def _read_noise_adu_roi(a: np.ndarray, b: np.ndarray) -> float:
+    """:func:`read_noise_adu` on darks already cut to the central region (float64)."""
     d = (a - b)[np.isfinite(a - b)]
     return float(np.std(d)) / math.sqrt(2.0) if d.size else float("nan")
 
@@ -131,11 +140,20 @@ def _hdr_num(h: Any, *keys: str) -> float | None:
     return None
 
 
-def _load(path: Path) -> tuple[np.ndarray, Any]:
+def _load_header(path: Path) -> Any:
     from astropy.io import fits  # noqa: PLC0415
 
     with fits.open(path, memmap=False) as hd:
-        return np.asarray(hd[0].data, dtype=np.float64), hd[0].header.copy()
+        return hd[0].header.copy()
+
+
+def _load_roi(path: Path) -> np.ndarray:
+    """The central region (:func:`_roi`) of the frame as float64 - G01-35: only the region the
+    measurement uses is kept (the full frames were all held in memory as float64)."""
+    from astropy.io import fits  # noqa: PLC0415
+
+    with fits.open(path, memmap=False) as hd:
+        return np.array(_roi(np.asarray(hd[0].data)), dtype=np.float64)
 
 
 def measure_from_files(
@@ -149,21 +167,18 @@ def measure_from_files(
     Every flat exposure needs darks of the same exposure (dark level and amp glow); the shortest dark
     pair gives the read noise. All frames must share binning and gain setting."""
     res = PtcResult(ok=False)
-    frames: list[tuple[Path, np.ndarray, Any]] = []
-    for p in sorted({Path(f) for f in flat_files}):
-        a, h = _load(p)
-        frames.append((p, a, h))
-    darks: list[tuple[Path, np.ndarray, Any]] = []
-    for p in sorted({Path(f) for f in dark_files}):
-        a, h = _load(p)
-        darks.append((p, a, h))
-    if len(frames) < 2:
+    # G01-35: headers first (the binning / gain check needs no pixels), then the central region only
+    flat_hdrs = [(p, _load_header(p)) for p in sorted({Path(f) for f in flat_files})]
+    dark_hdrs = [(p, _load_header(p)) for p in sorted({Path(f) for f in dark_files})]
+    if len(flat_hdrs) < 2:
         res.messages.append("At least two raw flats of the same exposure are needed (better 5 levels x 2).")
         return res
-    keys = {(_hdr_num(h, "XBINNING") or 1, _hdr_num(h, "GAIN")) for _, _, h in frames + darks}
+    keys = {(_hdr_num(h, "XBINNING") or 1, _hdr_num(h, "GAIN")) for _, h in flat_hdrs + dark_hdrs}
     if len(keys) > 1:
         res.messages.append(f"Frames differ in binning / gain setting: {sorted(keys, key=str)} - use one setting.")
         return res
+    frames: list[tuple[Path, np.ndarray, Any]] = [(p, _load_roi(p), h) for p, h in flat_hdrs]
+    darks: list[tuple[Path, np.ndarray, Any]] = [(p, _load_roi(p), h) for p, h in dark_hdrs]
     res.binning = int((next(iter(keys))[0]) or 1)
     res.gain_setting = next(iter(keys))[1]
 
@@ -177,7 +192,7 @@ def measure_from_files(
     if dark_by_exp:
         e_min = min(dark_by_exp)
         if len(dark_by_exp[e_min]) >= 2:
-            rn_adu = read_noise_adu(dark_by_exp[e_min][0], dark_by_exp[e_min][1])
+            rn_adu = _read_noise_adu_roi(dark_by_exp[e_min][0], dark_by_exp[e_min][1])
             res.read_noise_adu = rn_adu
         else:
             res.messages.append("Only one dark at the shortest exposure - read noise needs a dark pair.")
@@ -198,8 +213,8 @@ def measure_from_files(
         else:
             dark = 0.0
         for (p1, a1), (p2, a2) in zip(fl[0::2], fl[1::2]):
-            lev, var_h = pair_variance(a1, a2, dark)
-            m1, m2 = float(np.median(_roi(a1))), float(np.median(_roi(a2)))
+            lev, var_h = _pair_variance_roi(a1, a2, dark)
+            m1, m2 = float(np.median(a1)), float(np.median(a2))
             pt = PairPoint((p1.name, p2.name), e, lev, var_h)
             if abs(m1 - m2) > PAIR_LEVEL_TOL * max(abs(m1), abs(m2), 1.0):
                 pt.used, pt.note = False, "levels of the two flats differ (light changed)"
@@ -224,8 +239,23 @@ def measure_from_files(
     return res
 
 
+#: FITS integer container of the frames (bits).
+CONTAINER_BITS = 16
+
+
+def container_scale(adc_bits: int | None) -> float:
+    """Factor between native ADU and the values in the 16-bit files: an N-bit camera writes ADU x 2^(16-N)
+    (1.0 when the bit depth is unknown or outside 1..16). G14-18: the one definition."""
+    if adc_bits is None or not (1 <= int(adc_bits) <= CONTAINER_BITS):
+        return 1.0
+    return float(2 ** (CONTAINER_BITS - int(adc_bits)))
+
+
+def file_gain(gain_native: float, adc_bits: int | None) -> float:
+    """Native ADC gain (e-/ADU) -> gain of the 16-bit file values (e-/file ADU)."""
+    return float(gain_native) / container_scale(adc_bits)
+
+
 def native_gain(gain_files: float, adc_bits: int | None) -> float:
     """Gain of the files -> native ADC gain (files of an N-bit camera hold values x 2^(16-N))."""
-    if adc_bits is None or not (1 <= int(adc_bits) <= 16):
-        return float(gain_files)
-    return float(gain_files) * float(2 ** (16 - int(adc_bits)))
+    return float(gain_files) * container_scale(adc_bits)

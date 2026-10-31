@@ -18,6 +18,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from stats_core import coerce_bool_series, parse_bool
 from astropy.io import fits
 from astropy.nddata import NDData
 from astropy.table import Table
@@ -163,38 +164,6 @@ def _to_odd_cutout(n: int) -> int:
     if n % 2 == 0:
         n += 1
     return n
-
-
-def _scalar_is_explicit_false(v: Any) -> bool:
-    """True only for explicit false (not unknown / empty)."""
-    if isinstance(v, np.bool_):
-        return not bool(v)
-    if v is False:
-        return True
-    if v is True or v is None:
-        return False
-    if isinstance(v, float) and math.isnan(v):
-        return False
-    s = str(v).strip().lower()
-    if s == "":
-        return False
-    return s in ("false", "0", "no")
-
-
-def _scalar_is_explicit_true(v: Any) -> bool:
-    """True only for explicit true (not unknown / empty)."""
-    if isinstance(v, np.bool_):
-        return bool(v)
-    if v is True:
-        return True
-    if v is False or v is None:
-        return False
-    if isinstance(v, float) and math.isnan(v):
-        return False
-    s = str(v).strip().lower()
-    if s == "":
-        return False
-    return s in ("true", "1", "yes", "y")
 
 
 def _epsf_fwhm_native_from_profile(epsf_data: np.ndarray, *, osamp: int) -> float:
@@ -412,6 +381,53 @@ def _epsf_sky_subtracted_stars(data: np.ndarray, cat: Table, cutout_size: int) -
     return EPSFStars(out)
 
 
+def _epsf_star_rows(csv_ok: pd.DataFrame) -> list[dict[str, Any]]:
+    """Build-star rows (catalog_id, x, y, ra/dec, mag) of the ePSF candidate table; per id the last finite
+    ra/dec and magnitude of its rows. G09-29: column arrays instead of two iterrows passes."""
+    _ra_by_cid: dict[str, float] = {}
+    _dec_by_cid: dict[str, float] = {}
+    _mag_by_cid: dict[str, float] = {}
+    _mag_col = next((c for c in ("mag", "catalog_mag", "phot_g_mean_mag") if c in csv_ok.columns), None)
+    # G09-29: column arrays instead of two iterrows passes (same rows, same order, last value wins)
+    _cids = (csv_ok["_cid"].map(lambda v: str(v or "").strip()).tolist() if "_cid" in csv_ok.columns
+             else [""] * len(csv_ok))
+
+    def _num(col: str) -> np.ndarray:
+        return pd.to_numeric(csv_ok[col], errors="coerce").to_numpy(dtype=float)
+
+    if "ra_deg" in csv_ok.columns and "dec_deg" in csv_ok.columns:
+        _mg_all = _num(_mag_col) if _mag_col is not None else np.full(len(csv_ok), np.nan)
+        for cid, ra_v, de_v, mg in zip(_cids, _num("ra_deg"), _num("dec_deg"), _mg_all, strict=True):
+            if not cid:
+                continue
+            if math.isfinite(ra_v) and math.isfinite(de_v):
+                _ra_by_cid[cid] = float(ra_v)
+                _dec_by_cid[cid] = float(de_v)
+            if _mag_col is not None and math.isfinite(mg):
+                _mag_by_cid[cid] = float(mg)
+
+    star_rows: list[dict[str, Any]] = []
+    _xs = _num("x") if "x" in csv_ok.columns else np.full(len(csv_ok), np.nan)
+    _ys = _num("y") if "y" in csv_ok.columns else np.full(len(csv_ok), np.nan)
+    for cid, x_f, y_f in zip(_cids, _xs, _ys, strict=True):
+        if not cid:
+            continue
+        if not (math.isfinite(x_f) and math.isfinite(y_f)):
+            continue
+        star_rows.append(
+            {
+                "catalog_id": cid,
+                "x": float(x_f),
+                "y": float(y_f),
+                "ra_deg": _ra_by_cid.get(cid, float("nan")),
+                "dec_deg": _dec_by_cid.get(cid, float("nan")),
+                "mag": _mag_by_cid.get(cid, float("nan")),
+            }
+        )
+
+    return star_rows
+
+
 def _epsf_build_candidates(*, db, draft_id, masterstars_csv_path, min_stars, mpath):
     """Build-star candidates of the MASTERSTAR (gates, linear zone, magnitude cap), night FWHM, cutout size."""
     csvpath = Path(masterstars_csv_path)
@@ -438,12 +454,12 @@ def _epsf_build_candidates(*, db, draft_id, masterstars_csv_path, min_stars, mpa
     funnel: dict[str, Any] = {"n_csv_input": int(len(df))}
     if "catalog_known_variable" not in df.columns:
         _vsx = (
-            df["vsx_known_variable"].map(_scalar_is_explicit_true)
+            df["vsx_known_variable"].map(lambda v: parse_bool(v) is True)
             if "vsx_known_variable" in df.columns
             else pd.Series(False, index=df.index)
         )
         _gvar = (
-            df["gaia_dr3_variable_catalog"].map(_scalar_is_explicit_true)
+            df["gaia_dr3_variable_catalog"].map(lambda v: parse_bool(v) is True)
             if "gaia_dr3_variable_catalog" in df.columns
             else pd.Series(False, index=df.index)
         )
@@ -458,24 +474,24 @@ def _epsf_build_candidates(*, db, draft_id, masterstars_csv_path, min_stars, mpa
         )
 
     _funnel_mask = pd.Series(True, index=df.index)
-    _funnel_mask &= df["catalog_known_variable"].map(_scalar_is_explicit_false)
+    _funnel_mask &= df["catalog_known_variable"].map(lambda v: parse_bool(v) is False)
     funnel["n_after_variable_excluded"] = int(_funnel_mask.sum())
-    _funnel_mask &= df["likely_saturated"].map(_scalar_is_explicit_false)
+    _funnel_mask &= df["likely_saturated"].map(lambda v: parse_bool(v) is False)
     funnel["n_after_peak_sat_likely"] = int(_funnel_mask.sum())
     if "is_saturated" in df.columns:
-        _funnel_mask &= ~df["is_saturated"].fillna(False).astype(bool)
+        _funnel_mask &= ~coerce_bool_series(df["is_saturated"])
         funnel["n_after_peak_sat_is_saturated"] = int(_funnel_mask.sum())
     else:
         funnel["n_after_peak_sat_is_saturated"] = funnel["n_after_peak_sat_likely"]
-    _funnel_mask &= df["photometry_ok"].map(_scalar_is_explicit_true)
+    _funnel_mask &= df["photometry_ok"].map(lambda v: parse_bool(v) is True)
     funnel["n_after_photometry_ok"] = int(_funnel_mask.sum())
     if "is_noisy" in df.columns:
-        _funnel_mask &= ~df["is_noisy"].fillna(False).astype(bool)
+        _funnel_mask &= ~coerce_bool_series(df["is_noisy"])
         funnel["n_after_not_noisy"] = int(_funnel_mask.sum())
     else:
         funnel["n_after_not_noisy"] = funnel["n_after_photometry_ok"]
     if "is_usable" in df.columns:
-        _funnel_mask &= df["is_usable"].fillna(False).astype(bool)
+        _funnel_mask &= coerce_bool_series(df["is_usable"])
         funnel["n_after_usable"] = int(_funnel_mask.sum())
     else:
         funnel["n_after_usable"] = funnel["n_after_not_noisy"]
@@ -483,16 +499,16 @@ def _epsf_build_candidates(*, db, draft_id, masterstars_csv_path, min_stars, mpa
     funnel["n_after_snr_cut_reason"] = "not applied in this function"
 
     csv_mask = (
-        df["catalog_known_variable"].map(_scalar_is_explicit_false)
-        & df["likely_saturated"].map(_scalar_is_explicit_false)
-        & df["photometry_ok"].map(_scalar_is_explicit_true)
+        df["catalog_known_variable"].map(lambda v: parse_bool(v) is False)
+        & df["likely_saturated"].map(lambda v: parse_bool(v) is False)
+        & df["photometry_ok"].map(lambda v: parse_bool(v) is True)
     )
     if "is_saturated" in df.columns:
-        csv_mask &= ~df["is_saturated"].fillna(False).astype(bool)
+        csv_mask &= ~coerce_bool_series(df["is_saturated"])
     if "is_noisy" in df.columns:
-        csv_mask &= ~df["is_noisy"].fillna(False).astype(bool)
+        csv_mask &= ~coerce_bool_series(df["is_noisy"])
     if "is_usable" in df.columns:
-        csv_mask &= df["is_usable"].fillna(False).astype(bool)
+        csv_mask &= coerce_bool_series(df["is_usable"])
     csv_ok = df.loc[csv_mask].copy()
     with fits.open(mpath, memmap=True) as _hd_gate:
         _gate_shape = np.asarray(_hd_gate[0].data).shape
@@ -514,50 +530,7 @@ def _epsf_build_candidates(*, db, draft_id, masterstars_csv_path, min_stars, mpa
         funnel.get("n_csv_with_catalog_id"),
     )
 
-    _ra_by_cid: dict[str, float] = {}
-    _dec_by_cid: dict[str, float] = {}
-    _mag_by_cid: dict[str, float] = {}
-    _mag_col = next((c for c in ("mag", "catalog_mag", "phot_g_mean_mag") if c in csv_ok.columns), None)
-    if "ra_deg" in csv_ok.columns and "dec_deg" in csv_ok.columns:
-        for _, r in csv_ok.iterrows():
-            cid = str(r.get("_cid", "") or "").strip()
-            if not cid:
-                continue
-            try:
-                ra_v = float(pd.to_numeric(r.get("ra_deg"), errors="coerce"))
-                de_v = float(pd.to_numeric(r.get("dec_deg"), errors="coerce"))
-            except (TypeError, ValueError):
-                continue
-            if math.isfinite(ra_v) and math.isfinite(de_v):
-                _ra_by_cid[cid] = ra_v
-                _dec_by_cid[cid] = de_v
-            if _mag_col is not None:
-                mg = float(pd.to_numeric(r.get(_mag_col), errors="coerce"))
-                if math.isfinite(mg):
-                    _mag_by_cid[cid] = mg
-
-    star_rows: list[dict[str, Any]] = []
-    for _, r in csv_ok.iterrows():
-        cid = str(r.get("_cid", "") or "").strip()
-        if not cid:
-            continue
-        try:
-            x_f = float(pd.to_numeric(r.get("x"), errors="coerce"))
-            y_f = float(pd.to_numeric(r.get("y"), errors="coerce"))
-        except (TypeError, ValueError):
-            continue
-        if not (math.isfinite(x_f) and math.isfinite(y_f)):
-            continue
-        star_rows.append(
-            {
-                "catalog_id": cid,
-                "x": x_f,
-                "y": y_f,
-                "ra_deg": _ra_by_cid.get(cid, float("nan")),
-                "dec_deg": _dec_by_cid.get(cid, float("nan")),
-                "mag": _mag_by_cid.get(cid, float("nan")),
-            }
-        )
+    star_rows = _epsf_star_rows(csv_ok)
 
     funnel["used_broad_pool"] = False
     funnel["n_safe_comp_csv_join"] = int(len(star_rows))

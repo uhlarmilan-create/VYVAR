@@ -10,7 +10,7 @@ from typing import Any
 import pandas as pd
 
 from gaia_catalog_id import normalize_gaia_source_id, read_vyvar_csv
-from stats_core import _coerce_bool
+from stats_core import coerce_bool
 
 
 EPSF_SELECT_ALL = "ALL"
@@ -98,7 +98,7 @@ def epsf_target_candidates(platesolve_dir: Path | str) -> pd.DataFrame:
     at = read_vyvar_csv(at_p, low_memory=False)
     rows = []
     for _, row in at.iterrows():
-        if _coerce_bool(row.get("skip_photometry")):
+        if coerce_bool(row.get("skip_photometry")):
             continue
         if str(row.get("zone_flag", row.get("zone", "")) or "").strip().lower() == "catalog_only":
             continue

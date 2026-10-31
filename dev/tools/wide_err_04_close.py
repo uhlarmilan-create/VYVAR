@@ -408,6 +408,7 @@ def _measure_even_rows(w03c):
                 f_c,
                 sky_pp=sky if math.isfinite(sky) else 0.0,
                 area=ar,
+                n_sky=float(row.get("sky_n_px", float("nan"))),  # empirical branch: not used
                 gain=g_new,
                 read_noise=rn,
                 sigma_bkg_ap=sig,

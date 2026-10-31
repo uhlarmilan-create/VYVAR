@@ -17,6 +17,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from stats_core import coerce_bool_series
 
 LOGGER = logging.getLogger(__name__)
 
@@ -53,7 +54,7 @@ def force_eligible_masterstar_mask(master_tab: pd.DataFrame) -> pd.Series:
     def _b(col: str, default: bool = False) -> pd.Series:
         if col not in master_tab.columns:
             return pd.Series([default] * n, index=idx)
-        return master_tab[col].fillna(default).astype(bool)
+        return coerce_bool_series(master_tab[col], default=default)
 
     zone = (
         master_tab["zone"].astype(str).str.strip().str.lower()
@@ -288,5 +289,5 @@ def inject_forced_masterstar_rows(
             else:
                 add[c] = np.nan
     if FORCED_PHOT_COL in out.columns:
-        out[FORCED_PHOT_COL] = out[FORCED_PHOT_COL].fillna(False).astype(bool)
+        out[FORCED_PHOT_COL] = coerce_bool_series(out[FORCED_PHOT_COL])
     return pd.concat([out[all_cols], add[all_cols]], ignore_index=True), meta

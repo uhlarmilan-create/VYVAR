@@ -49,6 +49,8 @@ def test_per_frame_r_scales_with_frame_fwhm() -> None:
         "f001": {"T": {1.0: 1000.0}, "C1": {1.0: 900.0}},
         "f002": {"T": {1.0: 1100.0}, "C1": {1.0: 950.0}},
     }
+    night.sky_pp = {st: {c: {1.0: 100.0} for c in ("T", "C1")} for st in ("f001", "f002")}
+    night.sky_n = {st: {c: 300 for c in ("T", "C1")} for st in ("f001", "f002")}
     df = pd.DataFrame(
         [
             {"catalog_id": "T", "source_file": "proc_f001.csv", "mag_inst": 99.0},
@@ -57,7 +59,7 @@ def test_per_frame_r_scales_with_frame_fwhm() -> None:
             {"catalog_id": "C1", "source_file": "proc_f002.csv", "mag_inst": 99.0},
         ]
     )
-    out = apply_grid_fluxes_to_frames(df, night, catalog_ids=["T", "C1"], f_star=f_star, gain=None, read_noise=None, annulus_inner_fwhm=None, annulus_outer_fwhm=None)
+    out = apply_grid_fluxes_to_frames(df, night, catalog_ids=["T", "C1"], f_star=f_star, gain=1.0, read_noise=5.0)
     r1 = out.loc[out["source_file"] == "proc_f001.csv", "aperture_r_px"].to_numpy()
     r2 = out.loc[out["source_file"] == "proc_f002.csv", "aperture_r_px"].to_numpy()
     assert np.allclose(r1, 4.0)
@@ -213,7 +215,7 @@ def test_missing_grid_flux_gives_nan_not_other_aperture() -> None:
         {"catalog_id": "T", "source_file": "proc_a.csv", "mag_inst": 1.0},
         {"catalog_id": "C1", "source_file": "proc_a.csv", "mag_inst": 2.0},
     ])
-    out = apply_grid_fluxes_to_frames(df, night, catalog_ids=["T", "C1"], f_star=1.0, gain=None, read_noise=None, annulus_inner_fwhm=None, annulus_outer_fwhm=None)
+    out = apply_grid_fluxes_to_frames(df, night, catalog_ids=["T", "C1"], f_star=1.0, gain=1.0, read_noise=5.0)
     assert math.isnan(float(out.loc[out.catalog_id == "C1", "mag_inst"].iloc[0]))
 
 
@@ -222,18 +224,17 @@ def test_err_from_ccd_equation_for_chosen_aperture() -> None:
     night.fwhm_by_frame = {"a": 4.0}
     night.frames = {"a": {"T": {1.0: 10000.0}}}
     night.sky_pp = {"a": {"T": {1.0: 100.0}}}
+    night.sky_n = {"a": {"T": 700}}  # CCD-ONE-2026-10: the real number of sky pixels of the grid's sky median
     df = pd.DataFrame([{"catalog_id": "T", "source_file": "proc_a.csv", "mag_inst": 0.0, "err": 9.9}])
-    out = apply_grid_fluxes_to_frames(df, night, catalog_ids=["T"], f_star=1.0, gain=2.0, read_noise=4.0,
-                                      annulus_inner_fwhm=3.0, annulus_outer_fwhm=5.0)
+    out = apply_grid_fluxes_to_frames(df, night, catalog_ids=["T"], f_star=1.0, gain=2.0, read_noise=4.0)
     A = math.pi * 16.0
-    nsky = math.pi * (400.0 - 144.0)
-    var = 10000.0 / 2.0 + A * (1.0 + A / nsky) * (100.0 / 2.0 + 4.0)
+    var = 10000.0 / 2.0 + A * (1.0 + (math.pi / 2.0) * A / 700.0) * (100.0 / 2.0 + 4.0)
     assert abs(float(out["err"].iloc[0]) - math.sqrt(var) / 10000.0) < 1e-12
 
 
 def test_howell_snr_monotone_in_flux() -> None:
-    s1 = howell_snr(1000.0, 100.0, 50.0, gain=1.0, read_noise=10.0)
-    s2 = howell_snr(2000.0, 100.0, 50.0, gain=1.0, read_noise=10.0)
+    s1 = howell_snr(1000.0, 100.0, 50.0, 400.0, gain=1.0, read_noise=10.0)
+    s2 = howell_snr(2000.0, 100.0, 50.0, 400.0, gain=1.0, read_noise=10.0)
     assert s2 > s1 > 0
 
 

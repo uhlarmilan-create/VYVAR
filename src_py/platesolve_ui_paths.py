@@ -6,16 +6,21 @@ import re
 from pathlib import Path
 
 
-def masterstars_csv_in_dir(d: Path) -> Path | None:
+def masterstars_csv_in_dir(d: Path | str) -> Path | None:
+    """Masterstars CSV of a platesolve setup dir (full_match preferred), or None. G13-28: the one resolver."""
     for name in ("masterstars_full_match.csv", "masterstars.csv"):
-        p = d / name
+        p = Path(d) / name
         if p.is_file():
             return p
     return None
 
 
-def list_platesolve_setup_dirs(ps_root: Path) -> list[Path]:
-    """Subdirectories that look like a filter/setup (index and/or masterstar bundle)."""
+def setup_dirs(ps_root: Path, *, require_index: bool) -> list[Path]:
+    """Setup (filter / obs group) subdirectories of ``platesolve/``, sorted by name (G03-34: the one rule).
+
+    A setup has a per-frame catalog index; with ``require_index=False`` a MASTERSTAR bundle
+    (MASTERSTAR.fits + masterstars CSV) without an index counts too (UI listing before photometry)."""
+    ps_root = Path(ps_root)
     if not ps_root.is_dir():
         return []
     out: list[Path] = []
@@ -24,8 +29,7 @@ def list_platesolve_setup_dirs(ps_root: Path) -> list[Path]:
             continue
         if (sub / "per_frame_catalog_index.csv").is_file():
             out.append(sub)
-            continue
-        if (sub / "MASTERSTAR.fits").is_file() and masterstars_csv_in_dir(sub):
+        elif not require_index and (sub / "MASTERSTAR.fits").is_file() and masterstars_csv_in_dir(sub):
             out.append(sub)
     return out
 
@@ -42,7 +46,7 @@ def legacy_platesolve_root_bundle(ps_root: Path) -> Path | None:
 def platesolve_bundle_dirs(ps_root: Path) -> list[Path]:
     """Ordered dirs that contain ``MASTERSTAR.fits`` and a masterstars CSV."""
     bundles: list[Path] = []
-    for sub in list_platesolve_setup_dirs(ps_root):
+    for sub in setup_dirs(ps_root, require_index=False):
         if (sub / "MASTERSTAR.fits").is_file() and masterstars_csv_in_dir(sub):
             bundles.append(sub)
     leg = legacy_platesolve_root_bundle(ps_root)
@@ -107,7 +111,7 @@ def setup_label(name: str) -> str:
 
 def find_photometry_setups(cfg, draft_id: int | None, *, draft_dir_override: Path | None = None) -> dict[str, dict]:
     """All observation setups of a draft (``platesolve/<setup>`` with a per-frame catalog index),
-    keyed by setup name, each with its standard paths."""
+    keyed by setup name, each with its standard paths (one key per path; G03-34)."""
     from draft_provenance import draft_dir_for_id  # noqa: PLC0415
 
     # CORE-NO-UI-2026-10: the given folder or the folder of draft_id - never GUI session state
@@ -120,23 +124,17 @@ def find_photometry_setups(cfg, draft_id: int | None, *, draft_dir_override: Pat
         return {}
     ps_dir = draft_dir / "platesolve"
     aligned_root = draft_dir / "detrended_aligned" / "lights"
-    if not ps_dir.exists():
-        return {}
     result: dict[str, dict] = {}
-    for subdir in sorted(ps_dir.iterdir()):
-        if not subdir.is_dir() or not (subdir / "per_frame_catalog_index.csv").exists():
-            continue
+    for subdir in setup_dirs(ps_dir, require_index=True):
         setup_name = subdir.name
         per_frame_dir = (aligned_root / setup_name) if (aligned_root / setup_name).exists() else None
         photometry_dir = subdir / "photometry"
         result[str(setup_name)] = {
-            "setup_name": subdir,
+            "setup_name": str(setup_name),
             "masterstar_fits": subdir / "MASTERSTAR.fits",
             "active_targets_csv": photometry_dir / "active_targets.csv",
             "comparison_stars_csv": photometry_dir / "comparison_stars_per_target.csv",
-            "per_frame_csv_dir": per_frame_dir,
-            "detrended_aligned_dir": per_frame_dir,
-            "output_dir": photometry_dir,
+            "per_frame_csv_dir": per_frame_dir,  # the aligned frames (also the detrended_aligned dir)
             "photometry_dir": photometry_dir,
             "obs_group_dir": subdir,
         }

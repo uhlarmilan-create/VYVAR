@@ -234,6 +234,13 @@ def _seed_draft_center(df_rows: pd.DataFrame) -> None:
     st.session_state["center_de"] = float(de.median())
 
 
+@st.cache_data(max_entries=64, show_spinner=False)
+def _preview_png_cached(path: str, stamp: tuple) -> bytes:
+    """G14-26: the ZScale preview of a frame once per file state (every channel tab and plot click
+    reruns from the cache)."""
+    return quicklook_preview_png_bytes(path)
+
+
 def _show_preview(path: str, caption: str) -> None:
     if not path or not Path(path).is_file():
         st.caption(f"File not found: {Path(path).name if path else '-'}")
@@ -242,7 +249,9 @@ def _show_preview(path: str, caption: str) -> None:
         # The calibrated frames are deleted after a finished run (OUTPUT-REVIEW-2026-10).
         caption = f"{caption} - source frame (calibrated frames are removed after the run)"
     try:
-        st.image(quicklook_preview_png_bytes(path), caption=caption, width="stretch")
+        from ui_cache import file_stamp  # noqa: PLC0415
+
+        st.image(_preview_png_cached(str(path), file_stamp(path)), caption=caption, width="stretch")
     except (OSError, ValueError) as exc:
         st.caption(f"Preview failed: {exc}")
 

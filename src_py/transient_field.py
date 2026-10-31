@@ -32,7 +32,6 @@ No sigma clipping. Products: ``transient_candidates.csv``, ``moving_objects.csv`
 """
 from __future__ import annotations
 
-import json
 import logging
 import math
 from pathlib import Path
@@ -40,6 +39,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from stats_core import coerce_bool
 
 from gaia_catalog_id import read_vyvar_csv
 
@@ -100,7 +100,7 @@ def shape_text(extended: object, fwhm_ratio: object) -> str:
         r = float("nan")
     if not math.isfinite(r):
         return "-"
-    ext = str(extended).strip().lower() in ("true", "1", "yes")
+    ext = coerce_bool(extended)
     return f"{'extended' if ext else 'point'} (FWHM x{r:.2f})"
 
 def _detect_one(args: tuple) -> pd.DataFrame:
@@ -215,23 +215,34 @@ def classify_groups(un: pd.DataFrame, labels: np.ndarray, times: np.ndarray, fwh
 
 # ---------------------------------------------------------------- forced photometry
 def _measure_one(args: tuple) -> np.ndarray:
+    """Flux, error, centroid offset and footprint flag of every position on one frame.
+
+    G10-20 (CCD-ONE-2026-10): the flux is the production aperture engine
+    (``aperture_pertarget.measure_flux_on_f_grid``: exact aperture k x FWHM, sky = median of the annulus
+    outside r_ap + 0.5 px with detected sources and pixels off the aligned footprint masked,
+    SKY-SRC-MASK-2026-10), the error the one CCD equation (``ccd_noise``) with the real number of sky pixels.
+    The former private copy took the median of the unmasked annulus (a neighbour inside it biased a
+    crowded source by -1.4 to -2.2 % against the production scale).
+    """
     fp, xy, fwhm, k, a_in, a_out, gain, rn = args
     from astropy.io import fits  # noqa: PLC0415
-    from photutils.aperture import ApertureStats, CircularAnnulus, CircularAperture, aperture_photometry  # noqa: PLC0415
 
+    from aperture_pertarget import measure_flux_on_f_grid  # noqa: PLC0415
+    from ccd_noise import ccd_variance_adu2  # noqa: PLC0415
     from frame_footprint import aligned_footprint  # noqa: PLC0415
 
     with fits.open(fp, memmap=False) as h:
         img = np.asarray(h[0].data, dtype=np.float64)
         hdr = h[0].header
     cov = aligned_footprint(hdr, img.shape)
-    r = k * fwhm
-    ap = CircularAperture(xy, r)
-    an = CircularAnnulus(xy, a_in * fwhm, a_out * fwhm)
-    sky = np.asarray(ApertureStats(img, an, mask=~cov).median, float)
-    s = aperture_photometry(img, ap)["aperture_sum"]
-    F = np.asarray(s, float) - sky * ap.area
-    var = np.clip(F, 0, None) / gain + ap.area * (1 + ap.area / an.area) * (np.clip(sky, 0, None) / gain + (rn / gain) ** 2)
+    xy = np.asarray(xy, dtype=float)
+    fl, sk, _edge, n_sky = measure_flux_on_f_grid(
+        img, xy, f_grid=[float(k)], fwhm_px=float(fwhm), annulus_inner_fwhm=float(a_in),
+        annulus_outer_fwhm=float(a_out), covered=cov, return_n_sky=True,
+    )
+    F, sky = fl[float(k)], sk[float(k)]
+    area = math.pi * max(0.5, float(k) * float(fwhm)) ** 2
+    var = ccd_variance_adu2(F, sky, area, n_sky.astype(float), gain=gain, read_noise=rn)
     # centroid offset (intensity-weighted, inside 1 FWHM)
     off = np.full(len(xy), np.nan)
     R = int(math.ceil(fwhm))
@@ -249,18 +260,16 @@ def _measure_one(args: tuple) -> np.ndarray:
     return np.c_[F, np.sqrt(var), off, inside.astype(float)]
 
 
-def forced_photometry_tracks(frame_paths: list[Path], fwhm: np.ndarray, xy_t: np.ndarray, *, k: float, a_in: float,
-                             a_out: float, gain: float, rn: float, workers: int) -> np.ndarray:
-    """As :func:`forced_photometry` but with positions per frame: ``xy_t`` (n_frames, n_sources, 2)."""
-    jobs = [(str(p), xy_t[t], float(f), k, a_in, a_out, gain, rn) for t, (p, f) in enumerate(zip(frame_paths, fwhm, strict=True))]
-    res = list(map_frames(_measure_one, jobs, workers=workers, stage="transient photometry"))
-    return np.stack(res)
-
-
 def forced_photometry(frame_paths: list[Path], fwhm: np.ndarray, xy: np.ndarray, *, k: float, a_in: float, a_out: float,
                       gain: float, rn: float, workers: int) -> np.ndarray:
-    """(n_frames, n_sources, 4): flux, error, centroid offset (px), inside footprint."""
-    jobs = [(str(p), xy, float(f), k, a_in, a_out, gain, rn) for p, f in zip(frame_paths, fwhm, strict=True)]
+    """(n_frames, n_sources, 4): flux, error, centroid offset (px), inside footprint.
+
+    ``xy`` is (n_sources, 2) for fixed positions or (n_frames, n_sources, 2) for positions per frame
+    (moving-object tracks). G10-21: one function for both."""
+    xy = np.asarray(xy)
+    per_frame = xy.ndim == 3
+    jobs = [(str(p), xy[t] if per_frame else xy, float(f), k, a_in, a_out, gain, rn)
+            for t, (p, f) in enumerate(zip(frame_paths, fwhm, strict=True))]
     res = list(map_frames(_measure_one, jobs, workers=workers, stage="transient photometry"))
     return np.stack(res)
 
@@ -372,7 +381,9 @@ def run_field_transients(
     _dropped: dict[str, int] = {}
     stat, mov = classify_groups(un, labels, times, fwhm_med, dropped=_dropped)
     meta["groups_dropped"] = _dropped
-    mats = [np.array([float(fits.getheader(p)[f"VY_AM{j}"]) for j in range(9)]).reshape(3, 3) for p in paths]
+    from frame_footprint import alignment_matrix  # noqa: PLC0415
+
+    mats = [alignment_matrix(fits.getheader(p)) for p in paths]  # G10-45: one header read per frame
     n_mov0 = len(mov)
     mov = [m for m in mov if not _detector_fixed(un, labels, m, mats, fwhm_med)]
     meta["n_moving_detector_fixed"] = n_mov0 - len(mov)
@@ -454,7 +465,7 @@ def run_field_transients(
             dpx = _apply(inv[peak[i]], xy[i])
             for t in range(len(paths)):
                 xy_t[t, i] = _apply(mats[t], dpx)
-        Fd = forced_photometry_tracks(paths, fwhm, xy_t, k=k, a_in=a_in, a_out=a_out, gain=gain, rn=read_noise, workers=workers)
+        Fd = forced_photometry(paths, fwhm, xy_t, k=k, a_in=a_in, a_out=a_out, gain=gain, rn=read_noise, workers=workers)
         snr_d = Fd[:, :, 0] / np.sqrt(sig_sky[:, None] ** 2 + np.clip(Fd[:, :, 0], 0, None) / gain)
         away = (np.hypot(xy_t[:, :, 0] - xy[None, :, 0], xy_t[:, :, 1] - xy[None, :, 1]) > DETECTOR_AWAY_FWHM * fwhm_med) & (Fd[:, :, 3] > 0.5)
         ktree = cKDTree(known_xy)
@@ -774,17 +785,6 @@ def galaxy_near(gal: pd.DataFrame | None, ra: float, dec: float) -> tuple[str, f
 
 
 def _write_meta(phot: Path, meta: dict[str, Any]) -> None:
-    def _c(o: Any) -> Any:
-        if isinstance(o, dict):
-            return {kk: _c(v) for kk, v in o.items()}
-        if isinstance(o, (list, tuple)):
-            return [_c(v) for v in o]
-        if isinstance(o, (np.floating, float)):
-            return float(o) if math.isfinite(float(o)) else None
-        if isinstance(o, np.integer):
-            return int(o)
-        if isinstance(o, np.bool_):
-            return bool(o)
-        return o
+    from utils import write_json_finite  # noqa: PLC0415
 
-    (Path(phot) / META_JSON).write_text(json.dumps(_c(meta), indent=2), encoding="utf-8")
+    write_json_finite(Path(phot) / META_JSON, meta)

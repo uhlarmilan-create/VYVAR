@@ -9,6 +9,7 @@ import time
 from astropy.io import fits as astrofits
 import numpy as np
 import pandas as pd
+from stats_core import parse_bool
 
 from aperture_policy import fwhm_from_header_vy_fwhm
 from gaia_catalog_id import read_vyvar_csv
@@ -108,23 +109,24 @@ def _st_load_targets_and_masterstar(
         except Exception as exc:  # noqa: BLE001
             LOGGER.warning("[APERTURE] MASTERSTAR.fits open failed: %s", exc)
 
-    # Chip dims for edge checks: prefer MASTERSTAR.fits NAXIS (full detector); CSV max(x,y) underestimates.
-    chip_fw: int | None = None
-    chip_fh: int | None = None
-    try:
-        if _ms_header is not None:
-            _naxis1 = int(_ms_header.get("NAXIS1", 0) or 0)
-            _naxis2 = int(_ms_header.get("NAXIS2", 0) or 0)
-        else:
-            _naxis1 = _naxis2 = 0
-        if _naxis1 > 0 and _naxis2 > 0:
-            chip_fw = _naxis1
-            chip_fh = _naxis2
-            logging.info("[PHOT] chip dims from MASTERSTAR: %d x %d px", int(chip_fw), int(chip_fh))
-    except Exception:  # noqa: BLE001
-        chip_fw, chip_fh = None, None
-        logging.warning("[PHOT] chip dims: MASTERSTAR read failed, fallback to CSV max(x/y)")
+    chip_fw, chip_fh = _chip_dims(_ms_header, _ms_path)
+    logging.info("[PHOT] chip dims from MASTERSTAR: %d x %d px", int(chip_fw), int(chip_fh))
     return _aligned_dir_2a, _apt_fw, _cfg, _comp_table, _ms_data, _ms_header, _ms_path, annulus_inner_fwhm, annulus_outer_fwhm, at_df, chip_fh, chip_fw, comp_df, obs_group, output_dir
+
+
+def _chip_dims(ms_header: Any, ms_path: Any = None) -> tuple[int, int]:
+    """Chip (width, height) px for the edge checks: MASTERSTAR NAXIS1 / NAXIS2 (the reference grid every
+    aligned frame is resampled onto). G06-23: the one source - the former CSV ``ceil(max x) + 2``
+    fallbacks underestimated the chip and depended on which file was read first; a MASTERSTAR without
+    a readable size is an error."""
+    try:
+        w = int(ms_header.get("NAXIS1", 0) or 0) if ms_header is not None else 0
+        h = int(ms_header.get("NAXIS2", 0) or 0) if ms_header is not None else 0
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"MASTERSTAR {ms_path}: unreadable NAXIS1/NAXIS2 ({exc})") from exc
+    if w <= 0 or h <= 0:
+        raise ValueError(f"MASTERSTAR {ms_path}: no image size (NAXIS1/NAXIS2) - chip edges unknown")
+    return w, h
 
 
 def _st_frames_and_epochs(
@@ -132,38 +134,13 @@ def _st_frames_and_epochs(
     _comp_table,
     _p2,
     at_df,
-    chip_fh,
-    chip_fw,
     comp_df,
     masterstar_fits_path,
     per_frame_csv_dir,
     proc_frame_store,
 ):
-    """Chip size, frame list and epochs dropped by the MASTERSTAR-epoch rule."""
+    """Frame list and epochs dropped by the MASTERSTAR-epoch rule."""
     from comp_table import reserve as _comp_reserve  # noqa: PLC0415
-
-    if chip_fw is None or chip_fh is None:
-        try:
-            xm = float(
-                pd.to_numeric(
-                    pd.concat([at_df.get("x", pd.Series(dtype=float)), comp_df.get("x", pd.Series(dtype=float))]),
-                    errors="coerce",
-                ).max()
-            )
-            ym = float(
-                pd.to_numeric(
-                    pd.concat([at_df.get("y", pd.Series(dtype=float)), comp_df.get("y", pd.Series(dtype=float))]),
-                    errors="coerce",
-                ).max()
-            )
-            if chip_fw is None and math.isfinite(xm) and xm > 0:
-                chip_fw = int(math.ceil(xm)) + 2
-            if chip_fh is None and math.isfinite(ym) and ym > 0:
-                chip_fh = int(math.ceil(ym)) + 2
-        except Exception as exc:  # noqa: BLE001
-            # EXC-0165: T4 -- Non-numeric bp_rp on one masterstars row skipped when building target_bp_rp_by_cid (EXCEPT-BULK-2 2026-07-08)
-            logging.error('[EXC-0164] Chip height/width inference from target/comp xy max fails - chip margin filter may use ...: %s', exc)
-            pass
 
     if "x" not in comp_df.columns or "y" not in comp_df.columns:
         raise ValueError("comparison_stars_per_target.csv must contain columns x, y for aperture photometry")
@@ -226,7 +203,7 @@ def _st_frames_and_epochs(
     _n_total = int(len(at_df))
     logging.info("[APERTURE] %d targets (DAO+Gaia matched)", _n_total)
     _p2(f"Aperture photometry: {_n_total} targets, {n_frames} frames - loading per-frame catalogs...")
-    return _comp_index, _reserve_index, chip_fh, chip_fw, csv_files, masterstars_df, n_frames, target_bp_rp_by_cid
+    return _comp_index, _reserve_index, csv_files, masterstars_df, n_frames, target_bp_rp_by_cid
 
 
 def _st_proc_cache(*, _p2, csv_files, masterstar_fits_path, proc_frame_store):
@@ -347,12 +324,7 @@ def _st_proc_cache(*, _p2, csv_files, masterstar_fits_path, proc_frame_store):
                         continue
                     if "aligned" in rep.columns:
                         try:
-                            _al = r.get("aligned", True)
-                            if isinstance(_al, bool):
-                                _aligned = bool(_al)
-                            else:
-                                s = str(_al).strip().lower()
-                                _aligned = s not in ("false", "0", "no", "n")
+                            _aligned = parse_bool(r.get("aligned", True)) is not False
                             frame_time_lookup[stem]["alignment_failed"] = not _aligned
                         except Exception:  # noqa: BLE001
                             frame_time_lookup[stem]["alignment_failed"] = False
@@ -435,6 +407,7 @@ def _st_times_and_saturation(*, _aperture_csv_cache, _cfg, at_df, comp_df, csv_f
 
 def _st_fwhm(
     *,
+    _aperture_csv_cache,
     _cfg,
     csv_files,
     _fwhm_from_header,
@@ -481,7 +454,7 @@ def _st_fwhm(
         # fit on the MASTERSTAR and no constant
         from photometry_comp import night_frame_fwhms_px  # noqa: PLC0415
 
-        _night_vals = night_frame_fwhms_px(csv_files)
+        _night_vals = night_frame_fwhms_px(csv_files, _aperture_csv_cache)
         if not _night_vals:
             raise RuntimeError(
                 f"Aperture photometry: MASTERSTAR {masterstar_fits_path} has no valid VY_FWHM and the "
@@ -518,6 +491,7 @@ def _st_fwhm(
 
 def _st_apertures(
     *,
+    _aperture_csv_cache,
     _ap_pol,
     _apt_fw,
     _draft_dir_ee,
@@ -576,7 +550,7 @@ def _st_apertures(
 
         _qc_night_p2a = _night_p2a
         _night_grp, _night_src = night_median_fwhm_px(
-            csv_files, float(_night_p2a) if _night_p2a is not None else float("nan")
+            csv_files, float(_night_p2a) if _night_p2a is not None else float("nan"), store=_aperture_csv_cache
         )
         if math.isfinite(float(_night_grp)) and float(_night_grp) > 0:
             _night_p2a = float(_night_grp)
@@ -657,8 +631,6 @@ def _st_flux_matrix(
     _rn_phot,
     apertures_px,
     at_df,
-    chip_fh,
-    chip_fw,
     csv_files,
     frame_time_lookup,
     sat_limit_resolved,
@@ -726,22 +698,10 @@ def _st_flux_matrix(
         "[PERF-8] Flux matrix build time: included in photometry timing"
     )
 
-    if not _flux_matrix.empty and (chip_fw is None or chip_fh is None):
-        if "x" in _flux_matrix.columns and "y" in _flux_matrix.columns:
-            try:
-                _xm = float(pd.to_numeric(_flux_matrix["x"], errors="coerce").max())
-                _ym = float(pd.to_numeric(_flux_matrix["y"], errors="coerce").max())
-            except Exception:  # noqa: BLE001
-                _xm, _ym = float("nan"), float("nan")
-            if chip_fw is None and math.isfinite(_xm) and _xm > 0:
-                chip_fw = int(math.ceil(_xm)) + 2
-            if chip_fh is None and math.isfinite(_ym) and _ym > 0:
-                chip_fh = int(math.ceil(_ym)) + 2
-
     _nt = int(len(at_df))
     _plate_scale_arcsec = plate_scale_from_fits(_ms_path, header=_ms_header)  # G08-29: one reader
     _gaia_db_path = str(_cfg.gaia_db_path or "").strip() or None
-    return _all_lc_ids_list, _flux_matrix, _gaia_db_path, _nt, _plate_scale_arcsec, chip_fh, chip_fw
+    return _all_lc_ids_list, _flux_matrix, _gaia_db_path, _nt, _plate_scale_arcsec
 
 
 def _st_night_facts(
@@ -889,13 +849,9 @@ def _aperture_prepare_shared_state(
     draft_id: int | None = None,
     proc_frame_store: ProcFrameStore | None = None,
 ) -> _AperturePhotometryState:
-    def _p2(msg: str) -> None:
-        if progress_cb is None:
-            return
-        try:
-            progress_cb(str(msg))
-        except UnicodeEncodeError:
-            progress_cb(str(msg).encode("ascii", "backslashreplace").decode("ascii"))
+    from infolog import safe_progress  # noqa: PLC0415
+
+    _p2 = safe_progress(progress_cb)
 
     _aligned_dir_2a, _apt_fw, _cfg, _comp_table, _ms_data, _ms_header, _ms_path, annulus_inner_fwhm, annulus_outer_fwhm, at_df, chip_fh, chip_fw, comp_df, obs_group, output_dir = _st_load_targets_and_masterstar(
         active_targets_csv=active_targets_csv,
@@ -907,13 +863,10 @@ def _aperture_prepare_shared_state(
         per_frame_csv_dir=per_frame_csv_dir,
     )
 
-    # Fallback: estimate from star positions in CSV (any axis still unknown after MASTERSTAR).
-    _comp_index, _reserve_index, chip_fh, chip_fw, csv_files, masterstars_df, n_frames, target_bp_rp_by_cid = _st_frames_and_epochs(
+    _comp_index, _reserve_index, csv_files, masterstars_df, n_frames, target_bp_rp_by_cid = _st_frames_and_epochs(
         _comp_table=_comp_table,
         _p2=_p2,
         at_df=at_df,
-        chip_fh=chip_fh,
-        chip_fw=chip_fw,
         comp_df=comp_df,
         masterstar_fits_path=masterstar_fits_path,
         per_frame_csv_dir=per_frame_csv_dir,
@@ -938,6 +891,7 @@ def _aperture_prepare_shared_state(
         masterstar_fits_path=masterstar_fits_path,
     )
     _ap_pol, _draft_dir_ee, _equipment_id, _gain_phot, _gain_res, _rn_phot, _rn_res, fwhm_px, obs_group = _st_fwhm(
+        _aperture_csv_cache=_aperture_csv_cache,
         _cfg=_cfg,
         csv_files=csv_files,
         _fwhm_from_header=_fwhm_from_header,
@@ -955,6 +909,7 @@ def _aperture_prepare_shared_state(
         output_dir=output_dir,
     )
     _all_lc_ids, _ap_pol, apertures_px, field_map_path, sat_limit_resolved = _st_apertures(
+        _aperture_csv_cache=_aperture_csv_cache,
         _ap_pol=_ap_pol,
         _apt_fw=_apt_fw,
         _draft_dir_ee=_draft_dir_ee,
@@ -971,7 +926,7 @@ def _aperture_prepare_shared_state(
         output_dir=output_dir,
         sat_limit_adu=sat_limit_adu,
     )
-    _all_lc_ids_list, _flux_matrix, _gaia_db_path, _nt, _plate_scale_arcsec, chip_fh, chip_fw = _st_flux_matrix(
+    _all_lc_ids_list, _flux_matrix, _gaia_db_path, _nt, _plate_scale_arcsec = _st_flux_matrix(
         _all_lc_ids=_all_lc_ids,
         _aperture_csv_cache=_aperture_csv_cache,
         _aperture_lookup_cache=_aperture_lookup_cache,
@@ -984,8 +939,6 @@ def _aperture_prepare_shared_state(
         _rn_phot=_rn_phot,
         apertures_px=apertures_px,
         at_df=at_df,
-        chip_fh=chip_fh,
-        chip_fw=chip_fw,
         csv_files=csv_files,
         frame_time_lookup=frame_time_lookup,
         sat_limit_resolved=sat_limit_resolved,

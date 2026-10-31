@@ -50,8 +50,10 @@ def test_edge_star_gets_edge_fail_in_the_light_curve() -> None:
     night.frames = {"F1": {"t": {1.0: 1000.0}, "c": {1.0: 2000.0}}}
     night.fwhm_by_frame = {"F1": 4.0}
     night.edge_by_frame = {"F1": {"t"}}
+    night.sky_pp = {"F1": {"t": {1.0: 100.0}, "c": {1.0: 100.0}}}
+    night.sky_n = {"F1": {"t": 500, "c": 500}}
     df = pd.DataFrame({"catalog_id": ["t", "c"], "source_file": ["proc_F1.csv"] * 2, "flag": ["normal"] * 2, "mag_inst": [0.0, 0.0]})
-    out = apply_grid_fluxes_to_frames(df, night, catalog_ids=["t", "c"], f_star=1.0, gain=None, read_noise=None, annulus_inner_fwhm=None, annulus_outer_fwhm=None)
+    out = apply_grid_fluxes_to_frames(df, night, catalog_ids=["t", "c"], f_star=1.0, gain=1.0, read_noise=5.0)
     t = out.set_index("catalog_id")
     assert np.isnan(t.loc["t", "mag_inst"]) and t.loc["t", "flag"] == "edge_fail" and bool(t.loc["t", "edge_fail"])
     assert t.loc["c", "mag_inst"] == pytest.approx(-2.5 * np.log10(2000.0))

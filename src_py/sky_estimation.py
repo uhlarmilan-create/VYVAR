@@ -105,12 +105,19 @@ def annulus_sky_medians(sky: np.ndarray, pos: np.ndarray, r_in: float, r_out: fl
     ``sky`` is ``sky_image`` (NaN off the footprint and on sources). Fewer than ``SKY_MIN_PIX`` such pixels:
     plain median of the finite pixels in the box of half-size ``SKY_BOX_FACTOR`` x r_out; still too few: NaN.
     """
+    return annulus_sky_medians_n(sky, pos, r_in, r_out)[0]
+
+
+def annulus_sky_medians_n(sky: np.ndarray, pos: np.ndarray, r_in: float, r_out: float) -> tuple[np.ndarray, np.ndarray]:
+    """``annulus_sky_medians`` and the number of sky pixels each median used (CCD-ONE-2026-10: the n_sky of
+    the CCD equation, ``ccd_noise``); 0 where the sky is NaN."""
     from photutils.aperture import CircularAnnulus  # noqa: PLC0415
 
     p = np.atleast_2d(np.asarray(pos, dtype=np.float64))
     out = np.full(len(p), np.nan)
+    n_px = np.zeros(len(p), dtype=np.int64)
     if len(p) == 0:
-        return out
+        return out, n_px
     h, w = sky.shape
     half = SKY_BOX_FACTOR * float(r_out)
     for i, m in enumerate(CircularAnnulus(p, r_in=float(r_in), r_out=float(r_out)).to_mask(method="center")):
@@ -122,4 +129,5 @@ def annulus_sky_medians(sky: np.ndarray, pos: np.ndarray, r_in: float, r_out: fl
             v = box[np.isfinite(box)]
         if v.size >= SKY_MIN_PIX:
             out[i] = float(np.median(v))
-    return out
+            n_px[i] = int(v.size)
+    return out, n_px

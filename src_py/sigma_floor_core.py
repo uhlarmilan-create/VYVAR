@@ -108,6 +108,20 @@ def scintillation_mag_per_epoch(
     return float(relative_flux_err_to_mag_sigma(rel))
 
 
+def frame_scintillation_mag(rig: Any, airmass: float) -> float:
+    """Scintillation [mag] of one frame at its airmass with the run's rig parameters (``rig``:
+    ``sigma_budget.RigScintillationParams``); 0 where the airmass is unknown or below 1. The one per-frame
+    value of the light-curve error, the night floor (``aperture_photometry._frame_scintillation_mag``) and the
+    comparison ceiling (``comp_rms_loo.scint_mag_err_map``, COMP-CEIL-NOISEMODEL-2026-10)."""
+    am = float(airmass)
+    if not (math.isfinite(am) and am >= 1.0):
+        return 0.0
+    return scintillation_mag_per_epoch(
+        telescope_diameter_m=rig.telescope_diameter_m, airmass=am, exposure_s=rig.exposure_s,
+        altitude_m=rig.altitude_m, c_y=rig.c_y,
+    )
+
+
 def resolve_sigma_sys_mag(
     equipment_id: int | None,
     cfg: Any | None,
@@ -152,8 +166,7 @@ def night_sigma_sys_from_comps(
     k: float,
     gain: float,
     read_noise: float,
-    annulus_inner_fwhm: float,
-    annulus_outer_fwhm: float,
+    n_sky_by_cid: dict[str, Any],
     max_photon_mag: float = 0.01,
     min_comps: int = 5,
     scint_mag_by_frame: Any = None,
@@ -170,7 +183,9 @@ def night_sigma_sys_from_comps(
     describe the repeatability over the night, as the check-star scatter does (AAVSO practice). The floor is
     sqrt(median(s^2 - e^2)) over comps whose own photon error is below ``max_photon_mag``
     (bright comps, where a systematic term is measurable), never negative.
-    Everett & Howell (2001): 2-5 mmag typical. Returns {"sigma_sys_mag", "n_comps", ...};
+    Everett & Howell (2001): 2-5 mmag typical. CCD-ONE-2026-10: the photon error is
+    ``ccd_noise.ccd_variance_adu2`` with each comp's real number of sky pixels per frame (``n_sky_by_cid``);
+    gain and read noise are required (ValueError). Returns {"sigma_sys_mag", "n_comps", ...};
     sigma_sys_mag is NaN when fewer than ``min_comps`` comps qualify.
 
     SIGMA-SYS-MODEL-2026-10 (Milan 2026-10-26, D3): the predicted variance e^2 holds every known
@@ -182,6 +197,9 @@ def night_sigma_sys_from_comps(
     """
     import numpy as np
 
+    from ccd_noise import ccd_variance_adu2, check_gain_read_noise  # noqa: PLC0415
+
+    check_gain_read_noise(gain, read_noise)
     ids = [c for c in flux_by_cid if np.isfinite(np.asarray(flux_by_cid[c], float)).sum() >= 10]
     out: dict[str, Any] = {"sigma_sys_mag": float("nan"), "n_comps": 0,
                            "method": "comps LOO total scatter - (photon + scintillation + reference)"}
@@ -190,19 +208,16 @@ def night_sigma_sys_from_comps(
         return out
     F = np.vstack([np.asarray(flux_by_cid[c], float) for c in ids])
     S = np.vstack([np.asarray(sky_by_cid.get(c, np.full(F.shape[1], np.nan)), float) for c in ids])
+    NS = np.vstack([np.asarray(n_sky_by_cid.get(c, np.full(F.shape[1], np.nan)), float) for c in ids])
     fw = np.asarray(fwhm_by_frame, float)
     with np.errstate(invalid="ignore", divide="ignore"):
         M = -2.5 * np.log10(np.where(F > 0, F, np.nan))
         M = M - np.nanmedian(M, axis=1, keepdims=True)
         tot = np.nansum(M, axis=0)
         cnt = np.isfinite(M).sum(axis=0)
-        g = float(gain) if gain and math.isfinite(gain) and gain > 0 else 1.0
-        rn = float(read_noise) if math.isfinite(read_noise) else 0.0
         r_ap = float(k) * fw
         area = math.pi * r_ap**2
-        r_in = np.maximum(float(annulus_inner_fwhm) * fw, r_ap)
-        n_sky = np.maximum(math.pi * ((float(annulus_outer_fwhm) * fw) ** 2 - r_in**2), 1.0)
-        var = F / g + area * (1.0 + area / n_sky) * (np.clip(S, 0, None) / g + (rn / g) ** 2)
+        var = ccd_variance_adu2(F, S, area, NS, gain=gain, read_noise=read_noise)
         E2 = (1.0857362 * np.sqrt(var) / F) ** 2  # photon + sky + read noise per comp and frame [mag^2]
         E2 = np.where(np.isfinite(M) & (F > 0), E2, np.nan)
     sc = np.zeros(F.shape[1]) if scint_mag_by_frame is None else np.nan_to_num(np.asarray(scint_mag_by_frame, float))

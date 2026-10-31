@@ -33,23 +33,20 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from stats_core import coerce_bool_series
 
 from mag_constants import MAG_ERR_SCALE
 from psf_photometry import EPSF_FRAMES_DIR, EPSF_FRAMES_MANIFEST
 from report_methods import lc_csv_path
 
-_MAD_TO_SIGMA = 1.4826
 AP_HARD_FAIL_FLAGS = frozenset({"saturated", "edge_fail", "no_data", "nondetection"})
 
 
 def p2p_scatter(values: Any) -> float:
-    """Robust epoch-to-epoch scatter of one series (mag); NaN for fewer than 5 points."""
-    m = np.asarray(values, dtype=np.float64)
-    m = m[np.isfinite(m)]
-    if m.size < 5:
-        return float("nan")
-    d = np.diff(m)
-    return float(_MAD_TO_SIGMA * np.median(np.abs(d - np.median(d))) / math.sqrt(2.0))
+    """Robust epoch-to-epoch scatter of one series (mag); NaN for fewer than 5 points (``stats_core``)."""
+    from stats_core import robust_p2p_scatter  # noqa: PLC0415
+
+    return robust_p2p_scatter(values, min_points=5)
 
 
 def _read_lc(path: Path) -> pd.DataFrame:
@@ -100,7 +97,7 @@ def load_pair(lc_dir: Path | str, catalog_id: str, fwhm_by_frame: dict[str, floa
             "source_file": ps["source_file"].astype(str),
             "psf_mag": pd.to_numeric(ps["psf_delta_mag"], errors="coerce"),
             "psf_err": pd.to_numeric(ps["psf_delta_mag_err"], errors="coerce"),
-            "psf_ok": ps["psf_fit_ok"].astype(str).str.lower().isin(["true", "1"]),
+            "psf_ok": coerce_bool_series(ps["psf_fit_ok"]),
         }
     )
     # The PSF curve is written on the aperture curve's epochs (same source_file order).

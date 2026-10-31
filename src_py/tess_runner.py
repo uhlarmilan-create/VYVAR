@@ -8,12 +8,9 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from variability_store import tess_dir_for  # defined in the lower module; re-exported here
+
 LOGGER = logging.getLogger(__name__)
-
-
-def tess_dir_for(photometry_dir: Path, catalog_id: str) -> Path:
-    """VAR-TAB-2026-10 (Milan): TESS data of a star live in ``photometry/TESS/<gaia id>/``."""
-    return Path(photometry_dir) / "TESS" / str(catalog_id).strip()
 
 
 def run_tess_for_star(photometry_dir: Path, catalog_id: str, cfg: Any, progress: Any = None) -> Any:
@@ -47,7 +44,8 @@ def run_tess_for_star(photometry_dir: Path, catalog_id: str, cfg: Any, progress:
         d = pd.read_csv(lcp)
         vy = (d["time"].to_numpy(float), d["dmag"].to_numpy(float))
     else:
-        lc = phot / "lightcurves" / f"lightcurve_{cid}.csv"
+        from report_methods import lc_csv_path  # noqa: PLC0415
+        lc = lc_csv_path(phot / "lightcurves", cid)
         if lc.is_file():
             d = pd.read_csv(lc)
             from photometry_lightcurve import published_mag_column  # noqa: PLC0415

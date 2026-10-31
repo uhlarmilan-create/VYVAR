@@ -416,21 +416,6 @@ def measure_empty_aperture_sigma_bkg(
     return float(sigma), n_valid, ""
 
 
-def _howell_bkg_variance_adu2(
-    sky_pp: float,
-    area: float,
-    gain: float = 1.0,
-    read_noise: float = 10.0,
-) -> float:
-    """Background + read-noise variance [ADU^2] from Howell (1989) eq. 2 (excludes source Poisson F/g)."""
-    if not math.isfinite(sky_pp) or sky_pp < 0:
-        sky_pp = 0.0
-    if not math.isfinite(area) or area <= 0:
-        return float("nan")
-    g = float(gain) if math.isfinite(gain) and gain > 0 else 1.0
-    rn = float(read_noise) if math.isfinite(read_noise) and read_noise >= 0 else 10.0
-    return max(0.0, sky_pp) / g * area + (rn / g) ** 2 * area
-
 def _clamp_bkg_scale_r(r: float) -> float:
     if not math.isfinite(r):
         return float("nan")
@@ -440,15 +425,19 @@ def bkg_scale_ratio_empirical_over_howell(
     sigma_bkg_ap: float,
     sky_pp: float,
     area: float,
+    n_sky: float,
     *,
-    gain: float = 1.0,
-    read_noise: float = 10.0,
+    gain: float,
+    read_noise: float,
 ) -> float:
-    """Per-measurement r = sigma_bkg_ap^2 / howell_bkg_variance for hybrid fallback calibration."""
+    """Per-measurement r = sigma_bkg_ap^2 / CCD-equation background variance (``ccd_noise.ccd_sky_variance_adu2``,
+    with the sky-estimation term; CCD-ONE-2026-10) for hybrid fallback calibration."""
+    from ccd_noise import ccd_sky_variance_adu2  # noqa: PLC0415
+
     sig = float(sigma_bkg_ap)
     if not math.isfinite(sig) or sig < 0:
         return float("nan")
-    hb = _howell_bkg_variance_adu2(sky_pp, area, gain=gain, read_noise=read_noise)
+    hb = ccd_sky_variance_adu2(sky_pp, area, n_sky, gain=gain, read_noise=read_noise)
     if not math.isfinite(hb) or hb <= 0:
         return float("nan")
     return float(sig * sig / hb)
@@ -463,14 +452,17 @@ def compute_setup_bkg_scale_r(ratios: list[float]) -> tuple[float, int]:
 def scaled_sigma_bkg_ap_from_howell(
     sky_pp: float,
     area: float,
+    n_sky: float,
     *,
-    gain: float = 1.0,
-    read_noise: float = 10.0,
+    gain: float,
+    read_noise: float,
     r_setup: float,
 ) -> float:
-    """Calibrated fallback: sqrt(r_setup * howell_bkg_variance) [ADU] at aperture scale."""
+    """Calibrated fallback: sqrt(r_setup * CCD-equation background variance) [ADU] at aperture scale."""
+    from ccd_noise import ccd_sky_variance_adu2  # noqa: PLC0415
+
     r_c = _clamp_bkg_scale_r(float(r_setup))
-    hb = _howell_bkg_variance_adu2(sky_pp, area, gain=gain, read_noise=read_noise)
+    hb = ccd_sky_variance_adu2(sky_pp, area, n_sky, gain=gain, read_noise=read_noise)
     if not math.isfinite(r_c) or not math.isfinite(hb) or hb < 0:
         return float("nan")
     return float(math.sqrt(r_c * hb))
@@ -648,51 +640,21 @@ def _aperture_flux_sky_per_star(
 # --- moved from aperture_photometry (LAYER-2026-10) ---
 
 
-def _howell_variance_adu2(
-    flux: float,
-    sky_pp: float,
-    area: float,
-    gain: float = 1.0,
-    read_noise: float = 10.0,
-) -> float:
-    """Total variance [ADU^2] from a reduced Howell (1989) eq. 2 form.
-
-    Implemented terms: source Poisson (``flux/gain``), sky Poisson on the aperture
-    (``sky_pp/gain * area``), and read noise (``(read_noise/gain)^2 * area``).
-
-    Omitted (not in this helper): dark-current shot noise, the ``(1 + n_pix/n_B)``
-    sky-estimation factor, flat-field noise, and digitisation/quantisation noise.
-    """
-    if not math.isfinite(flux) or flux <= 0:
-        return float("nan")
-    if not math.isfinite(sky_pp) or sky_pp < 0:
-        sky_pp = 0.0
-    if not math.isfinite(area) or area <= 0:
-        return float("nan")
-    g = float(gain) if math.isfinite(gain) and gain > 0 else 1.0
-    rn = float(read_noise) if math.isfinite(read_noise) and read_noise >= 0 else 10.0
-    return flux / g + max(0.0, sky_pp) / g * area + (rn / g) ** 2 * area
-
-
 def _photometric_error(
     flux: float,
     sky_pp: float,
     area: float,
-    gain: float = 1.0,
-    read_noise: float = 10.0,
+    n_sky: float,
+    *,
+    gain: float,
+    read_noise: float,
 ) -> float:
-    """Relative photometric error from Poisson + read-noise variance (Howell 1989 eq. 2).
+    """Relative photometric error err/flux from the CCD equation (``ccd_noise.ccd_rel_error``: Merline &
+    Howell 1995 with the sky-estimation term, median sky; CCD-ONE-2026-10). ``flux`` and ``sky_pp`` in ADU
+    (per px for sky), ``n_sky`` the number of sky pixels, ``gain`` e-/ADU, ``read_noise`` e-; NaN for flux <= 0."""
+    from ccd_noise import ccd_rel_error  # noqa: PLC0415
 
-    Units at boundary: ``flux`` and ``sky_pp`` in ADU (per px for sky); ``gain`` in e-/ADU;
-    ``read_noise`` in e-; internal variance in ADU^2. Returns dimensionless err/flux.
-    Legacy ``howell`` mode - byte-identical to pre F-BINGAIN-1 behaviour.
-    """
-    variance = _howell_variance_adu2(flux, sky_pp, area, gain=gain, read_noise=read_noise)
-    if not math.isfinite(variance) or variance < 0:
-        return float("nan")
-    if not math.isfinite(flux) or flux <= 0:
-        return float("nan")
-    return math.sqrt(variance) / flux
+    return float(ccd_rel_error(flux, sky_pp, area, n_sky, gain=gain, read_noise=read_noise))
 
 
 def _photometric_error_with_bkg_mode(
@@ -700,24 +662,27 @@ def _photometric_error_with_bkg_mode(
     *,
     sky_pp: float,
     area: float,
-    gain: float = 1.0,
-    read_noise: float = 10.0,
+    n_sky: float,
+    gain: float,
+    read_noise: float,
     sigma_bkg_ap: float | None = None,
 ) -> tuple[float, str]:
     """Relative err/flux with empirical background term (F-BINGAIN-1).
 
     Empirical (production): ``var = F/g + sigma_bkg_ap^2`` - photutils/SExtractor
     pattern with measured ``sigma_bkg`` at aperture scale (Labbe et al. 2003).
-    When ``sigma_bkg_ap`` is missing, Howell variance is the data-conditioned
-    fallback.
+    When ``sigma_bkg_ap`` is missing, the CCD equation (``_photometric_error``) is the
+    data-conditioned fallback. Gain and read noise are required (ValueError).
     """
+    from ccd_noise import check_gain_read_noise  # noqa: PLC0415
+
+    g, _rn = check_gain_read_noise(gain, read_noise)
     if not math.isfinite(flux) or flux <= 0:
         return float("nan"), ERR_BKG_SOURCE_HOWELL_FALLBACK
-    g = float(gain) if math.isfinite(gain) and gain > 0 else 1.0
     sig_ap = float(sigma_bkg_ap) if sigma_bkg_ap is not None else float("nan")
     if math.isfinite(sig_ap) and sig_ap >= 0:
         variance = flux / g + sig_ap * sig_ap
         if math.isfinite(variance) and variance >= 0:
             return math.sqrt(variance) / flux, ERR_BKG_SOURCE_EMPIRICAL
-    err = _photometric_error(flux, sky_pp, area, gain=gain, read_noise=read_noise)
+    err = _photometric_error(flux, sky_pp, area, n_sky, gain=g, read_noise=_rn)
     return err, ERR_BKG_SOURCE_HOWELL_FALLBACK

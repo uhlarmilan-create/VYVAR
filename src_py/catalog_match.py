@@ -47,14 +47,13 @@ from pipeline_catalog import (
     _chord_to_arcsec,
     _dao_auto_binning_factor,
     _dao_convolved_background_rms_adu,
-    _dao_noise_sigma_adu,
     _dao_spatial_flux_cap_row_indices,
     _detect_empirical_clip_level_adu,
     _effective_field_catalog_cone_radius_deg,
     _exo_host_annotation_arrays,
     _gaia_chip_xy_from_catalog,
     _icrs_deg_to_unitxyz,
-    _mean_bin2d_for_dao,
+    _bin2d_mean,
     _prefilter_dao_table_brightest,
     _proc_rename_det_names_to_catalog_id,
     _proc_sat_block_for_csv,
@@ -123,7 +122,6 @@ def _dm_detection_noise(
     fwhm_eff,
     h,
     hdr,
-    std,
     wcs_obj,
     wpx,
 ):
@@ -149,7 +147,6 @@ def _dm_detection_noise(
     _smask = star_mask_from_gaia_xy(_gx_sm, _gy_sm, wpx=int(wpx), h=int(h), fwhm_px=float(_base_fw))
     sky_sig, _sky_med_det = estimate_star_masked_sky_sigma(data0, star_mask=_smask)
     rms_conv, _dao_rel_err = _dao_convolved_background_rms_adu(data_dao, fwhm_px=fwhm_eff)
-    sigma_pp_diag = _dao_noise_sigma_adu(arr, bfac=bfac, fallback_std=float(std), data_dao=data_dao)
     # DAO-NOISE-2026-10: threshold basis = noise of the convolved (binned) detection
     # image, the same as the per-frame detection; the unbinned star-masked sigma
     # was on a different scale (effective ~6.8 sigma instead of the nominal N).
@@ -173,10 +170,8 @@ def _dm_detection_noise(
                 mx = float(np.nanmax(vals))
             else:
                 n_unique, mn, mx = 0, float("nan"), float("nan")
-            print(
-                f"DEBUG std=0: {_nm} n_unique={n_unique} n_finite={n_finite} "
-                f"min={mn:.1f} max={mx:.1f}"
-            )
+            LOGGER.debug("DAO std=0: %s n_unique=%d n_finite=%d min=%.1f max=%.1f",
+                         _nm, n_unique, n_finite, mn, mx)
         except Exception:  # noqa: BLE001
             pass
         try:
@@ -185,7 +180,7 @@ def _dm_detection_noise(
                 std_dao = float(np.std(arr[nonzero_mask]))
         except Exception:  # noqa: BLE001
             pass
-    return _gaia_chip_det, _gx_sm, _gy_sm, rms_conv, sigma_pp_diag, std_dao
+    return _gaia_chip_det, _gx_sm, _gy_sm, rms_conv, std_dao
 
 
 def _dm_dao_pass1(
@@ -202,7 +197,6 @@ def _dm_dao_pass1(
     hdr,
     n_raw_dao,
     rms_conv,
-    sigma_pp_diag,
     std_dao,
 ):
     """DAO pass 1 (DAOStarFinder at the threshold sigma) and its false-detection fraction."""
@@ -210,16 +204,15 @@ def _dm_dao_pass1(
     from masterstar_gaia_accounting import dedup_pass1_spatial  # noqa: PLC0415
     import numpy as np  # noqa: PLC0415
 
-    try:
+    _dbg_log = logging.getLogger(__name__)
+    if _dbg_log.isEnabledFor(logging.DEBUG):
+        # G04-22 / G05-07: the full-frame mean/std are computed only when DEBUG is on.
         _nm = str(frame_name or hdr.get("FILENAME") or "").strip() or "frame"
-        logging.getLogger(__name__).debug(
+        _dbg_log.debug(
             f"DAO input: {_nm} mean={float(np.nanmean(arr)):.1f} std={float(np.nanstd(arr)):.1f} "
             f"threshold={float(_thr):.1f} sky_sigma={float(std_dao):.2f} n_sigma={float(_thr_sigma):.2f} "
-            f"rms_conv_diag={float(rms_conv):.2f} sigma_pp_diag={float(sigma_pp_diag):.2f} "
-            f"fwhm={float(fwhm_eff):.2f}"
+            f"rms_conv_diag={float(rms_conv):.2f} fwhm={float(fwhm_eff):.2f}"
         )
-    except Exception:  # noqa: BLE001
-        pass
     finder = DAOStarFinder(
         fwhm=float(fwhm_eff),
         threshold=float(_thr),
@@ -486,6 +479,29 @@ def _n_gaia_variable(cat_df: pd.DataFrame) -> int:
         return 0
     return int(cat_df["var_flag"].fillna("").astype(str).str.strip().str.upper().eq("VARIABLE").sum())
 
+def _identity_candidate_pairs(
+    sep_k: "np.ndarray", idx: "np.ndarray", oix_rows: "np.ndarray", nc: int, thr: float
+) -> list[tuple[float, int, int]]:
+    """Candidate (separation, detection, catalogue row) pairs within ``thr`` arcsec, sorted by
+    separation; equal separations keep the row-major (detection, neighbour) order.
+
+    G04-21: vectorised form of the former n x k Python loop; the stable argsort reproduces
+    ``pairs.sort(key=sep)`` over the row-major insertion order exactly."""
+    import numpy as np  # noqa: PLC0415
+
+    sep = np.asarray(sep_k, dtype=np.float64)
+    jj = np.asarray(idx, dtype=np.int64)
+    n_oix = int(len(oix_rows))
+    ok = (jj >= 0) & (jj < n_oix) & np.isfinite(sep) & (sep <= float(thr))
+    ii, kk = np.nonzero(ok)  # row-major order
+    cr = np.asarray(oix_rows, dtype=np.int64)[jj[ii, kk]]
+    keep = (cr >= 0) & (cr < int(nc))
+    ii, kk, cr = ii[keep], kk[keep], cr[keep]
+    s = sep[ii, kk]
+    order = np.argsort(s, kind="stable")
+    return list(zip(s[order].tolist(), ii[order].tolist(), cr[order].tolist(), strict=True))
+
+
 def _dm_assign_identities(
     *,
     _base_fw,
@@ -585,6 +601,9 @@ def _dm_assign_identities(
             )
 
         _bind_gaia_catalog_columns()
+        # G04-21: catalog_id -> catalogue row once per match (was rebuilt on every threshold call);
+        # the last row of a duplicated id wins, as before
+        _cid_to_cr = {str(cid_c[_k]).strip(): _k for _k in range(nc) if str(cid_c[_k]).strip()}
 
         def _assign_catalog_at_threshold(thr: float, g_zp: float = float("nan")) -> tuple[pd.DataFrame, int]:
             thr_f = float(thr)
@@ -601,28 +620,12 @@ def _dm_assign_identities(
                     dist = dist.reshape(-1, 1)
                     idx = idx.reshape(-1, 1)
                 sep_k = _chord_to_arcsec(dist)
-                n_oix = int(len(oix_rows))
-                pairs: list[tuple[float, int, int]] = []
-                for i in range(n):
-                    for kk in range(int(idx.shape[1])):
-                        j_comp = int(idx[i, kk])
-                        if j_comp < 0 or j_comp >= n_oix:
-                            continue
-                        s = float(sep_k[i, kk])
-                        if not np.isfinite(s) or s > thr_f:
-                            continue
-                        cr = int(oix_rows[j_comp])
-                        if 0 <= cr < nc:
-                            pairs.append((s, i, cr))
-                pairs.sort(key=lambda t: t[0])
+                pairs = _identity_candidate_pairs(sep_k, idx, oix_rows, nc, thr_f)
                 used_det: set[int] = set()
                 used_cat: set[int] = set()
                 cat_row = np.full(n, -1, dtype=np.int64)
                 sepa_out = np.full(n, np.nan, dtype=np.float64)
                 # Born-owned pass2: pre-lock seed catalog_id (no greedy reassignment).
-                _cid_to_cr = {
-                    str(cid_c[_k]).strip(): _k for _k in range(nc) if str(cid_c[_k]).strip()
-                }
                 for i in range(n):
                     if int(_dao_pass[i]) != 2:
                         continue
@@ -1141,9 +1144,9 @@ def detect_stars_and_match_catalog(
     _match_depth_g = float("inf")
 
     dao_scale = _dao_auto_binning_factor(*data0.shape)
-    data_dao, bfac = _mean_bin2d_for_dao(data0, dao_scale)
+    data_dao, bfac = _bin2d_mean(data0, dao_scale)
     fwhm_eff = max(1.2, _base_fw / float(bfac))
-    _gaia_chip_det, _gx_sm, _gy_sm, rms_conv, sigma_pp_diag, std_dao = _dm_detection_noise(
+    _gaia_chip_det, _gx_sm, _gy_sm, rms_conv, std_dao = _dm_detection_noise(
         _base_fw=_base_fw,
         arr=arr,
         bfac=bfac,
@@ -1154,13 +1157,12 @@ def detect_stars_and_match_catalog(
         fwhm_eff=fwhm_eff,
         h=h,
         hdr=hdr,
-        std=std,
         wcs_obj=wcs_obj,
         wpx=wpx,
     )
     if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
         _nm = str(frame_name or hdr.get("FILENAME") or "").strip() or "frame"
-        print(f"WARNING: {_nm} std=0 even after fallback, skipping")
+        LOGGER.warning("%s: DAO std=0 even after fallback, frame skipped", _nm)
         return pd.DataFrame(), {
             "n_detected": 0,
             "n_detected_dao": 0,
@@ -1186,7 +1188,6 @@ def detect_stars_and_match_catalog(
         hdr=hdr,
         n_raw_dao=n_raw_dao,
         rms_conv=rms_conv,
-        sigma_pp_diag=sigma_pp_diag,
         std_dao=std_dao,
     )
 

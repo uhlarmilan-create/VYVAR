@@ -11,6 +11,7 @@ import pandas as pd
 import pytest
 from astropy.io import fits
 
+from ccd_noise import ccd_variance_adu2
 from osc_align import (
     OSC_REGISTRATION_HANDOFF,
     apply_registration_handoff_to_frame,
@@ -25,7 +26,6 @@ from osc_extract import channel_obs_group_folder, effective_gain_rn
 from database import VyvarDatabase
 from param_resolver import resolve_gain, resolve_read_noise
 from photometry_core import (
-    _howell_variance_adu2,
     _photometric_error_with_bkg_mode,
     run_full_photometry_pipeline,
     select_comparison_stars_per_target,
@@ -234,6 +234,9 @@ def _synthetic_dense_comp_fixture() -> tuple[pd.Series, pd.DataFrame, list[Path]
                     "mag": float(star["mag"]),
                     "noise_floor_adu": 35.0,
                     "aperture_r_px": 7.0,
+                    # COMP-CEIL-FIELDK-2026-10: CCD-equation inputs of the comp_rms ceiling
+                    "sky_adu_per_px_annulus": 200.0,
+                    "sky_n_px": 500,
                     "is_usable": True,
                     "is_saturated": False,
                     "is_noisy": False,
@@ -285,14 +288,15 @@ def test_production_path_howell_variance_uses_vy_egain_rdnois(tmp_path: Path) ->
         flux,
         sky_pp=sky_pp,
         area=area,
+        n_sky=400.0,
         gain=g_eff,
         read_noise=rn_eff,
         sigma_bkg_ap=None,
     )
     assert src == "howell_fallback"
-    var_target = _howell_variance_adu2(flux, sky_pp, area, gain=g_eff, read_noise=rn_eff)
+    var_target = ccd_variance_adu2(flux, sky_pp, area, 400.0, gain=g_eff, read_noise=rn_eff)
     assert err_target == pytest.approx(math.sqrt(var_target) / flux)
-    var_mono = _howell_variance_adu2(flux, sky_pp, area, gain=g_raw, read_noise=1.3)
+    var_mono = ccd_variance_adu2(flux, sky_pp, area, 400.0, gain=g_raw, read_noise=1.3)
     assert var_mono > var_target
 
 
@@ -307,7 +311,8 @@ def test_osc_comp_selection_smoke_per_channel(channel: str) -> None:
     cfg.gs11_dilution_enabled = False
     from photometry_comp import build_global_comp_pool  # noqa: PLC0415
 
-    pool = build_global_comp_pool(masterstars, paths, cache, frozenset({"6000000000000000005"}), None, 800, 600, 0, cfg, min_frames_frac=0.3, fwhm_px=3.7)
+    pool = build_global_comp_pool(masterstars, paths, cache, frozenset({"6000000000000000005"}), None, 800, 600, 0, cfg, min_frames_frac=0.3, fwhm_px=3.7,
+                                  gain=1.0, read_noise=10.0, scint_params=_NO_SCINT)
     out = select_comparison_stars_per_target(
         target,
         masterstars,
@@ -324,3 +329,10 @@ def test_osc_comp_selection_smoke_per_channel(channel: str) -> None:
     assert "catalog_id" in out.columns
     assert "bp_rp" in out.columns or "mag" in out.columns
     assert len(out) >= 3
+
+
+# COMP-CEIL-NOISEMODEL-2026-10: build_global_comp_pool requires the rig scintillation parameters; none here
+# (no telescope diameter / site altitude -> scintillation 0, as sigma_budget does for such a rig)
+from sigma_budget import RigScintillationParams  # noqa: E402
+
+_NO_SCINT = RigScintillationParams(None, "test", float("nan"), float("nan"), 60.0, 1.5, [])

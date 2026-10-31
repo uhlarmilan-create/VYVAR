@@ -26,7 +26,8 @@ from typing import Any
 
 from pipeline_constants import GAIA_BUILD_MAG_LIMIT_DEFAULT, VSX_BUILD_MAG_LIMIT_DEFAULT
 
-from run_job import STATUS_FILE, STDOUT_FILE, pid_alive, read_status, stop_job, write_status
+from run_job import STATUS_FILE, STDOUT_FILE, read_status, stop_job, write_status
+from run_job import job_state as _run_job_state
 
 JOB_FILE = "job.json"
 
@@ -150,12 +151,10 @@ def jobs(data_root: Path | str, catalog: str | None = None) -> list[Path]:
 
 
 def job_state(job_dir: Path | str) -> str:
-    """running | done | failed | lost (process gone without a final state)."""
-    st = read_status(job_dir) or {}
-    s = str(st.get("state") or "")
-    if s in ("done", "failed"):
-        return s
-    return "running" if pid_alive(st.get("pid")) else "lost"
+    """running | done | failed | lost (process gone without a final state; also no status file).
+    G05-19: ``run_job.job_state`` with its "none" reported as "lost" (a listed catalog job always ran)."""
+    s = _run_job_state(job_dir)
+    return "lost" if s == "none" else s
 
 
 def active_job(data_root: Path | str, catalog: str) -> Path | None:

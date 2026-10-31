@@ -138,5 +138,5 @@ def test_choose_field_aperture_k(tmp_path):
             m = 12 + np.arange(12) * 0.2 + clouds + rng.normal(0, s, 12)
             d[f"flux_k{int(round(k * 100))}"] = 10 ** (-0.4 * (m - 25))
         cache[str(p)] = pd.DataFrame(d)
-    k, loo, scores = choose_field_aperture_k(set(ids), paths, cache, min_frames_frac=0.2)
+    k, loo, scores, _info = choose_field_aperture_k(set(ids), paths, cache, min_frames_frac=0.2)
     assert k == 1.25 and len(loo) == 12 and set(scores) == set(noise)

@@ -1,10 +1,10 @@
 """
 dilution.py - light of catalogue neighbours inside the target aperture (GS11-2026-10).
 
-For every Gaia neighbour within aperture + 3 FWHM the fraction of its PSF that falls
-into the target aperture is computed (circular Gaussian of the frame FWHM; Rice /
-non-central chi-square CDF) and its flux is taken in the observed band (Gaia DR3
-G + BP-RP -> g/r/i/V/B/R, DR3 documentation 5.5.1). The total is removed from the
+For every Gaia neighbour within the annulus + 6 FWHM the extra light it adds to the target's
+light-curve measurement is computed with the comparison-star model (``comp_blend.contamination_fractions``:
+measured Moffat PSF, aperture sum minus area x annulus median; DILUTION-ONE-2026-10, G07-33) and its
+flux is taken in the observed band (Gaia DR3 G + BP-RP -> g/r/i/V/B/R, DR3 documentation 5.5.1). The total is removed from the
 target light curve in FLUX, frame by frame:
 
     m_corr(t) = -2.5 log10( 10^(-0.4 m(t)) - F_contam )
@@ -16,6 +16,7 @@ D = F_star / (F_star + F_contam) at catalogue brightness is kept as a blend metr
 
 References:
     Howell (2006) Handbook of CCD Astronomy - aperture contamination
+    Moffat (1969) A&A 3, 455 - PSF profile (wing exponent beta measured on the MASTERSTAR)
     Gaia DR3 documentation release 1.3, section 5.5.1 - photometric relationships
     Gaia Collaboration (2023) A&A 674, A1 - neighbour catalogue
 """
@@ -28,6 +29,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+from stats_core import coerce_bool
 
 from catalog_db import query_local_gaia
 from gaia_catalog_id import normalize_gaia_source_id
@@ -166,18 +168,13 @@ def _no_blend_result(
     }
 
 
-def enclosed_fraction(sep: float, r_ap: float, sigma: float) -> float:
-    """Fraction of a circular Gaussian PSF (sigma) centred ``sep`` away that falls in a
-    circular aperture of radius ``r_ap`` (same units).
-
-    |X| for X ~ N(mu, sigma^2 I_2), |mu| = sep, is Rice distributed, so the fraction is the
-    non-central chi-square CDF with 2 dof: P((r/sigma)^2; k=2, lambda=(sep/sigma)^2).
-    """
-    from scipy.stats import ncx2  # noqa: PLC0415
-
-    if not (sigma > 0 and r_ap > 0):
-        return 0.0
-    return float(ncx2.cdf((r_ap / sigma) ** 2, 2, (sep / sigma) ** 2))
+def _offsets_arcsec(ra0: float, dec0: float, ra: float, dec: float) -> tuple[float, float]:
+    """Tangent-plane (gnomonic) offsets east / north of (ra, dec) from (ra0, dec0), arcsec."""
+    a0, d0, a, d = map(math.radians, (ra0, dec0, ra, dec))
+    cosc = math.sin(d0) * math.sin(d) + math.cos(d0) * math.cos(d) * math.cos(a - a0)
+    xi = math.cos(d) * math.sin(a - a0) / cosc
+    eta = (math.cos(d0) * math.sin(d) - math.sin(d0) * math.cos(d) * math.cos(a - a0)) / cosc
+    return math.degrees(xi) * 3600.0, math.degrees(eta) * 3600.0
 
 
 def compute_dilution_factor(
@@ -187,58 +184,56 @@ def compute_dilution_factor(
     aperture_arcsec: float,
     gaia_db_path: str,
     *,
+    fwhm_arcsec: float,
+    beta: float,
+    annulus_arcsec: tuple[float, float],
     catalog_id: int | None = None,
-    search_radius_arcsec: float | None = None,
     mag_limit_delta: float = 5.0,
-    fwhm_arcsec: float | None = None,
     band: str = "G",
     target_bp_rp: float | None = None,
 ) -> dict[str, Any]:
-    """Light of Gaia neighbours inside the target aperture (GS11-2026-10).
+    """Light of Gaia neighbours in the target's light-curve measurement (GS11-2026-10, DILUTION-ONE-2026-10).
 
-    Each neighbour contributes F_nb * f_enc(sep), with f_enc the enclosed fraction of a
-    Gaussian PSF of the frame FWHM centred at the neighbour (:func:`enclosed_fraction`).
-    Fluxes are taken in the observed ``band`` (Gaia G + BP-RP -> g/r/i/V/B/R via
-    :mod:`gaia_bands`); a neighbour without a valid colour falls back to G (flagged).
-    The search radius is aperture + 3 FWHM (the PSF wing beyond that is < 1e-5).
+    G07-33: one neighbour-light model for the comparison-star gate and the target correction -
+    ``comp_blend.contamination_fractions``: Moffat PSF with the measured wing exponent ``beta`` and the
+    FWHM, the measurement modelled as the pipeline does it (aperture sum minus area x median of the sky
+    annulus ``annulus_arcsec``, so a neighbour in the annulus raises the sky and lowers the target). The
+    former circular-Gaussian enclosed fraction without the annulus under-corrected at 2-3 FWHM (~0.06 /
+    0.014 mag for an equal neighbour) and is removed. Geometry in arcsec (tangent-plane offsets of the
+    Gaia positions); the caller passes the light-curve aperture k* x FWHM and its annulus.
 
-    Returns ``contam_flux_total`` - neighbour light in the aperture expressed as a
-    total-flux equivalent on the catalogue scale (divided by the target's own enclosed
-    fraction, because the ensemble zero point puts aperture fluxes on total magnitudes) -
-    which :func:`apply_target_dilution_to_mag_calib` subtracts in flux, frame by frame.
-    ``dilution_factor`` D = F_target / (F_target + contamination) at catalogue brightness.
+    Fluxes in the observed ``band`` (Gaia G + BP-RP via :mod:`gaia_bands`); a star without a valid band
+    relation is compared in Gaia G (flagged). Neighbours are searched to annulus_out + 6 FWHM (the
+    range of ``contamination_fractions``).
+
+    Returns ``contam_flux_total`` = c x F_target (c = extra measured light / own measured light), the
+    neighbour light as a total-flux equivalent on the catalogue scale (the ensemble zero point puts
+    aperture fluxes on total magnitudes), which :func:`apply_target_dilution_to_mag_calib` subtracts in flux,
+    frame by frame; ``dilution_factor`` D = 1 / (1 + c) at catalogue brightness.
     """
+    from comp_blend import contamination_fractions  # noqa: PLC0415
     from gaia_bands import band_mag_from_gaia  # noqa: PLC0415
 
-    try:
-        ap_arcsec = float(aperture_arcsec)
-    except (TypeError, ValueError):
-        ap_arcsec = float("nan")
-    try:
-        fw = float(fwhm_arcsec) if fwhm_arcsec is not None else float("nan")
-    except (TypeError, ValueError):
-        fw = float("nan")
-    if not (math.isfinite(fw) and fw > 0):
-        fw = ap_arcsec / 1.35 if math.isfinite(ap_arcsec) and ap_arcsec > 0 else float("nan")
-    if search_radius_arcsec is not None:
-        r_search = float(search_radius_arcsec)
-    else:
-        r_search = ap_arcsec + 3.0 * fw if math.isfinite(ap_arcsec) and math.isfinite(fw) else 0.0
-    base = _no_blend_result(aperture_arcsec=ap_arcsec, search_radius_arcsec=r_search)
+    ap = float(aperture_arcsec)
+    fw = float(fwhm_arcsec)
+    bt = float(beta)
+    r_in, r_out = (float(v) for v in annulus_arcsec)
+    if not (math.isfinite(ap) and ap > 0 and math.isfinite(fw) and fw > 0 and math.isfinite(bt) and bt > 1.0
+            and math.isfinite(r_in) and math.isfinite(r_out) and r_out > r_in > 0):
+        raise ValueError(f"GS11 dilution: invalid geometry / PSF (aperture {aperture_arcsec!r}, FWHM "
+                         f"{fwhm_arcsec!r}, beta {beta!r}, annulus {annulus_arcsec!r})")
+    r_search = r_out + 6.0 * fw
+    base = _no_blend_result(aperture_arcsec=ap, search_radius_arcsec=r_search)
     try:
         g = float(g_mag)
     except (TypeError, ValueError):
-        return base
-    if not (math.isfinite(g) and math.isfinite(ap_arcsec) and ap_arcsec > 0 and math.isfinite(fw)):
-        return base
-    sigma = fw / (2.0 * math.sqrt(2.0 * math.log(2.0)))
+        g = float("nan")
+    if not math.isfinite(g):
+        return {**base, "dilution_skipped": True, "dilution_skip_reason": "target without a catalogue magnitude"}
 
     m_t, _ = band_mag_from_gaia(g, target_bp_rp if target_bp_rp is not None else float("nan"), band)
     target_band_ok = math.isfinite(m_t)
-    if not target_band_ok:
-        m_t = g
-    f_t = flux_from_gmag(m_t)
-    f0 = enclosed_fraction(0.0, ap_arcsec, sigma)
+    f_t = flux_from_gmag(m_t if target_band_ok else g)
 
     neighbors = query_gaia_neighbors(
         float(ra_deg),
@@ -248,47 +243,60 @@ def compute_dilution_factor(
         mag_limit=g + float(mag_limit_delta),
         exclude_source_id=_normalize_exclude_source_id(catalog_id),
     )
-    contam_ap = 0.0
-    n_used = 0
+    xy, fl_band, fl_g, nb = [], [], [], []
     n_g_fallback = 0
-    variable_ids: list[str] = []
     for n in neighbors:
         try:
             gm = float(n["g_mag"])
-            sep = float(n["sep_arcsec"])
-        except (KeyError, TypeError, ValueError):
+            dx, dy = _offsets_arcsec(float(ra_deg), float(dec_deg), float(n["ra"]), float(n["dec"]))
+        except (KeyError, TypeError, ValueError, ZeroDivisionError):
             continue
-        if not (math.isfinite(gm) and math.isfinite(sep)):
+        if not (math.isfinite(gm) and math.isfinite(dx) and math.isfinite(dy)):
             continue
         m_n, _ = band_mag_from_gaia(gm, n.get("bp_rp") if n.get("bp_rp") is not None else float("nan"), band)
-        if not math.isfinite(m_n):
-            m_n = gm
-            n_g_fallback += 1 if band != "G" else 0
-        frac = enclosed_fraction(sep, ap_arcsec, sigma)
-        if frac <= 1e-6:
-            continue
-        contam_ap += flux_from_gmag(m_n) * frac
-        n_used += 1
-        if str(n.get("var_flag") or "").strip().upper() == "VARIABLE":
-            variable_ids.append(str(n.get("source_id")))
-    if contam_ap <= 0 or f0 <= 0:
-        return {**base, "n_neighbors": 0}
-    contam_total = contam_ap / f0
-    d = float(f_t / (f_t + contam_total))
+        if not math.isfinite(m_n) and band != "G":
+            n_g_fallback += 1
+        xy.append((dx, dy))
+        fl_band.append(flux_from_gmag(m_n) if math.isfinite(m_n) else float("nan"))
+        fl_g.append(flux_from_gmag(gm))
+        nb.append(n)
+    if not nb:
+        return base
+    # the target itself is excluded by source id in the query, so no positional self-match here
+    kw = dict(r_ap_px=ap, fwhm_px=fw, beta=bt, annulus_px=(r_in, r_out), self_match_px=0.0)
+    star_xy = np.zeros((1, 2))
+    s_band = np.array([f_t if target_band_ok else float("nan")])
+    s_g = np.array([flux_from_gmag(g)])
+    xy_a, fb_a, fg_a = np.asarray(xy, float), np.asarray(fl_band, float), np.asarray(fl_g, float)
+    c = float(contamination_fractions(star_xy, s_band, xy_a, fb_a, star_flux_g=s_g, neighbour_flux_g=fg_a, **kw)[0])
+    # each neighbour on its own: which ones reach the measurement (count, variable neighbours)
+    c_each = [float(contamination_fractions(star_xy, s_band, xy_a[j:j + 1], fb_a[j:j + 1], star_flux_g=s_g,
+                                            neighbour_flux_g=fg_a[j:j + 1], **kw)[0]) for j in range(len(nb))]
+    used = [j for j, v in enumerate(c_each) if math.isfinite(v) and abs(v) > 1e-6]
+    variable_ids = [str(nb[j].get("source_id")) for j in used
+                    if str(nb[j].get("var_flag") or "").strip().upper() == "VARIABLE"]
+    if not (math.isfinite(c) and c > 0) or not used:
+        return {**base, "n_neighbors": 0, "contamination_frac": c}
+    contam_total = c * f_t
+    d = float(1.0 / (1.0 + c))
     return {
         "dilution_factor": d,
         "dilution_delta_mag": float(-2.5 * math.log10(d)) if d < 1.0 else 0.0,
-        "n_neighbors": int(n_used),
-        "neighbor_flux_sum": float(contam_total / f_t),
+        "n_neighbors": int(len(used)),
+        "neighbor_flux_sum": float(c),
+        "contamination_frac": float(c),
         "contam_flux_total": float(contam_total),
         "contam_mag_total": float(-2.5 * math.log10(contam_total)),
         "band": str(band),
         "target_band_mag_ok": bool(target_band_ok),
         "n_neighbors_g_fallback": int(n_g_fallback),
         "variable_neighbors": variable_ids,
-        "aperture_arcsec": float(ap_arcsec),
+        "aperture_arcsec": float(ap),
         "fwhm_arcsec": float(fw),
+        "psf_beta": float(bt),
+        "annulus_arcsec": [float(r_in), float(r_out)],
         "search_radius_arcsec": float(r_search),
+        "model": "moffat_annulus (comp_blend.contamination_fractions)",
     }
 
 
@@ -359,7 +367,7 @@ def gs11_dilution_from_summary(summary_row: Any, cfg: Any) -> tuple[float, float
         return None
     try:
         get = summary_row.get
-        if bool(get("gs11_dilution_skipped", False)) and str(get("gs11_dilution_skipped", "")).lower() not in ("false", "0", ""):
+        if coerce_bool(get("gs11_dilution_skipped", False)):
             return None
         d = float(get("dilution_factor", float("nan")))
         dm = float(get("dilution_delta_mag", float("nan")))

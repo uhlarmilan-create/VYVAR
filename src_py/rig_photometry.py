@@ -22,10 +22,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-LOGGER = logging.getLogger(__name__)
+from gain_ptc import container_scale
 
-#: FITS integer container of the calibrated frames.
-CONTAINER_BITS = 16
+LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -107,10 +106,9 @@ def photometric_gain_read_noise(header: Any, cfg: Any | None, equipment_id: int 
         )
     g_nat = float(g_res.value)
     rn = float(rn_res.value)
-    bits = prof.adc_bits
-    scale = float(2 ** (CONTAINER_BITS - int(bits))) if bits is not None and 1 <= int(bits) <= CONTAINER_BITS else 1.0
+    scale = container_scale(prof.adc_bits)
     return PhotometricGain(
-        gain=g_nat / scale if scale > 0 else g_nat,
+        gain=g_nat / scale,
         read_noise=rn,
         gain_native=g_nat,
         container_scale=scale,

@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from pipeline_constants import GAIA_DB_DEFAULT, OBJECTS_DB_DEFAULT
+from stats_core import parse_bool
 
 
 def is_git_dev_checkout(install_root: Path) -> bool:
@@ -424,8 +425,6 @@ BOOL_KEYS: tuple[str, ...] = (
     "auto_fwhm_enabled",
 )
 
-_TRUE_WORDS = frozenset({"1", "true", "yes", "on"})
-_FALSE_WORDS = frozenset({"0", "false", "no", "off"})
 
 
 def _coerce_number(key: str, raw: Any, kind: type, lo: float, hi: float) -> float | int | None:
@@ -450,15 +449,10 @@ def _coerce_number(key: str, raw: Any, kind: type, lo: float, hi: float) -> floa
 
 
 def _coerce_bool(key: str, raw: Any) -> bool | None:
-    if isinstance(raw, bool):
-        return raw
-    if isinstance(raw, (int, float)) and raw in (0, 1):
-        return bool(raw)
-    word = str(raw).strip().lower()
-    if word in _TRUE_WORDS:
-        return True
-    if word in _FALSE_WORDS:
-        return False
+    """The one flag vocabulary (stats_core.parse_bool, G02-39); unknown -> None with a warning."""
+    b = parse_bool(raw)
+    if b is not None:
+        return b
     logging.warning("config.json: %s = %r is not true / false; the default is used", key, raw)
     return None
 
@@ -749,16 +743,16 @@ class AppConfig:
             self.aavso_filter_map = {}
         self.epsf_targets = str(data.get("epsf_targets", self.epsf_targets) or "ALL").strip() or "ALL"
         _act = str(data.get("apply_color_term", self.apply_color_term) or "auto").strip().lower()
-        if _act in _TRUE_WORDS:
+        if parse_bool(_act) is True:
             self.apply_color_term = "on"
-        elif _act in _FALSE_WORDS:
+        elif parse_bool(_act) is False:
             self.apply_color_term = "off"
         else:
             if _act != "auto":  # G13-35: a typo ("atuo") is not silently read as auto
                 logging.warning("config.json: apply_color_term = %r is not on / off / auto; auto is used", _act)
             self.apply_color_term = "auto"
         _k2m = str(data.get("k2_mode", self.k2_mode) or "literature").strip().lower()
-        if _k2m in _FALSE_WORDS or _k2m == "none":
+        if parse_bool(_k2m) is False or _k2m == "none":
             self.k2_mode = "off"
         else:
             if _k2m != "literature":

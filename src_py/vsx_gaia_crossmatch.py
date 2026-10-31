@@ -23,7 +23,7 @@ from astropy.coordinates import SkyCoord, search_around_sky
 from catalog_db import query_local_gaia
 from gaia_catalog_id import normalize_gaia_source_id
 from infolog import log_event
-from gaia_pm import GAIA_EPOCH, apply_proper_motion as _apply_proper_motion
+from gaia_pm import GAIA_EPOCH, apply_proper_motion_arrays as _apply_proper_motion_arrays
 
 LOGGER = logging.getLogger(__name__)
 
@@ -406,7 +406,12 @@ def frame_bbox_radec_limits(
     margin_px: float = 50.0,
     center: SkyCoord | None = None,
 ) -> tuple[float, float, float, float]:
-    """Return (ra_min, ra_max, dec_min, dec_max) for frame bbox + margin (same geometry as VSX query)."""
+    """Return (ra_min, ra_max, dec_min, dec_max) of the frame + ``margin_px`` (the one frame-bbox box: Gaia
+    cross-match, catalogue depth and the VSX frame query, G03-17).
+
+    Corners and edge midpoints are sampled; RA is taken relative to the centre (wrap at RA 0 gives
+    ``ra_min < 0`` or ``ra_max > 360``, split by ``catalog_db.ra_intervals_deg``). When a celestial pole
+    projects inside the frame + margin, every RA is inside: RA [0, 360] and Dec up to the pole."""
     m = float(margin_px)
     w = float(width_px)
     h = float(height_px)
@@ -422,6 +427,12 @@ def frame_bbox_radec_limits(
     decs = decs[ok]
     de_min = float(np.min(decs))
     de_max = float(np.max(decs))
+    pad = 1.0 / 3600.0
+    pole = _pole_inside_frame(wcs, w, h, m)
+    if pole > 0:
+        return 0.0, 360.0, de_min - pad, 90.0
+    if pole < 0:
+        return 0.0, 360.0, -90.0, de_max + pad
     if center is not None:
         try:
             ra0 = float(center.icrs.ra.deg)
@@ -432,8 +443,29 @@ def frame_bbox_radec_limits(
     dra = ((ras - ra0 + 180.0) % 360.0) - 180.0
     ra_min = ra0 + float(np.min(dra))
     ra_max = ra0 + float(np.max(dra))
-    pad = 1.0 / 3600.0
     return ra_min - pad, ra_max + pad, de_min - pad, de_max + pad
+
+
+def _pole_inside_frame(wcs: Any, w: float, h: float, m: float) -> int:
+    """+1 / -1 when the north / south celestial pole projects inside the frame + margin, else 0."""
+    try:
+        c = wcs.all_pix2world([0.5 * (w - 1.0)], [0.5 * (h - 1.0)], 0)
+        dec_c = float(np.asarray(c[1])[0])
+    except Exception:  # noqa: BLE001
+        return 0
+    if not math.isfinite(dec_c):
+        return 0
+    for sgn in (1, -1):
+        if sgn * dec_c <= 0.0:  # the pole lies 90 deg or more from the frame centre
+            continue
+        try:
+            px, py = wcs.all_world2pix([0.0], [90.0 * sgn], 0)
+        except Exception:  # noqa: BLE001  (SIP inversion may not converge far off the chip)
+            continue
+        x, y = float(np.asarray(px)[0]), float(np.asarray(py)[0])
+        if math.isfinite(x) and math.isfinite(y) and -m <= x <= w + m and -m <= y <= h + m:
+            return sgn
+    return 0
 
 
 def query_gaia_for_frame_bbox(
@@ -495,19 +527,9 @@ def _apply_pm_to_gaia_catalog(
     pm_cols, n_pm_finite = _pm_stats(pmra, pmdec)
     if not pm_cols or n_pm_finite == 0:
         return ra_out, dec_out, "broadened", PM_SIGMA_BROADEN_ARCSEC, n_pm_finite
-    n_prop = 0
-    for i in range(len(ra_out)):
-        ra_c, dec_c = _apply_proper_motion(
-            float(ra_out[i]),
-            float(dec_out[i]),
-            float(pmra[i]) if pmra is not None else None,
-            float(pmdec[i]) if pmdec is not None else None,
-            obs_year=float(target_epoch),
-        )
-        if math.isfinite(pmra[i]) and math.isfinite(pmdec[i]):  # type: ignore[index]
-            n_prop += 1
-        ra_out[i] = ra_c
-        dec_out[i] = dec_c
+    # G05-56: all rows at once (was one apply_proper_motion call per Gaia row; same values)
+    ra_out, dec_out = _apply_proper_motion_arrays(ra_out, dec_out, pmra, pmdec, float(target_epoch))
+    n_prop = int(np.count_nonzero(np.isfinite(np.asarray(pmra, dtype=float)) & np.isfinite(np.asarray(pmdec, dtype=float))))
     if n_prop > 0:
         return ra_out, dec_out, "propagated", 0.0, n_pm_finite
     return ra_out, dec_out, "broadened", PM_SIGMA_BROADEN_ARCSEC, n_pm_finite

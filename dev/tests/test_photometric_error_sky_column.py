@@ -37,14 +37,15 @@ def test_err_uses_annulus_not_detection_floor() -> None:
     flux = 5000.0
     area = math.pi * 4.0**2
     gain, rn = 1.3, 1.3
-    err_ann = _photometric_error(flux, 500.0, area, gain=gain, read_noise=rn)
-    err_det = _photometric_error(flux, 650.0, area, gain=gain, read_noise=rn)
+    err_ann = _photometric_error(flux, 500.0, area, 400.0, gain=gain, read_noise=rn)
+    err_det = _photometric_error(flux, 650.0, area, 400.0, gain=gain, read_noise=rn)
     assert err_ann < err_det
     row = pd.Series({SKY_ADU_PER_PX_ANNULUS_COL: 500.0, "noise_floor_adu": 650.0})
     err_via_row = _photometric_error(
         flux,
         _sky_pp_for_photometric_error(row),
         area,
+        400.0,
         gain=gain,
         read_noise=rn,
     )

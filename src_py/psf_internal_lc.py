@@ -18,7 +18,7 @@ import pandas as pd
 
 from gaia_catalog_id import normalize_gaia_source_id
 from report_methods import lc_csv_path
-from stats_core import _coerce_bool
+from stats_core import coerce_bool, flux_to_mag
 
 LOGGER = logging.getLogger(__name__)
 
@@ -62,14 +62,6 @@ def psf_usable_mask(fit_ok: np.ndarray, flux: np.ndarray) -> np.ndarray:
     """Epochs that enter the ensemble: ``psf_fit_ok`` (night chi2 locus, FIT-OK-ADMISSION-01) and a positive flux."""
     fl = np.asarray(flux, dtype=np.float64)
     return np.asarray(fit_ok, dtype=bool) & np.isfinite(fl) & (fl > 0)
-
-
-def _flux_to_inst_mag(flux: np.ndarray) -> np.ndarray:
-    f = np.asarray(flux, dtype=np.float64)
-    out = np.full(f.shape, np.nan, dtype=np.float64)
-    ok = np.isfinite(f) & (f > 0)
-    out[ok] = -2.5 * np.log10(f[ok])
-    return out
 
 
 def _load_gain_authority(photometry_dir: Path) -> tuple[float, str]:
@@ -244,7 +236,8 @@ def _read_proc_stack(frames_root: Path) -> pd.DataFrame:
         try:
             from proc_frame_store import read_proc_csv  # noqa: PLC0415
 
-            df = read_proc_csv(p, low_memory=False, dtype={"catalog_id": str})
+            # G09-27: only the columns the light curve uses
+            df = read_proc_csv(p, usecols=lambda c: c in _PROC_USECOLS, low_memory=False, dtype={"catalog_id": str})
         except Exception as exc:  # noqa: BLE001
             LOGGER.warning("[PSF-LC] skip unreadable %s: %s", p.name, exc)
             continue
@@ -261,8 +254,14 @@ def _read_proc_stack(frames_root: Path) -> pd.DataFrame:
     return pd.concat(chunks, ignore_index=True)
 
 
-def _star_frame_table(stack: pd.DataFrame, cid: str, epoch_keys: Sequence[str]) -> pd.DataFrame:
-    sub = stack.loc[stack["catalog_id"] == cid]
+def _stack_by_star(stack: pd.DataFrame) -> dict[str, pd.DataFrame]:
+    """G09-28: the night stack split by star once (rows in stack order, as a ``catalog_id ==`` filter)."""
+    return {str(k): g for k, g in stack.groupby("catalog_id", sort=False)}
+
+
+def _star_frame_table(by_star: dict[str, pd.DataFrame], cid: str, epoch_keys: Sequence[str]) -> pd.DataFrame:
+    sub = by_star.get(str(cid))
+    sub = sub if sub is not None else pd.DataFrame()
     by_key: dict[str, pd.Series] = {}
     if not sub.empty:
         for _, row in sub.iterrows():
@@ -288,16 +287,16 @@ def _star_frame_table(stack: pd.DataFrame, cid: str, epoch_keys: Sequence[str]) 
         # EPSF-BLEND-2026-10: a fit whose box lost pixels to the saturation mask is not used in the
         # light curve (wing-only fits on draft 535 injections: +0.04..+0.11 mag), as the aperture
         # light curve drops saturated epochs.
-        sat = _coerce_bool(rec.get("psf_sat_masked"))
+        sat = coerce_bool(rec.get("psf_sat_masked"))
         # EPSF-FOOTPRINT-2026-10: fit box or sky annulus off the aligned frame's data (constant fill).
-        edge = _coerce_bool(rec.get("psf_edge_masked"))
+        edge = coerce_bool(rec.get("psf_edge_masked"))
         rows.append(
             {
                 "epoch_key": key,
                 "psf_flux": np.nan if (sat or edge) else float(pd.to_numeric(rec.get("psf_flux"), errors="coerce")),
                 "psf_flux_err": float(pd.to_numeric(rec.get("psf_flux_err"), errors="coerce")),
                 "psf_chi2": float(pd.to_numeric(rec.get("psf_chi2"), errors="coerce")),
-                "psf_fit_ok": _coerce_bool(rec.get("psf_fit_ok")) and not (sat or edge),
+                "psf_fit_ok": coerce_bool(rec.get("psf_fit_ok")) and not (sat or edge),
                 "sat_masked": sat,
                 "edge_masked": edge,
                 "aperture_flux": flux,
@@ -326,6 +325,7 @@ def write_one_internal_psf_lc(
     gain_source: str,
     git_hash: str,
     git_dirty: str,
+    by_star: dict[str, pd.DataFrame] | None = None,
 ) -> Path | None:
     from photometry_lightcurve import ensemble_normalize  # noqa: PLC0415
     from sigma_floor_core import combine_production_err_mag, rel_sigma_to_mag  # noqa: PLC0415
@@ -339,7 +339,9 @@ def write_one_internal_psf_lc(
         return None
     epoch_keys = [str(s).strip() for s in ap["source_file"].tolist()]
     n = len(epoch_keys)
-    tgt = _star_frame_table(stack, tid, epoch_keys)
+    if by_star is None:
+        by_star = _stack_by_star(stack)
+    tgt = _star_frame_table(by_star, tid, epoch_keys)
     comp_ids, ens_source = resolve_ensemble_ids(tid, photometry_dir)
     if not comp_ids:
         LOGGER.warning("[PSF-LC] %s has no ensemble membership; skip", tid)
@@ -363,16 +365,16 @@ def write_one_internal_psf_lc(
     psf_flux = tgt["psf_flux"].to_numpy(dtype=np.float64)
     usable = psf_usable_mask(psf_ok, psf_flux)
     target_mag = np.full(n, np.nan, dtype=np.float64)
-    target_mag[usable] = _flux_to_inst_mag(psf_flux)[usable]
+    target_mag[usable] = flux_to_mag(psf_flux)[usable]
 
     comp_mag: dict[str, np.ndarray] = {}
     comp_quality: dict[str, dict] = {}
     for cid in comp_ids:
-        ctab = _star_frame_table(stack, cid, epoch_keys)
+        ctab = _star_frame_table(by_star, cid, epoch_keys)
         cf = ctab["psf_flux"].to_numpy(dtype=np.float64)
         cok = psf_usable_mask(ctab["psf_fit_ok"].to_numpy(dtype=bool), cf)
         mag = np.full(n, np.nan, dtype=np.float64)
-        mag[cok] = _flux_to_inst_mag(cf)[cok]
+        mag[cok] = flux_to_mag(cf)[cok]
         comp_mag[cid] = mag
         comp_quality[cid] = {"quality": "good"}
 
@@ -550,6 +552,7 @@ def write_internal_psf_lightcurves(
     gain_value, gain_source = _load_gain_authority(phot)
     git_hash, git_dirty = _git_provenance()
     stack = _read_proc_stack(root)
+    by_star = _stack_by_star(stack)
 
     target_ids = [normalize_gaia_source_id(t) for t in target_ids if normalize_gaia_source_id(t)]
 
@@ -577,6 +580,7 @@ def write_internal_psf_lightcurves(
             gain_source=gain_source,
             git_hash=git_hash,
             git_dirty=git_dirty,
+            by_star=by_star,
         )
         if path is not None:
             written.append(str(path))

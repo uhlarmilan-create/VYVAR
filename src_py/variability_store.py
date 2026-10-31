@@ -49,9 +49,15 @@ def save_adopted_period(phot: Path, cid: str, period_d: float, t0_bjd: float) ->
     (Path(phot) / ADOPTED_PERIODS_JSON).write_text(json.dumps(cur, indent=2, sort_keys=True), encoding="utf-8")
 
 
-def tess_summary(phot: Path, cid: str) -> dict[str, Any]:
-    from tess_runner import tess_dir_for  # noqa: PLC0415
+def tess_dir_for(photometry_dir: Path, catalog_id: str) -> Path:
+    """VAR-TAB-2026-10 (Milan): TESS data of a star live in ``photometry/TESS/<gaia id>/``.
 
+    Lives here (re-exported by ``tess_runner``) so the store does not import the runner: tess_analysis
+    uses this module's pdm_theta (G10-19) and the runner imports tess_analysis (no call-time cycle)."""
+    return Path(photometry_dir) / "TESS" / str(catalog_id).strip()
+
+
+def tess_summary(phot: Path, cid: str) -> dict[str, Any]:
     return _read_json(tess_dir_for(phot, cid) / "tess_result.json")
 
 
@@ -83,7 +89,9 @@ def phase_of(t: np.ndarray, period_d: float, t0_bjd: float) -> np.ndarray:
 
 
 def pdm_theta(phase: np.ndarray, mag: np.ndarray, n_bins: int = 20) -> float:
-    """Phase dispersion Theta (Stellingwerf 1978): pooled bin variance / total variance."""
+    """Phase dispersion Theta (Stellingwerf 1978): pooled bin variance / total variance, ``n_bins``
+    equal phase bins (one cover). The caller chooses the phase origin (:func:`phase_of`) and the bins:
+    the Variability tab 20 bins from t0, the TESS verdict 10 bins from BJD 0. G10-19: the one PDM."""
     ph = np.asarray(phase, float)
     m = np.asarray(mag, float)
     ok = np.isfinite(ph) & np.isfinite(m)
@@ -96,10 +104,10 @@ def pdm_theta(phase: np.ndarray, mag: np.ndarray, n_bins: int = 20) -> float:
     for k in range(n_bins):
         x = m[b == k]
         if x.size > 1:
-            num += float(np.sum((x - x.mean()) ** 2))
+            num += float(np.var(x, ddof=1)) * (x.size - 1)
             dof += x.size - 1
     vt = float(np.var(m, ddof=1))
-    return (num / dof) / vt if dof > 0 and vt > 0 else float("nan")
+    return float((num / dof) / vt) if dof > 0 and vt > 0 else float("nan")
 
 
 def epoch_of_minimum(t: np.ndarray, mag: np.ndarray, period_d: float, n_bins: int = 50) -> float:

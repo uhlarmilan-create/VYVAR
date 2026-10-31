@@ -112,10 +112,35 @@ class EpsfSetupRun:
         }
 
 
+@st.cache_data(max_entries=16, show_spinner=False)
+def _fit_set_cached(platesolve_dir: str, selection: str, stamp: tuple) -> Any:
+    """G14-26: ``build_epsf_fit_set`` once per setup, selection and file state (``stamp``: the comparison
+    table, active targets and the aperture light curves it reads)."""
+    from epsf_science_set import build_epsf_fit_set  # noqa: PLC0415
+
+    return build_epsf_fit_set(Path(platesolve_dir), selection)
+
+
+def _fit_set_stamp(ps: Path) -> tuple:
+    from ui_cache import dir_stamp, file_stamp  # noqa: PLC0415
+
+    phot = ps / "photometry"
+    return (file_stamp(phot / "comparison_stars_per_target.csv", phot / "active_targets.csv")
+            + dir_stamp(phot / "lightcurves", "lightcurve_*.csv"))
+
+
+@st.cache_data(max_entries=8, show_spinner=False)
+def _compare_draft_cached(platesolve_dir: str, catalog_ids: tuple, stamp: tuple) -> pd.DataFrame:
+    """G14-26: the ePSF / aperture scatter table once per file state of the light curves."""
+    from epsf_lc_compare import compare_draft  # noqa: PLC0415
+
+    return compare_draft(Path(platesolve_dir), list(catalog_ids))
+
+
 def epsf_run_plan(all_setups: dict[str, dict[str, Any]], selection: str) -> list[EpsfSetupRun]:
     """EPSF-MULTISETUP-2026-10 (Milan 2026-10-19): RUN ePSF measures every setup of the draft with the same
     target selection - each setup has its own targets with aperture photometry and its own comparison stars."""
-    from epsf_science_set import EpsfFitSet, build_epsf_fit_set
+    from epsf_science_set import EpsfFitSet
 
     plan = []
     for setup, paths in all_setups.items():
@@ -132,7 +157,7 @@ def epsf_run_plan(all_setups: dict[str, dict[str, Any]], selection: str) -> list
             fit = EpsfFitSet(frozenset(), frozenset(), selection=selection, empty_reason="setup directory not found")
             missing.insert(0, "setup directory")
         else:
-            fit = build_epsf_fit_set(ps, selection)
+            fit = _fit_set_cached(str(ps), str(selection), _fit_set_stamp(ps))
         plan.append(EpsfSetupRun(setup, ps, ms_fits, ms_csv, frames, fit, tuple(missing)))
     return plan
 
@@ -213,7 +238,7 @@ def _render_export_button(cfg: "AppConfig", all_setups: dict[str, dict[str, Any]
 
 
 def _render_light_curves(ps_dir: Path, setup: str) -> None:
-    from epsf_lc_compare import compare_draft, frame_fwhm_map, load_pair
+    from epsf_lc_compare import frame_fwhm_map, load_pair
 
     tg = psf_lightcurve_targets(ps_dir)
     if tg.empty:
@@ -241,14 +266,21 @@ def _render_light_curves(ps_dir: Path, setup: str) -> None:
 
     p = find_epsf_export(ps_dir / "photometry", str(cid), setup)
     if p is not None:
-        st.download_button(f"Download ePSF light curve ({p.name})", data=p.read_bytes(), file_name=p.name,
+        st.download_button(f"Download ePSF light curve ({p.name})", data=p.read_bytes, file_name=p.name,  # G14-29
                            mime="text/plain", key=f"epsf_dl_{setup}_{cid}")
 
     with st.expander("All measured targets: ePSF vs aperture scatter", expanded=False):
-        table = compare_draft(ps_dir, tg["catalog_id"].tolist())
-        if table.empty:
-            st.caption("No pairs to compare.")
+        # G14-26: computed on request (the collapsed expander's body runs on every rerun), cached per file state
+        if not st.checkbox("Compare all targets", key=f"epsf_cmp_{setup}"):
+            table = None
         else:
+            from ui_cache import dir_stamp  # noqa: PLC0415
+
+            table = _compare_draft_cached(str(ps_dir), tuple(tg["catalog_id"].tolist()),
+                                          dir_stamp(Path(ps_dir) / "photometry" / "lightcurves"))
+        if table is not None and table.empty:
+            st.caption("No pairs to compare.")
+        elif table is not None:
             table.insert(1, "star", [labels.get(c, c) for c in table["catalog_id"]])
             table["psf_over_ap"] = table["psf_p2p_mmag"] / table["ap_p2p_mmag"]
             st.caption(

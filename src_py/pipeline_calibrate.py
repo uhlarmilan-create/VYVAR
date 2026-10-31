@@ -10,6 +10,7 @@ import logging
 import math
 import os
 import traceback
+from contextlib import ExitStack
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
@@ -19,6 +20,7 @@ from astropy.io import fits
 
 from config import AppConfig, resolve_detection_threshold_sigma
 from database import VyvarDatabase
+from draft_provenance import manifest_batch, manifest_batched
 from calibration import (
     MasterResamplingError,
     filter_light_paths_for_calibration_db,
@@ -70,10 +72,6 @@ from utils import exposure_seconds, norm_fits_path_key  # LAYER-2026-10: moved t
 # pipeline -> pipeline_calibrate -> pipeline at module load (spawn children
 # import this module first).
 LOGGER = logging.getLogger("pipeline")
-
-#: DAOStarFinder kernel FWHM hint (px) for the post-calibration QC: a star-scale default.
-#: Not derived from segmentation (that preferred hot pixels / cosmics and pulled it low).
-_DAO_FWHM_GUESS_PX = 4.5
 
 def _obs_group_key_from_light_path(src: Path) -> str:
     with fits.open(src, memmap=False) as hdul:
@@ -379,36 +377,7 @@ def draft_median_pointing_icrs_deg(db: VyvarDatabase, draft_id: int) -> tuple[fl
     return float(statistics.median(ras)), float(statistics.median(des))
 
 
-def _estimate_fov_deg_from_header(hdr: fits.Header) -> float | None:
-    """Rough field diameter in degrees from WCS pixel scale x ``NAXIS*`` (fallback when CDELT missing)."""
-    try:
-        n1 = int(hdr.get("NAXIS1", 0) or 0)
-        n2 = int(hdr.get("NAXIS2", 0) or 0)
-        if n1 <= 0 or n2 <= 0:
-            return None
-        d1 = hdr.get("CDELT1")
-        d2 = hdr.get("CDELT2")
-        if d1 is not None and d2 is not None:
-            a, b = abs(float(d1)), abs(float(d2))
-            if math.isfinite(a) and math.isfinite(b) and a > 0 and b > 0:
-                return float(math.hypot(a * n1, b * n2))
-        c11 = hdr.get("CD1_1")
-        c12 = hdr.get("CD1_2")
-        c21 = hdr.get("CD2_1")
-        c22 = hdr.get("CD2_2")
-        if None not in (c11, c12, c21, c22):
-            a11, a12 = float(c11), float(c12)
-            a21, a22 = float(c21), float(c22)
-            if all(math.isfinite(x) for x in (a11, a12, a21, a22)):
-                wx = abs(a11) * n1 + abs(a12) * n2
-                hy = abs(a21) * n1 + abs(a22) * n2
-                if wx > 0 and hy > 0:
-                    return float(math.hypot(wx, hy))
-    except (TypeError, ValueError):
-        return None
-    return None
-
-
+@manifest_batched  # G01-13: one manifest write per stage
 def sync_obs_files_drift_arcmin_for_draft(
     db: VyvarDatabase,
     draft_id: int,
@@ -471,6 +440,29 @@ def sync_obs_files_drift_arcmin_for_draft(
     return n
 
 
+def stamp_frame_qc_headers(hdr: fits.Header, qc: Mapping[str, Any]) -> None:
+    """FWHM-ONCE-2026-10: write the frame's one QC measurement into its header (VY_FWHM the aperture FWHM,
+    VY_ELONG, VY_NSTAR, VY_QCBG the sky outside the star mask) - the values frame QC has in the manifest."""
+    fw = _finite_or_none(qc.get("fwhm_mean"))
+    el = _finite_or_none(qc.get("elongation_mean"))
+    sky = _finite_or_none(qc.get("sky_background"))
+    if fw is not None:
+        hdr["VY_FWHM"] = (round(fw, 4), "Estimated FWHM [pix]")
+    if el is not None:
+        hdr["VY_ELONG"] = (round(el, 4), "Estimated elongation (a/b)")
+    hdr["VY_NSTAR"] = (int(qc.get("star_count") or 0), "Approx. star detections (QC)")
+    if sky is not None:
+        hdr["VY_QCBG"] = (float(sky), "QC sky median outside the star mask [ADU]")
+
+
+def _finite_or_none(v: Any) -> float | None:
+    try:
+        x = float(v)
+    except (TypeError, ValueError):
+        return None
+    return x if math.isfinite(x) else None
+
+
 def _perf10_lookup_qc(
     perf10_qc_results: dict[str, dict[str, Any]],
     archive: Path,
@@ -504,59 +496,30 @@ def _save_qc_star_lists(ap: Path, lists: dict[str, Any]) -> None:
         logging.warning("[QC] star lists not saved: %s", exc)
 
 
-def apply_perf10_dao_qc_to_obs_files(
-    *,
-    db: VyvarDatabase,
-    draft_id: int,
-    archive_path: Path | str,
-    perf10_qc_results: dict[str, dict[str, Any]],
-) -> dict[str, Any]:
-    """Write calibration-time DAO QC to ``manifest files[]`` (same columns as RAM QC step 5)."""
-    import numpy as np
+def _store_frame_qc(db: VyvarDatabase, draft_id: int, rid: int, m: dict[str, Any]) -> None:
+    """DAO frame metrics -> ``manifest files[]`` (rejected_auto reset to 0; the FWHM rule runs after all frames)."""
+    _el = m.get("elongation_mean")
+    _el_db = float(_el) if _el is not None and math.isfinite(float(_el)) and float(_el) > 0.0 else None
+    db.update_obs_file_quality_by_id(int(draft_id), rid,
+        fwhm=m.get("fwhm_mean"),
+        sky_level=m.get("sky_background"),
+        star_count=int(m.get("star_count") or 0),
+        rejected_auto=0,
+        inspection_jd=m.get("inspection_jd"),
+        ra_deg=m.get("ra_deg"),
+        de_deg=m.get("de_deg"),
+        exptime_sec=m.get("exposure_sec"),
+        elongation_mean=_el_db,
+        noise_sigma=m.get("noise_sigma"),
+    )
 
-    ap = Path(archive_path).expanduser()
 
-    rows = db.fetch_draft_light_rows_for_quality(int(draft_id))
-    fwhm_by_id: dict[int, float] = {}
-    n_updated = 0
-    errors: list[str] = []
-    _qc_star_lists: dict[str, Any] = {}
-
-    for row in rows:
-        rid = int(row["ID"])
-        qc = _perf10_lookup_qc(perf10_qc_results, ap, str(row.get("FILE_PATH") or ""))
-        if qc is None or qc.get("error"):
-            continue
-        try:
-            _el = qc.get("elongation_mean")
-            _el_db = (
-                float(_el)
-                if _el is not None and math.isfinite(float(_el)) and float(_el) > 0.0
-                else None
-            )
-            db.update_obs_file_quality_by_id(int(draft_id), rid,
-                fwhm=qc.get("fwhm_mean"),
-                sky_level=qc.get("sky_background"),
-                star_count=int(qc.get("star_count") or 0),
-                rejected_auto=0,
-                inspection_jd=qc.get("inspection_jd"),
-                ra_deg=qc.get("ra_deg"),
-                de_deg=qc.get("de_deg"),
-                exptime_sec=qc.get("exposure_sec"),
-                elongation_mean=_el_db,
-                noise_sigma=qc.get("noise_sigma"),
-            )
-            _take_qc_star_list(_qc_star_lists, str(row.get("FILE_PATH") or ""), qc)
-            n_updated += 1
-            fv = qc.get("fwhm_mean")
-            if fv is not None and math.isfinite(float(fv)):
-                fwhm_by_id[rid] = float(fv)
-        except Exception as exc:  # noqa: BLE001
-            errors.append(f"{row.get('FILE_PATH')}: {exc}")
-
-    _save_qc_star_lists(ap, _qc_star_lists)
-    logging.info("[PERF-10] Updated manifest files[] QC for %d frames during calibration", n_updated)
-
+def _qc_reject_and_drift(
+    db: VyvarDatabase, draft_id: int, rows: list[dict[str, Any]], fwhm_by_id: dict[int, float]
+) -> tuple[float | None, int, Any, Any]:
+    """Frame QC tail shared by the calibration-time (PERF-10) and the RAM QC (G01-17): median FWHM,
+    ``rejected_auto`` for FWHM > 1.5 x median, then the drift columns against the median pointing.
+    Returns (median FWHM, number auto-rejected, median RA, median Dec)."""
     vals = [v for v in fwhm_by_id.values() if math.isfinite(v) and v > 0]
     med: float | None
     if vals:
@@ -581,7 +544,45 @@ def apply_perf10_dao_qc_to_obs_files(
 
     med_ra, med_de = draft_median_pointing_icrs_deg(db, int(draft_id))
     sync_obs_files_drift_arcmin_for_draft(db, int(draft_id), ref_ra_deg=med_ra, ref_de_deg=med_de)
-    _dl_suggest = 5.0
+    return med, auto_n, med_ra, med_de
+
+
+@manifest_batched  # G01-13: one manifest write per stage
+def apply_perf10_dao_qc_to_obs_files(
+    *,
+    db: VyvarDatabase,
+    draft_id: int,
+    archive_path: Path | str,
+    perf10_qc_results: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    """Write calibration-time DAO QC to ``manifest files[]`` (same columns as RAM QC step 5)."""
+    ap = Path(archive_path).expanduser()
+
+    rows = db.fetch_draft_light_rows_for_quality(int(draft_id))
+    fwhm_by_id: dict[int, float] = {}
+    n_updated = 0
+    errors: list[str] = []
+    _qc_star_lists: dict[str, Any] = {}
+
+    for row in rows:
+        rid = int(row["ID"])
+        qc = _perf10_lookup_qc(perf10_qc_results, ap, str(row.get("FILE_PATH") or ""))
+        if qc is None or qc.get("error"):
+            continue
+        try:
+            _store_frame_qc(db, int(draft_id), rid, qc)
+            _take_qc_star_list(_qc_star_lists, str(row.get("FILE_PATH") or ""), qc)
+            n_updated += 1
+            fv = qc.get("fwhm_mean")
+            if fv is not None and math.isfinite(float(fv)):
+                fwhm_by_id[rid] = float(fv)
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"{row.get('FILE_PATH')}: {exc}")
+
+    _save_qc_star_lists(ap, _qc_star_lists)
+    logging.info("[PERF-10] Updated manifest files[] QC for %d frames during calibration", n_updated)
+
+    med, auto_n, med_ra, med_de = _qc_reject_and_drift(db, int(draft_id), rows, fwhm_by_id)
     return {
         "draft_id": int(draft_id),
         "n_lights": len(rows),
@@ -592,10 +593,10 @@ def apply_perf10_dao_qc_to_obs_files(
         "auto_rejected": int(auto_n),
         "errors": errors,
         "perf10_n_updated": int(n_updated),
-        "suggested_drift_limit_arcmin": float(_dl_suggest),
     }
 
 
+@manifest_batched  # G01-13: one manifest write per stage
 def run_draft_ram_calibration_qc_to_obs_files(
     *,
     db: VyvarDatabase,
@@ -608,16 +609,17 @@ def run_draft_ram_calibration_qc_to_obs_files(
     equipment_id: int | None = None,
     progress_cb: Callable[[int, int, str], None] | None = None,
     pedestal_temp_tol_c: float,
+    flat_substitute_by_obs_key: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
     """Calibrate each draft light **in RAM only**, DAO metrics -> ``manifest files[]``; FWHM x1.5 reject.
 
     ``pedestal_temp_tol_c``: ``calibration_master_ccd_temp_tolerance_c`` for the CAL-DIAG pedestal darks (G01-46).
+    ``flat_substitute_by_obs_key``: as in :func:`calibrate_lights_to_calibrated`; the FLAT offsets are looked up
+    with the same ``_flat_offsets_for_masters``, so QC measures the pixels the calibration writes (G01-17).
 
     No calibrated FITS are written. Uses the same master selection rules as :func:`calibrate_lights_to_calibrated`.
     After QC, :func:`sync_obs_files_drift_arcmin_for_draft` writes ``DRIFT`` / ``DRIFT_DRA`` / ``DRIFT_DDE``.
     """
-    import numpy as np
-
     ap = Path(archive_path).expanduser()
     db_cal = db  # G01-15: the run's database (flat offsets, saturation) - never None here
 
@@ -631,6 +633,8 @@ def run_draft_ram_calibration_qc_to_obs_files(
     if master_dark_path is not None and Path(master_dark_path).exists():
         md_path_ok = Path(master_dark_path)
 
+    flat_offsets = _flat_offsets_for_masters(mf_merged.values(), db_cal)
+    flat_substitutes = {str(k): str(v) for k, v in (flat_substitute_by_obs_key or {}).items() if v}
     flat_cache: dict[str, Any] = {}
     flat_median_scale: dict[str, float] = {}
     dark_cache: dict[tuple[Any, ...], Any] = {}
@@ -638,7 +642,6 @@ def run_draft_ram_calibration_qc_to_obs_files(
     n = len(rows)
     fwhm_by_id: dict[int, float] = {}
     errors: list[str] = []
-    fov_sample_deg: float | None = None
     _qc_star_lists: dict[str, Any] = {}
 
     cal_diag_session = CalDiagSession()
@@ -696,14 +699,10 @@ def run_draft_ram_calibration_qc_to_obs_files(
                 progress_cb(i, n, f"CAL-DIAG skip {raw_fp.name}")
             continue
 
-        md_use = md_path_ok
+        md_use = _resolve_dark_path_for_light(
+            obs_group_key=_ok, master_dark_path=md_path_ok, master_dark_by_obs_key=master_dark_by_obs_key
+        )
         light_bx, _ = fits_binning_xy_from_header(hdr0)
-        if master_dark_by_obs_key:
-            _alt = master_dark_by_obs_key.get(_ok)
-            if _alt is not None and str(_alt).strip() != "":
-                _pa = Path(_alt)
-                if _pa.is_file():
-                    md_use = _pa
         gr = gate_result_for_frame(
             cal_diag_session,
             obs_group_key=_ok,
@@ -722,6 +721,8 @@ def run_draft_ram_calibration_qc_to_obs_files(
                 db=db_cal,
                 id_equipments=equipment_id,
                 cal_diag_gate_result=gr,
+                flat_offsets=flat_offsets,
+                flat_substitutes=flat_substitutes,
             )
         except Exception as exc:  # noqa: BLE001
             errors.append(f"{raw_fp.name}: {exc}")
@@ -732,22 +733,7 @@ def run_draft_ram_calibration_qc_to_obs_files(
 
         m = _quality_inspection_dao_metrics_array(data, hdr)
         _take_qc_star_list(_qc_star_lists, str(row.get("FILE_PATH") or ""), m)
-        if fov_sample_deg is None:
-            fov_sample_deg = _estimate_fov_deg_from_header(hdr)
-        _el = m.get("elongation_mean")
-        _el_db = float(_el) if _el is not None and math.isfinite(float(_el)) and float(_el) > 0.0 else None
-        db.update_obs_file_quality_by_id(int(draft_id), rid,
-            fwhm=m.get("fwhm_mean"),
-            sky_level=m.get("sky_background"),
-            star_count=int(m.get("star_count") or 0),
-            rejected_auto=0,
-            inspection_jd=m.get("inspection_jd"),
-            ra_deg=m.get("ra_deg"),
-            de_deg=m.get("de_deg"),
-            exptime_sec=m.get("exposure_sec"),
-            elongation_mean=_el_db,
-            noise_sigma=m.get("noise_sigma"),
-        )
+        _store_frame_qc(db, int(draft_id), rid, m)
         fv = m.get("fwhm_mean")
         if fv is not None and math.isfinite(float(fv)):
             fwhm_by_id[rid] = float(fv)
@@ -755,34 +741,9 @@ def run_draft_ram_calibration_qc_to_obs_files(
             progress_cb(i, n, f"QC RAM {raw_fp.name}")
 
     _save_qc_star_lists(ap, _qc_star_lists)
-    vals = [v for v in fwhm_by_id.values() if math.isfinite(v) and v > 0]
-    med: float | None
-    if vals:
-        med = float(np.median(np.asarray(vals, dtype=np.float64)))
-        if not math.isfinite(med) or med <= 0:
-            med = None
-    else:
-        med = None
-
-    thr = med * 1.5 if med is not None else None
-    light_rows_ram = db.fetch_draft_light_rows_for_quality(int(draft_id))
-    auto_n = 0
-    for row in light_rows_ram:
-        rid = int(row["ID"])
-        rej = 0
-        if med is not None and thr is not None:
-            fv = fwhm_by_id.get(rid)
-            if fv is not None and math.isfinite(float(fv)) and float(fv) > thr:
-                rej = 1
-        if rej:
-            auto_n += 1
-        db.update_obs_file_quality_by_id(int(draft_id), rid, rejected_auto=rej)
-
-    med_ra, med_de = draft_median_pointing_icrs_deg(db, int(draft_id))
-    sync_obs_files_drift_arcmin_for_draft(db, int(draft_id), ref_ra_deg=med_ra, ref_de_deg=med_de)
-    _dl_suggest_ram = 5.0
-    if fov_sample_deg is not None and math.isfinite(float(fov_sample_deg)) and float(fov_sample_deg) > 0:
-        _dl_suggest_ram = max(0.5, min(180.0, 0.1 * float(fov_sample_deg) * 60.0))
+    med, auto_n, med_ra, med_de = _qc_reject_and_drift(
+        db, int(draft_id), db.fetch_draft_light_rows_for_quality(int(draft_id)), fwhm_by_id
+    )
     result = {
         "draft_id": int(draft_id),
         "n_lights": n,
@@ -792,7 +753,6 @@ def run_draft_ram_calibration_qc_to_obs_files(
         "median_de_deg": med_de,
         "auto_rejected": int(auto_n),
         "errors": errors,
-        "suggested_drift_limit_arcmin": float(_dl_suggest_ram),
     }
     return result
 
@@ -958,7 +918,10 @@ def _qc_pack_from_config(
             _dbp = Path(cfg.database_path)
             if _dbp.is_file():
                 _vdb = VyvarDatabase(_dbp)
-                id_equipments = _vdb.get_draft_equipment_id(int(draft_id))
+                try:
+                    id_equipments = _vdb.get_draft_equipment_id(int(draft_id))
+                finally:
+                    _vdb.conn.close()  # G13-15: was left open
         except Exception:  # noqa: BLE001
             id_equipments = None
     return {
@@ -987,125 +950,6 @@ def _qc_center_crop_for_stars(data: "np.ndarray", max_side: int = 1000) -> "np.n
     y0, y1 = max(0, cy - hs), min(h, cy + hs)
     x0, x1 = max(0, cx - ws), min(w, cx + ws)
     return np.asarray(a[y0:y1, x0:x1], dtype=np.float32)
-
-
-def _half_flux_radius_in_cutout(cut: "np.ndarray", xc: float, yc: float) -> float:
-    import numpy as np
-
-    cut = np.asarray(cut, dtype=np.float64)
-    h, w = cut.shape
-    yy, xx = np.mgrid[0:h, 0:w].astype(np.float64)
-    r = np.sqrt((xx - xc) ** 2 + (yy - yc) ** 2).ravel()
-    pix = np.maximum(cut.ravel(), 0.0)
-    order = np.argsort(r)
-    r = r[order]
-    pix = pix[order]
-    tot = float(np.sum(pix))
-    if tot <= 0 or not math.isfinite(tot):
-        return float("nan")
-    cum = np.cumsum(pix)
-    idx = int(np.searchsorted(cum, 0.5 * tot))
-    idx = min(max(idx, 0), cum.size - 1)
-    return float(r[idx])
-
-
-def _mean_hfr_bright_stars_dao(
-    crop: "np.ndarray",
-    *,
-    max_stars: int = 50,
-    dao_detection_sigma: float = 5.0,
-) -> tuple[float | None, int, float | None]:
-    """Median half-flux radius [px] on up to ``max_stars`` brightest DAO sources.
-
-    Returns (HFR, n_detected, fwhm_guess_px).
-    """
-    import numpy as np
-    from photutils.detection import DAOStarFinder
-
-    img = np.asarray(crop, dtype=np.float32)
-    finite = np.isfinite(img)
-    if not np.any(finite):
-        return None, 0, None
-    _, med, std = plain_mean_med_std(img[finite])
-    std = float(std)
-    if not math.isfinite(std) or std <= 0:
-        return None, 0, None
-    img2 = np.asarray(img - float(med), dtype=np.float32)
-    img2 = np.nan_to_num(img2, nan=0.0, posinf=0.0, neginf=0.0)
-    if float(np.nanmedian(img2)) < 0:
-        img2 = -img2
-    fwhm_guess = _DAO_FWHM_GUESS_PX
-    sig0 = float(dao_detection_sigma) if math.isfinite(float(dao_detection_sigma)) and float(dao_detection_sigma) > 0 else 5.0
-    daofind = DAOStarFinder(
-        fwhm=float(fwhm_guess),
-        threshold=sig0 * std,
-        **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
-    )
-    tbl = daofind(img2)
-    if tbl is None or len(tbl) == 0:
-        daofind = DAOStarFinder(
-            fwhm=float(fwhm_guess),
-            threshold=max(3.5, 0.7 * sig0) * std,
-            **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
-        )
-        tbl = daofind(img2)
-    if tbl is None or len(tbl) == 0:
-        return None, 0, float(fwhm_guess)
-    n_det = int(len(tbl))
-    tbl.sort("flux")
-    tbl = tbl[::-1]
-    h, w = img2.shape
-    half = 10
-    hfrs: list[float] = []
-    for i in range(min(max_stars, len(tbl))):
-        x0 = float(tbl["x_centroid"][i])
-        y0 = float(tbl["y_centroid"][i])
-        xi, yi = int(round(x0)), int(round(y0))
-        y1, y2 = max(0, yi - half), min(h, yi + half + 1)
-        x1, x2 = max(0, xi - half), min(w, xi + half + 1)
-        sl = img2[y1:y2, x1:x2]
-        if sl.shape[0] < 5 or sl.shape[1] < 5:
-            continue
-        hfr = _half_flux_radius_in_cutout(sl, x0 - x1, y0 - y1)
-        if math.isfinite(hfr) and 0.2 < hfr < 50.0:
-            hfrs.append(hfr)
-    if not hfrs:
-        return None, n_det, float(fwhm_guess)
-    return float(np.nanmedian(np.asarray(hfrs, dtype=np.float64))), n_det, float(fwhm_guess)
-
-
-def _post_calibration_qc_eval(
-    data: "np.ndarray",
-    *,
-    dao_detection_sigma: float,
-) -> dict[str, Any]:
-    """Sky stats on full frame; star HFR/count on central crop if frame is large (measurements only,
-    no pass/fail limits - CFG-REVIEW-2026-10)."""
-    import numpy as np
-
-    img = np.asarray(data, dtype=np.float32)
-    finite = np.isfinite(img)
-    if not np.any(finite):
-        return {"hfr": None, "n_stars": 0, "sky_mean": None, "sky_median": None, "sky_rms": None}
-
-    sky_mean, sky_med, sky_rms = plain_mean_med_std(img[finite])
-    sky_mean = float(sky_mean)
-    sky_med = float(sky_med)
-    sky_rms = float(sky_rms)
-
-    crop = _qc_center_crop_for_stars(img, 1000)
-    _ds = float(dao_detection_sigma)
-    if not math.isfinite(_ds) or _ds <= 0:
-        _ds = 5.0
-    hfr_m, n_star, _fwhm_guess = _mean_hfr_bright_stars_dao(crop, max_stars=50, dao_detection_sigma=_ds)
-
-    return {
-        "hfr": hfr_m,
-        "n_stars": int(n_star),
-        "sky_mean": sky_mean,
-        "sky_median": sky_med,
-        "sky_rms": sky_rms,
-    }
 
 
 def _strip_raw_linearity_header_keywords(hdr: fits.Header) -> None:
@@ -1451,8 +1295,8 @@ def _calibrate_one_light_disk(
     Uses ``fits.open(..., memmap=False)`` and ``with`` blocks so BZERO/BSCALE frames load reliably and
     file handles close after each read (arrays are copied into RAM before processing).
 
-    Returns ``(used_dark, used_flat, qc_summary, vy_cflag, perf10_qc)`` where ``qc_summary`` is set when
-    post-calibration QC ran; ``perf10_qc`` holds the DAO inspection metrics (PERF-10);
+    Returns ``(used_dark, used_flat, vy_cflag, perf10_qc)``; ``perf10_qc`` holds the frame's one QC
+    measurement (PERF-10, FWHM-ONCE-2026-10), also stamped into the header;
     ``vy_cflag`` matches ``VY_CFLAG`` written to the FITS (see calibration decision table).
 
     ``db_updates`` (SPEED-2026-10): when a list is given, the manifest / DB updates of this frame are
@@ -1484,45 +1328,13 @@ def _calibrate_one_light_disk(
         flat_substitutes=flat_substitutes,
     )
 
-    qc_summary: dict[str, Any] | None = None
     _osc_mosaic = _valid_bayerpat_from_header(hdr) is not None
-    if (used_dark or used_flat) and qc_pack and qc_pack.get("enabled") and not _osc_mosaic:
-        qc_summary = _post_calibration_qc_eval(
-            np.asarray(data, dtype=np.float32),
-            dao_detection_sigma=float(qc_pack.get("dao_detection_sigma", 5.0)),
-        )
-        hfrv = qc_summary.get("hfr")
-        if hfrv is not None and math.isfinite(float(hfrv)):
-            hdr["VY_QCHFR"] = (float(hfrv), "QC median HFR [px]")
-        hdr["VY_QCNS"] = (int(qc_summary["n_stars"]), "QC DAO detections (central crop if large)")
-        sm = qc_summary.get("sky_median")
-        if sm is not None and math.isfinite(float(sm)):
-            hdr["VY_QCBG"] = (float(sm), "QC sigma-clipped sky median")
-        sr = qc_summary.get("sky_rms")
-        if sr is not None and math.isfinite(float(sr)):
-            hdr["VY_QCRMS"] = (float(sr), "QC sigma-clipped sky RMS")
-        if qc_pack.get("draft_id") is not None or (
-            qc_pack.get("observation_id") not in (None, "")
-        ):
-            _upd_qc = {
-                "draft_id": qc_pack.get("draft_id"),
-                "qc_hfr": qc_summary.get("hfr"),
-                "qc_stars": int(qc_summary["n_stars"]),
-                "qc_background": qc_summary.get("sky_median"),
-                "qc_bg_rms": qc_summary.get("sky_rms"),
-            }
-            if db_updates is not None:
-                db_updates.append(("qc", _upd_qc))
-            else:
-                try:
-                    db_q = db if db is not None else _db_for_calibration_tasks(qc_pack)
-                    if db_q is not None:
-                        db_q.update_obs_file_qc_by_raw_light_path(src, **_upd_qc)
-                except Exception as exc:  # noqa: BLE001
-                    LOGGER.debug("manifest files[] QC update failed: %s", exc)
-
+    # FWHM-ONCE-2026-10 (G01-16): the frame's one QC measurement (frame_metrics.measure_frame on the central
+    # crop) - FWHM, elongation, star count, sky; frame QC reads it from the manifest, every later stage from
+    # the header (VY_FWHM / VY_ELONG / VY_NSTAR / VY_QCBG). ``qc_after_calibrate_enabled`` off: the frame is
+    # measured once later (RAM QC of the night run, else the preprocess).
     perf10_qc: dict[str, Any] | None = None
-    if not _osc_mosaic and qc_pack:
+    if not _osc_mosaic and qc_pack and qc_pack.get("enabled"):
         try:
             perf10_qc = _quality_inspection_dao_metrics_array(
                 np.asarray(data, dtype=np.float32),
@@ -1530,6 +1342,8 @@ def _calibrate_one_light_disk(
             )
         except Exception as exc:  # noqa: BLE001
             logging.warning("[PERF-10] DAO QC in calibrate failed for %s: %s", src.name, exc)
+        if perf10_qc is not None and not perf10_qc.get("error"):
+            stamp_frame_qc_headers(hdr, perf10_qc)
 
     from cal_stage import stamp_cal_stage_headers  # noqa: PLC0415
 
@@ -1547,7 +1361,7 @@ def _calibrate_one_light_disk(
                     db_cs.update_obs_file_cal_stage_by_raw_light_path(src, **_upd_cs)
             except Exception as exc:  # noqa: BLE001
                 LOGGER.debug("manifest cal_stage sync failed after calibrate: %s", exc)
-    return used_dark, used_flat, qc_summary, _hdr_vy_cflag_str(hdr), perf10_qc
+    return used_dark, used_flat, _hdr_vy_cflag_str(hdr), perf10_qc
 
 
 def _apply_cal_frame_db_updates(
@@ -1592,7 +1406,7 @@ def _init_calibrate_frame_worker(ctx: dict[str, Any]) -> None:
 def _calibrate_frame_task(item: tuple[str, str]) -> dict[str, Any]:
     """Calibrate one LIGHT (the one path for any number of workers).
 
-    Returns ``ok``, ``skipped``, ``used_dark``, ``used_flat``, ``qc_summary``, ``vy_cflag``,
+    Returns ``ok``, ``skipped``, ``used_dark``, ``used_flat``, ``vy_cflag``,
     ``perf10_qc``, ``db_updates`` and the infolog lines (``events``); the run process applies the
     DB updates and writes the lines in frame order.
     """
@@ -1626,7 +1440,7 @@ def _calibrate_frame_task(item: tuple[str, str]) -> dict[str, Any]:
                 gr = gate_result_for_frame(session, obs_group_key=_ok, dark_path=md_use, light_binning=light_bx)
             mf = {str(k): (Path(v) if v else None) for k, v in (st.get("masterflat_by_filter") or {}).items()}
             updates: list[tuple[str, dict[str, Any]]] = []
-            used_dark, used_flat, qc_sum, flags, perf10_qc = _calibrate_one_light_disk(
+            used_dark, used_flat, flags, perf10_qc = _calibrate_one_light_disk(
                 src=src,
                 dst=dst,
                 master_dark_path=md_use,
@@ -1646,7 +1460,6 @@ def _calibrate_frame_task(item: tuple[str, str]) -> dict[str, Any]:
                 "skipped": False,
                 "used_dark": bool(used_dark),
                 "used_flat": bool(used_flat),
-                "qc_summary": qc_sum,
                 "vy_cflag": flags,
                 "perf10_qc": perf10_qc,
                 "db_updates": updates,
@@ -1724,18 +1537,50 @@ def _passthrough_lights_to_calibrated(
             db_pt = VyvarDatabase(Path(database_path))
     except Exception:  # noqa: BLE001
         db_pt = None
-    for i, src in enumerate(files, start=1):
-        rel = src.relative_to(lights_root)
-        dst = calibrated_root / rel
-        if progress_cb is not None:
-            progress_cb(i, total, f"Passthrough {src.name}")
-        try:
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            if dst.exists():
-                # Reuse previous calibrated output; do not fail when rerunning.
+    # G01-13: one manifest write for the passthrough stage
+    with manifest_batch(db_pt, draft_id):
+        for i, src in enumerate(files, start=1):
+            rel = src.relative_to(lights_root)
+            dst = calibrated_root / rel
+            if progress_cb is not None:
+                progress_cb(i, total, f"Passthrough {src.name}")
+            try:
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                if dst.exists():
+                    # Reuse previous calibrated output; do not fail when rerunning.
+                    stats["processed"] += 1
+                    stats["copied_only"] += 1
+                    stats["passthrough_existing_reused"] += 1
+                    if db_pt is not None:
+                        try:
+                            db_pt.update_obs_file_calibration_state_by_raw_light_path(
+                                src,
+                                draft_id=draft_id,
+                                is_calibrated=0,
+                                calib_type="PASSTHROUGH",
+                                calib_flags="P",
+                            )
+                        except Exception:  # noqa: BLE001
+                            pass
+                    continue
+                with fits.open(src, memmap=False) as hdul:
+                    hdr = hdul[0].header.copy()
+                    data = np.asarray(hdul[0].data, dtype=np.float32)
+                hdr["VYVARCAL"] = (True, "VYVAR calibrated output")
+                hdr["VY_DARK"] = (False, "MasterDark applied")
+                hdr["VY_FLAT"] = (False, "MasterFlat applied")
+                hdr["VY_CFLAG"] = ("P", "DF full, D dark only, FS no flat, P raw")
+                hdr["VY_CALIB"] = ("PASSTHROUGH", "Calibration mode")
+                hdr["VY_CALST"] = (0, "Calib status: 2 DF, 1 dark only, 0 raw")
+                hdr.add_history("No calibration frames applied.")
+                passthrough_cal_diag_headers(hdr)
+                from cal_stage import stamp_cal_stage_headers  # noqa: PLC0415
+
+                cal_stage_token = "PASSTHROUGH"
+                cal_datasum = stamp_cal_stage_headers(hdr, data, stage=cal_stage_token)
+                fits.writeto(dst, _as_fits_float32_image(data), header=hdr, overwrite=True)
                 stats["processed"] += 1
                 stats["copied_only"] += 1
-                stats["passthrough_existing_reused"] += 1
                 if db_pt is not None:
                     try:
                         db_pt.update_obs_file_calibration_state_by_raw_light_path(
@@ -1745,46 +1590,16 @@ def _passthrough_lights_to_calibrated(
                             calib_type="PASSTHROUGH",
                             calib_flags="P",
                         )
+                        db_pt.update_obs_file_cal_stage_by_raw_light_path(
+                            src,
+                            draft_id=draft_id,
+                            cal_stage=cal_stage_token,
+                            cal_datasum=cal_datasum,
+                        )
                     except Exception:  # noqa: BLE001
                         pass
-                continue
-            with fits.open(src, memmap=False) as hdul:
-                hdr = hdul[0].header.copy()
-                data = np.asarray(hdul[0].data, dtype=np.float32)
-            hdr["VYVARCAL"] = (True, "VYVAR calibrated output")
-            hdr["VY_DARK"] = (False, "MasterDark applied")
-            hdr["VY_FLAT"] = (False, "MasterFlat applied")
-            hdr["VY_CFLAG"] = ("P", "DF full, D dark only, FS no flat, P raw")
-            hdr["VY_CALIB"] = ("PASSTHROUGH", "Calibration mode")
-            hdr["VY_CALST"] = (0, "Calib status: 2 DF, 1 dark only, 0 raw")
-            hdr.add_history("No calibration frames applied.")
-            passthrough_cal_diag_headers(hdr)
-            from cal_stage import stamp_cal_stage_headers  # noqa: PLC0415
-
-            cal_stage_token = "PASSTHROUGH"
-            cal_datasum = stamp_cal_stage_headers(hdr, data, stage=cal_stage_token)
-            fits.writeto(dst, _as_fits_float32_image(data), header=hdr, overwrite=True)
-            stats["processed"] += 1
-            stats["copied_only"] += 1
-            if db_pt is not None:
-                try:
-                    db_pt.update_obs_file_calibration_state_by_raw_light_path(
-                        src,
-                        draft_id=draft_id,
-                        is_calibrated=0,
-                        calib_type="PASSTHROUGH",
-                        calib_flags="P",
-                    )
-                    db_pt.update_obs_file_cal_stage_by_raw_light_path(
-                        src,
-                        draft_id=draft_id,
-                        cal_stage=cal_stage_token,
-                        cal_datasum=cal_datasum,
-                    )
-                except Exception:  # noqa: BLE001
-                    pass
-        except Exception:  # noqa: BLE001
-            stats["errors"] += 1
+            except Exception:  # noqa: BLE001
+                stats["errors"] += 1
     try:
         if db_pt is not None:
             db_pt.conn.close()
@@ -2028,6 +1843,9 @@ def calibrate_lights_to_calibrated(
         stage="calibration",
     )
     _seq_tb_logged = False
+    # G01-13: the per-frame manifest updates of this stage are written once, at its end
+    _manifest_stage = ExitStack()
+    _manifest_stage.enter_context(manifest_batch(db_main, draft_id))
     try:
         for i, ((src, _dst), res) in enumerate(zip(pairs, _results, strict=True), start=1):
             if progress_cb is not None:
@@ -2073,34 +1891,15 @@ def calibrate_lights_to_calibrated(
                 stats["used_flat"] += 1
             if not res.get("used_dark") and not res.get("used_flat"):
                 stats["copied_only"] += 1
-            if res.get("qc_summary") is not None:
+            if res.get("perf10_qc") is not None:
                 stats["qc_evaluated"] += 1
     finally:
         _results.close()
         _CAL_FRAME_STATE.clear()
+        _manifest_stage.close()
 
     return stats
 
-
-def _qc_fwhm_elongation(
-    data: "np.ndarray",
-) -> dict[str, Any]:
-    """FWHM / elongation for ``VY_FWHM`` (FWHM-ONE-2026-10).
-
-    Same measurement as frame QC (:func:`frame_metrics.measure_frame` on the
-    central crop: elliptical Gaussian fits), so ``VY_FWHM`` in every header is
-    the one VYVAR FWHM. Returns ``n_stars_detected`` (DAO detections at 5 sigma
-    on the crop) and ``n_sources`` (stars used in the fit).
-    """
-    from frame_metrics import measure_frame  # noqa: PLC0415
-
-    m = measure_frame(_qc_center_crop_for_stars(np.asarray(data, dtype=np.float32)))
-    return {
-        "fwhm_px": m.get("fwhm_mean"),
-        "elongation": m.get("elongation_mean"),
-        "n_sources": int(m.get("n_fit") or 0),
-        "n_stars_detected": int(m.get("star_count") or 0),
-    }
 
 def _poly_surface_fit(work: Any, fit_mask: Any, order: int, step: int, bg: float) -> Any | None:
     """Least-squares 2D polynomial (order 1-2) to ``work - bg`` on ``fit_mask`` (subsampled by ``step``);
@@ -2117,10 +1916,22 @@ def _poly_surface_fit(work: Any, fit_mask: Any, order: int, step: int, bg: float
     x_fit, y_fit, z_fit = xx_s[use].astype(np.float64), yy_s[use].astype(np.float64), z_s[use]
     terms = [(i, j) for i in range(order + 1) for j in range(order + 1 - i)]
     coef, *_ = np.linalg.lstsq(np.column_stack([(x_fit**i) * (y_fit**j) for i, j in terms]), z_fit, rcond=None)
-    yy_f, xx_f = np.mgrid[0:h, 0:w]
-    x_flat, y_flat = xx_f.ravel().astype(np.float64), yy_f.ravel().astype(np.float64)
-    surf = sum(c * (x_flat**i) * (y_flat**j) for c, (i, j) in zip(coef, terms, strict=True))
-    return np.asarray(surf).reshape(h, w).astype(np.float32), int(z_fit.size)
+    # G01-12: evaluate in row blocks on 1-D x / y vectors (no h*w design matrix). Per pixel the
+    # operation sequence is unchanged - (c * x**i) * y**j, summed in term order by Python sum, then
+    # cast to float32 - so the surface is bit-identical to the full-frame evaluation.
+    # (Horner / polygrid2d would change the rounding.)
+    x_row = np.arange(w, dtype=np.float64)
+    cx_terms = [(c * (x_row**i), j) for c, (i, j) in zip(coef, terms, strict=True)]
+    surf = np.empty((h, w), dtype=np.float32)
+    for r0 in range(0, h, _SURFACE_EVAL_ROWS):
+        r1 = min(h, r0 + _SURFACE_EVAL_ROWS)
+        y_col = np.arange(r0, r1, dtype=np.float64)[:, None]
+        surf[r0:r1] = sum(cx * (y_col**j) for cx, j in cx_terms)
+    return surf, int(z_fit.size)
+
+
+#: G01-12 row-block height of the sky-surface evaluation (memory only; the values do not depend on it).
+_SURFACE_EVAL_ROWS = 256
 
 
 #: SKY-MASK-2026-10 source mask (photutils background guide, ``make_source_mask``): pixels of the
@@ -2408,10 +2219,70 @@ def _decide_preprocess_sky_action(
     )
 
 
-def _qc_enrich_task(item: tuple[str, str | None, int, float | None, float | None, bool, float]) -> Any:
+def _frame_fwhm_of_record(hdr: fits.Header, frame_qc: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    """FWHM-ONCE-2026-10: the frame's QC measurement already on record - its header (calibration), else the
+    manifest values of frame QC; None when the frame was never measured."""
+    fw = _finite_or_none(hdr.get("VY_FWHM"))
+    if fw is not None:
+        el = _finite_or_none(hdr.get("VY_ELONG"))
+        return {"fwhm_px": fw, "elongation": el, "n_stars_detected": int(hdr.get("VY_NSTAR") or 0),
+                "n_sources": None, "sky_background": _finite_or_none(hdr.get("VY_QCBG")),
+                "fwhm_source": "calibration header"}
+    if frame_qc:
+        fw = _finite_or_none(frame_qc.get("fwhm"))
+        if fw is not None:
+            return {"fwhm_px": fw, "elongation": _finite_or_none(frame_qc.get("elongation")),
+                    "n_stars_detected": int(frame_qc.get("star_count") or 0), "n_sources": None,
+                    "sky_background": _finite_or_none(frame_qc.get("sky_level")),
+                    "fwhm_source": "frame QC (manifest)"}
+    return None
+
+
+def _manifest_frame_qc_by_calibrated_path(
+    fits_paths: Sequence[Path], *, db: VyvarDatabase | None, draft_id: int | None,
+) -> dict[str, dict[str, Any]]:
+    """FWHM-ONCE-2026-10: frame-QC values (FWHM, elongation, star count, sky) of the manifest for each
+    calibrated light, keyed by ``norm_fits_path_key`` of the calibrated path (via its Raw / non_calibrated
+    source light). Empty without a draft."""
+    if db is None or draft_id is None or not fits_paths:
+        return {}
+    try:
+        rows = db.fetch_draft_light_rows_for_quality(int(draft_id))
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.warning("[FWHM-ONCE] manifest frame QC not read: %s", exc)
+        return {}
+    marker = f"{os.sep}calibrated{os.sep}lights{os.sep}"
+    split = [(str(Path(c).resolve()).find(marker), str(Path(c).resolve()), c) for c in fits_paths]
+    roots = {s_[:i] for i, s_, _c in split if i >= 0}
+    if len(roots) != 1:
+        return {}
+    root = Path(roots.pop())
+    by_raw: dict[str, dict[str, Any]] = {}
+    for r in rows:
+        fp = str(r.get("FILE_PATH") or "")
+        raw = _resolve_draft_light_raw_path(root, fp) if fp else None
+        if raw is not None:
+            by_raw[norm_fits_path_key(raw)] = {
+                "fwhm": r.get("FWHM"), "elongation": r.get("ELONGATION_MEAN"),
+                "star_count": r.get("STAR_COUNT"), "sky_level": r.get("SKY_LEVEL"),
+            }
+    out: dict[str, dict[str, Any]] = {}
+    for i, s_, cal in split:
+        if i < 0:
+            continue
+        rel = Path(s_[i + len(marker):])
+        for tree in ("Raw", "non_calibrated"):
+            hit = by_raw.get(norm_fits_path_key(root / tree / "lights" / rel))
+            if hit is not None:
+                out[norm_fits_path_key(cal)] = hit
+                break
+    return out
+
+
+def _qc_enrich_task(item: tuple[str, str | None, int, float | None, float | None, bool, float, Any]) -> Any:
     """Pool task of the in-place QC: one frame; a sky-surface order conflict is returned, not
     raised, so the main process stops with the frame's name."""
-    fp_str, status, sky_order, ra, dec, only_if_missing, det_sigma = item
+    fp_str, status, sky_order, ra, dec, only_if_missing, det_sigma, frame_qc = item
     try:
         return _qc_enrich_one_frame(
             fp_str,
@@ -2421,6 +2292,7 @@ def _qc_enrich_task(item: tuple[str, str | None, int, float | None, float | None
             target_dec=dec,
             inject_pointing_only_if_missing=only_if_missing,
             detection_sigma=det_sigma,
+            frame_qc=frame_qc,
         )
     except SkySurfaceOrderConflictError as exc:
         return exc
@@ -2435,10 +2307,16 @@ def _qc_enrich_one_frame(
     target_dec: float | None,
     inject_pointing_only_if_missing: bool,
     detection_sigma: float,
+    frame_qc: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Process one calibrated light frame in-place (picklable worker for parallel QC).
 
-    BADPIX-REPAIR-2026-10: after the FWHM, the missing pixels (bad flat pixels) are filled from the frame's
+    FWHM-ONCE-2026-10 (G01-16): the frame's FWHM / elongation / star count are its one QC measurement - the
+    calibration header (VY_FWHM, stamped by :func:`stamp_frame_qc_headers`), else the frame-QC values of the
+    manifest (``frame_qc``: RAM QC of pre-calibrated lights), else (never measured: QC after calibration off,
+    OSC channel frames) the measurement is made here once and stamped. ``fwhm_source`` in the row says which.
+
+    BADPIX-REPAIR-2026-10: with that FWHM the missing pixels (bad flat pixels) are filled from the frame's
     PSF model (:func:`badpix_repair.repair_missing_pixels`) and listed in the ``VYBPFIX`` extension."""
     import numpy as np
 
@@ -2477,7 +2355,12 @@ def _qc_enrich_one_frame(
                     sky_order,
                 )
 
-        qc = _qc_fwhm_elongation(data)
+        qc = _frame_fwhm_of_record(hdr, frame_qc)
+        if qc is None:
+            _m = _quality_inspection_dao_metrics_array(data, hdr)
+            qc = {"fwhm_px": _m.get("fwhm_mean"), "elongation": _m.get("elongation_mean"),
+                  "n_stars_detected": int(_m.get("star_count") or 0), "n_sources": int(_m.get("n_fit") or 0),
+                  "sky_background": _m.get("sky_background"), "fwhm_source": "preprocess (first measurement)"}
         fwhm = float(qc.get("fwhm_px")) if qc.get("fwhm_px") is not None else float("nan")
         elong = float(qc.get("elongation")) if qc.get("elongation") is not None else float("nan")
         n_stars = int(qc.get("n_stars_detected") or 0)
@@ -2521,6 +2404,9 @@ def _qc_enrich_one_frame(
             if math.isfinite(elong):
                 hdr["VY_ELONG"] = (round(elong, 4), "Estimated elongation (a/b)")
             hdr["VY_NSTAR"] = (n_stars, "Approx. star detections (QC)")
+            _qbg = _finite_or_none(qc.get("sky_background"))
+            if _qbg is not None and "VY_QCBG" not in hdr:
+                hdr["VY_QCBG"] = (_qbg, "QC sky median outside the star mask [ADU]")
             if bp.n_missing:
                 hdr["VY_BPMIS"] = (bp.n_missing, "Missing pixels before the repair")
                 hdr["VY_BPPSF"] = (bp.n_psf, "Missing pixels filled: sky + star ePSF model")
@@ -2554,6 +2440,7 @@ def _qc_enrich_one_frame(
             "elongation": elong,
             "n_sources": qc.get("n_sources"),
             "n_stars_detected": n_stars,
+            "fwhm_source": qc.get("fwhm_source"),
             "bg_median": float(np.nanmedian(data)) if data.size else None,
             "bp_missing": bp.n_missing,
             "bp_psf": bp.n_psf,
@@ -2630,6 +2517,7 @@ def _sync_manifest_cal_stage_from_qc_row(
         LOGGER.debug("manifest cal_stage sync failed after preprocess: %s", exc)
 
 
+@manifest_batched  # G01-13: one manifest write per stage
 def _qc_enrich_calibrated_in_place(
     calibrated_root: Path,
     *,
@@ -2679,9 +2567,10 @@ def _qc_enrich_calibrated_in_place(
     from config import resolve_detection_threshold_sigma  # noqa: PLC0415
 
     _det_sigma = float(resolve_detection_threshold_sigma(cfg))
+    _frame_qc = _manifest_frame_qc_by_calibrated_path(fits_paths, db=db, draft_id=draft_id)
     tasks = [
         (str(fp), _prefilter.get(norm_fits_path_key(fp)), sky_order, target_ra, target_dec,
-         bool(inject_pointing_only_if_missing), _det_sigma)
+         bool(inject_pointing_only_if_missing), _det_sigma, _frame_qc.get(norm_fits_path_key(fp)))
         for fp in fits_paths
     ]
     rows = map_frames(_qc_enrich_task, tasks, workers=n_workers, stage="QC in-place")

@@ -215,7 +215,7 @@ def test_no_fixed_radius_in_select_active_targets_source() -> None:
         encoding="utf-8"
     )
     fn_start = src.index("def select_active_targets(")
-    fn_end = src.index("\ndef _batch_enrich_targets_bp_rp_from_gaia_db")
+    fn_end = src.index("\ndef _enrich_target_bp_rp_from_gaia_db")
     body = src[fn_start:fn_end]
     assert "match_radius_arcsec" not in body
     assert "phase01_match_radius_arcsec" not in body

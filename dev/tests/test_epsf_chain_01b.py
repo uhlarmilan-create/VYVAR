@@ -101,8 +101,7 @@ def _stub_night_photometry(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> d
             "masterstar_fits": str(og / "MASTERSTAR.fits"),
             "obs_group_dir": str(og),
             "per_frame_csv_dir": str(lights),
-            "detrended_aligned_dir": str(lights),
-            "output_dir": str(out_d),
+            "photometry_dir": str(out_d),
         }
     }
     spy: dict[str, object] = {"epsf_calls": 0, "require_psf": None}

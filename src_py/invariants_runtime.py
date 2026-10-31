@@ -16,6 +16,7 @@ from typing import Any, Mapping, Sequence
 import numpy as np
 
 from gaia_catalog_id import read_vyvar_csv
+from processed_field import processed_field_root
 
 LOGGER = logging.getLogger(__name__)
 
@@ -652,23 +653,8 @@ def _active_and_planned_targets(photometry_dir: Path | str | None) -> tuple[Any,
         return None, None
 
 
-def _draft_root_from_photometry_dir(photometry_dir: Path | str | None) -> Path | None:
-    """Resolve draft archive root from a photometry or platesolve path."""
-    if photometry_dir is None:
-        return None
-    p = Path(photometry_dir).resolve()
-    for cand in (p, *p.parents):
-        # a processed field: its manifest (any folder name) or a legacy draft_NNNNNN folder
-        is_field = (cand / "draft_manifest.json").is_file() or cand.name.startswith("draft_")
-        if is_field and (cand / "calibrated").is_dir():
-            return cand
-        if (cand / "sat_diag.json").is_file():
-            return cand
-    return None
-
-
 def _load_sat_diag_block_from_disk(photometry_dir: Path | str | None) -> dict[str, Any] | None:
-    root = _draft_root_from_photometry_dir(photometry_dir)
+    root = processed_field_root(photometry_dir)
     if root is None:
         return None
     sd_path = root / "sat_diag.json"
@@ -683,7 +669,7 @@ def _load_sat_diag_block_from_disk(photometry_dir: Path | str | None) -> dict[st
 
 def _sample_cal_stage_from_disk(photometry_dir: Path | str | None) -> dict[str, Any] | None:
     """Return calibrated-stage evidence from ``cal_stage.json`` or FITS headers."""
-    root = _draft_root_from_photometry_dir(photometry_dir)
+    root = processed_field_root(photometry_dir)
     if root is None:
         return None
     cal_json = root / "cal_stage.json"
@@ -705,7 +691,9 @@ def _sample_cal_stage_from_disk(photometry_dir: Path | str | None) -> dict[str, 
     except Exception:  # noqa: BLE001
         return None
 
-    for fp in sorted(cal_lights.rglob("*.fits"))[:5]:
+    from fits_suffixes import list_fits_files  # noqa: PLC0415
+
+    for fp in list_fits_files(cal_lights, recursive=True)[:5]:
         try:
             with fits.open(fp, memmap=True) as hdul:
                 hdr = hdul[0].header

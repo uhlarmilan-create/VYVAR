@@ -169,7 +169,9 @@ def _render_cameras(pipeline: AstroPipeline) -> None:
                 st.error("The gain setting must be a number.")
             g = lookup(prof, "gain", s_val, b_val)
             r = lookup(prof, "read_noise", s_val, b_val)
-            scale = 2 ** (16 - int(prof.adc_bits)) if prof.adc_bits and 1 <= int(prof.adc_bits) <= 16 else 1
+            from gain_ptc import container_scale  # noqa: PLC0415
+
+            scale = container_scale(prof.adc_bits)
             if g.value is None or r.value is None:
                 st.warning(f"Not known: {g.detail if g.value is None else r.detail}. Photometry would stop here.")
             else:

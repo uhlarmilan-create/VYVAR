@@ -716,17 +716,6 @@ def solve_hinted(
 # ---------------------------------------------------------------------------
 # FITS entry point (MASTERSTAR and any frame)
 # ---------------------------------------------------------------------------
-_WCS_KEY_PREFIXES = ("CTYPE", "CRVAL", "CRPIX", "CDELT", "CROTA", "CUNIT", "CD1_", "CD2_", "PC1_", "PC2_",
-                     "A_", "B_", "AP_", "BP_", "PV1_", "PV2_")
-_WCS_KEYS = ("LONPOLE", "LATPOLE", "RADESYS", "EQUINOX", "WCSAXES", "MJDREF", "DATEREF", "WCSNAME")
-
-
-def strip_wcs(hdr: Any) -> None:
-    for k in list(hdr.keys()):
-        if k.startswith(_WCS_KEY_PREFIXES) or k in _WCS_KEYS:
-            del hdr[k]
-
-
 def header_scale_hint(hdr: Any) -> float | None:
     """arcsec/px from the header focal length and pixel (optics module, G03-19; only orders the
     cone ladder - a wrong value costs time, never the result)."""
@@ -816,14 +805,23 @@ def solve_fits(
     return out
 
 
+_SOLUTION_TIME_KEYS = ("MJDREF", "MJDREFI", "MJDREFF", "DATEREF", "DATE-OBS", "MJD-OBS", "DATE-AVG", "MJD-AVG")
+
+
 def _write_solution(path: Any, res: SolveResult, method: str) -> None:
     """Replace the primary-header WCS with ``res.wcs`` plus the VY_SOL* provenance keys."""
     from astropy.io import fits  # noqa: PLC0415
 
+    from utils import strip_celestial_wcs_keys  # noqa: PLC0415  (G03-21: the one WCS key list)
+
     with fits.open(path, mode="update") as hd:
         h = hd[0].header
-        strip_wcs(h)
-        h.update(res.wcs.to_header(relax=True))
+        strip_celestial_wcs_keys(h)
+        sol = res.wcs.to_header(relax=True)
+        for k in _SOLUTION_TIME_KEYS:  # time keys of the frame stay (astropy writes MJDREF = 0.0)
+            if k in h and k in sol:
+                del sol[k]
+        h.update(sol)
         h["VY_SOLVR"] = ("astrosolve", "VYVAR plate solver (PLATESOLVE-2026-10)")
         h["VY_SOLMD"] = (method, "hinted | blind | confirmed")
         h["VY_SOLLO"] = (round(float(res.log_odds), 2), "verification log-odds")

@@ -374,10 +374,21 @@ def check_ambiguous_owner(
     gaia_df: pd.DataFrame,
     *,
     margin_px: float = 1.0,
+    gxy: tuple[np.ndarray, np.ndarray] | None = None,
 ) -> tuple[bool, int]:
-    """True when centroid is >margin_px closer to a different Gaia star than the seed."""
-    gx = pd.to_numeric(gaia_df.get("x_gaia", gaia_df.get("x")), errors="coerce").to_numpy(dtype=np.float64)
-    gy = pd.to_numeric(gaia_df.get("y_gaia", gaia_df.get("y")), errors="coerce").to_numpy(dtype=np.float64)
+    """True when centroid is >margin_px closer to a different Gaia star than the seed.
+
+    ``gxy``: the Gaia pixel positions of ``gaia_df`` already converted by the caller (G04-20: was a
+    ``pd.to_numeric`` of both columns on every call)."""
+    if gxy is not None:
+        gx, gy = gxy
+        if len(gx) != len(gaia_df) or len(gy) != len(gaia_df):
+            raise ValueError(
+                f"check_ambiguous_owner: gxy has {len(gx)}/{len(gy)} positions for {len(gaia_df)} Gaia rows"
+            )
+    else:
+        gx = pd.to_numeric(gaia_df.get("x_gaia", gaia_df.get("x")), errors="coerce").to_numpy(dtype=np.float64)
+        gy = pd.to_numeric(gaia_df.get("y_gaia", gaia_df.get("y")), errors="coerce").to_numpy(dtype=np.float64)
     if owner_j < 0 or owner_j >= len(gaia_df):
         return False, -1
     xg0 = float(gx[owner_j])
@@ -510,15 +521,30 @@ def _dedup_pass2_by_position(
         cid = _norm_cid_strip_dotzero(r.get("vy_seed_catalog_id", ""))
         return (gmag.get(cid, math.inf), cid)
 
-    order = sorted(range(len(rows)), key=lambda i: _key(rows[i]))
     xy = np.array([[float(rows[i]["x_full"]), float(rows[i]["y_full"])] for i in range(len(rows))], dtype=np.float64)
+    kept = one_detection_per_centroid(xy, [_key(r) for r in rows], sep_px=float(sep_px))
+    return [rows[i] for i in range(len(rows)) if kept[i]]
+
+
+def one_detection_per_centroid(xy_full: np.ndarray, owner_keys: list[Any], *, sep_px: float) -> np.ndarray:
+    """G04-07 / G04-26: the rule shared by the MASTERSTAR and the per-frame DAO pass 2 - pass-2 detections whose
+    full-resolution centroids lie within ``sep_px`` of an already kept one are the same detection.
+
+    Rows are visited in the order of ``owner_keys`` (smallest first: brightest seed, ties by catalogue id;
+    a stable sort keeps the input order for equal keys); the first one keeps the centroid. Returns the
+    boolean mask of kept rows."""
+    n = len(owner_keys)
+    kept = np.zeros(n, dtype=bool)
+    if n == 0:
+        return kept
+    xy = np.asarray(xy_full, dtype=np.float64)
+    order = sorted(range(n), key=lambda i: owner_keys[i])
     tree = cKDTree(xy)
-    kept = np.zeros(len(rows), dtype=bool)
     for i in order:
         if any(kept[j] for j in tree.query_ball_point(xy[i], r=float(sep_px))):
             continue
         kept[i] = True
-    return [rows[i] for i in range(len(rows)) if kept[i]]
+    return kept
 
 
 def _dao_xy_binned_to_full(x: np.ndarray, y: np.ndarray, f: int) -> tuple[np.ndarray, np.ndarray]:
@@ -599,7 +625,7 @@ def dao_pass2_born_owned_rows(
         if not hit.get("accepted"):
             continue
         xd, yd = float(hit["x_det"]), float(hit["y_det"])
-        amb, j_other = check_ambiguous_owner(xd, yd, j, gaia_chip)
+        amb, j_other = check_ambiguous_owner(xd, yd, j, gaia_chip, gxy=(gx, gy))
         xb, yb = _dao_full_to_binned_xy(xd, yd, int(bfac))
         pass2_rows.append(
             {
@@ -656,6 +682,13 @@ def _norm_cid_strip_dotzero(v: object) -> str:
     return s
 
 
+def _require_unique_index(df: pd.DataFrame, what: str) -> None:
+    """Fail loud when ``df`` has a non-unique index (G04-20): the label writes (``.loc[df.index[i]]``) and
+    the positional label decisions of the MASTERSTAR Gaia accounting address one row per label."""
+    if not df.index.is_unique:
+        raise ValueError(f"MASTERSTAR Gaia accounting: the {what} table index is not unique")
+
+
 def lock_existing_and_leftover_assign(
     det_x: np.ndarray,
     det_y: np.ndarray,
@@ -705,6 +738,19 @@ def lock_existing_and_leftover_assign(
             if det_catalog_ids is not None
             else np.array([""] * n_d, dtype=object)
         )
+        # G04-20: detections by their own catalog_id (ascending index) and a KD-tree over the
+        # detections, built once; the per-pair rules below are unchanged (were two scans of every
+        # detection per locked pair: O(n_lock x n_det)).
+        dets_by_cid: dict[str, list[int]] = {}
+        for i in range(min(n_d, len(det_cids))):
+            dc = _norm_cid_strip_dotzero(det_cids[i])
+            if dc:
+                dets_by_cid.setdefault(dc, []).append(i)
+        dx_a = np.asarray(det_x, dtype=np.float64)
+        dy_a = np.asarray(det_y, dtype=np.float64)
+        fin_d = np.flatnonzero(np.isfinite(dx_a) & np.isfinite(dy_a))
+        det_tree = cKDTree(np.column_stack([dx_a[fin_d], dy_a[fin_d]])) if fin_d.size else None
+        r_lock = float(lock_tol_px) * (1.0 + 1e-9) + 1e-9
         for cid, (_lx, _ly) in locked_pairs.items():
             gr = cid_to_row.get(_norm_cid_strip_dotzero(cid))
             if gr is None or gr in used_g:
@@ -716,25 +762,26 @@ def lock_existing_and_leftover_assign(
             best_d = float("inf")
             # Preference: born-owned within lock_tol_px. Keep (still lock) when
             # lock_tol < d <= identity_fail. Reject only past identity_fail_px (D4).
-            for i in range(n_d):
+            for i in dets_by_cid.get(nc, ()):
                 if i in used_det:
                     continue
-                dc = _norm_cid_strip_dotzero(det_cids[i]) if i < len(det_cids) else ""
-                if dc and dc == nc:
-                    d_gaia = float(math.hypot(det_x[i] - gx_g, det_y[i] - gy_g))
-                    if not math.isfinite(d_gaia):
-                        continue
-                    if d_gaia <= float(lock_tol_px):
-                        best_i = i
-                        best_d = d_gaia
-                        break
-                    if d_gaia > float(fail_px):
-                        geometry_reject_dets.append(i)
-                    elif d_gaia < best_d:
-                        best_i = i
-                        best_d = d_gaia
-            if best_i < 0:
-                for i in range(n_d):
+                d_gaia = float(math.hypot(det_x[i] - gx_g, det_y[i] - gy_g))
+                if not math.isfinite(d_gaia):
+                    continue
+                if d_gaia <= float(lock_tol_px):
+                    best_i = i
+                    best_d = d_gaia
+                    break
+                if d_gaia > float(fail_px):
+                    geometry_reject_dets.append(i)
+                elif d_gaia < best_d:
+                    best_i = i
+                    best_d = d_gaia
+            if (best_i < 0 and det_tree is not None and math.isfinite(gx_g) and math.isfinite(gy_g)
+                    and math.isfinite(float(lock_tol_px)) and float(lock_tol_px) >= 0):
+                # nearest unused detection within lock_tol_px, ties to the lowest index (the scan's
+                # strict '<'); the tree gives candidates, the test is the same math.hypot
+                for i in sorted(int(fin_d[c]) for c in det_tree.query_ball_point((gx_g, gy_g), r_lock)):
                     if i in used_det:
                         continue
                     d = float(math.hypot(det_x[i] - gx_g, det_y[i] - gy_g))
@@ -1197,6 +1244,7 @@ def _acc_census(
         wpx=int(wpx),
         h=int(h),
     )
+    _require_unique_index(census, "Gaia census")  # G04-20: census.loc label writes below
     _bg_col = gdf["blend_group_id"] if "blend_group_id" in gdf.columns else pd.Series([""] * n_g, index=gdf.index)
     _bg_arr = _bg_col.fillna("").astype(str).str.strip().to_numpy(dtype=object)
     if len(census) and "catalog_id" in census.columns and bool((_bg_arr != "").any()):
@@ -1219,16 +1267,29 @@ def _acc_census(
     cid_out = out.get("catalog_id", pd.Series([""] * len(out))).map(_norm_cid_strip_dotzero)
     census_st: dict[str, str] = {}
     if len(census):
-        for ci in range(len(census)):
-            cc = _norm_cid_strip_dotzero(census.iloc[ci].get("catalog_id"))
+        # G04-20: column-wise (was census.iloc[ci] per row); the last row of an id wins, as before
+        _c_st = census["source_state"].tolist() if "source_state" in census.columns else [""] * len(census)
+        _c_id = census["catalog_id"].tolist() if "catalog_id" in census.columns else [None] * len(census)
+        for _cid_c, _st_c in zip(_c_id, _c_st, strict=True):
+            cc = _norm_cid_strip_dotzero(_cid_c)
             if cc:
-                census_st[cc] = str(census.iloc[ci].get("source_state", "")).strip()
+                census_st[cc] = str(_st_c).strip()
+    # G04-20: the per-row state is decided on lists and written once (was out.loc per row: ~7 s for
+    # 9 000 rows). Row i is read and written only at step i, so the values are the same as the
+    # former row-by-row label writes - for a unique index, which the MASTERSTAR table has.
+    _require_unique_index(out, "masterstars")
+    _st_cur = out["source_state"].tolist()
+    _mode_cur = out["vy_match_mode"].tolist() if "vy_match_mode" in out.columns else None
+    _cid_cur = cid_out.tolist()
+    _new_pos: list[int] = []
+    _new_val: list[str] = []
     for i in range(len(out)):
-        cid = _norm_cid_strip_dotzero(cid_out.iloc[i])
+        cid = _norm_cid_strip_dotzero(_cid_cur[i])
         if not cid:
-            out.loc[out.index[i], "source_state"] = "DAO_ONLY"
+            _new_pos.append(i)
+            _new_val.append("DAO_ONLY")
             continue
-        st = out.loc[out.index[i], "source_state"] if "source_state" in out.columns else ""
+        st = _st_cur[i]
         if str(st).strip() in (SOURCE_DETECTED_P1, SOURCE_DETECTED_P2):
             # Pre-set DETECTED_* is only kept when this row itself is a DAO detection.
             pass
@@ -1236,19 +1297,20 @@ def _acc_census(
             continue
         vp = int(det_pass[i])
         if vp in (1, 2):
-            out.loc[out.index[i], "source_state"] = (
-                SOURCE_DETECTED_P2 if vp == 2 else SOURCE_DETECTED_P1
-            )
+            _new_pos.append(i)
+            _new_val.append(SOURCE_DETECTED_P2 if vp == 2 else SOURCE_DETECTED_P1)
             continue
-        mode = str(out.loc[out.index[i], "vy_match_mode"] or "").strip() if "vy_match_mode" in out.columns else ""
+        mode = str(_mode_cur[i] or "").strip() if _mode_cur is not None else ""
         if mode == "catalog_membership":
-            out.loc[out.index[i], "source_state"] = SOURCE_CATALOG_MEMBERSHIP
+            _new_pos.append(i)
+            _new_val.append(SOURCE_CATALOG_MEMBERSHIP)
             continue
         cst = str(census_st.get(cid, "") or "").strip()
-        if cst in _NONDET_CENSUS_STATES:
-            out.loc[out.index[i], "source_state"] = cst
-        else:
-            out.loc[out.index[i], "source_state"] = SOURCE_CATALOG_ONLY
+        _new_pos.append(i)
+        _new_val.append(cst if cst in _NONDET_CENSUS_STATES else SOURCE_CATALOG_ONLY)
+    if _new_pos:
+        _st_col = out.columns.get_loc("source_state")
+        out.iloc[_new_pos, _st_col] = np.asarray(_new_val, dtype=object)
 
     meta["n_on_chip_gaia"] = n_g
     meta["census_by_state"] = (
@@ -1256,20 +1318,20 @@ def _acc_census(
     )
     if "ambiguous_owner" in out.columns and len(census):
         amb_map: dict[str, bool] = {}
-        for i in range(len(out)):
-            cid = _norm_cid_strip_dotzero(out.iloc[i].get("catalog_id"))
+        _o_id = out["catalog_id"].tolist() if "catalog_id" in out.columns else [None] * len(out)
+        for _cid_o, raw_amb in zip(_o_id, out["ambiguous_owner"].tolist(), strict=True):
+            cid = _norm_cid_strip_dotzero(_cid_o)
             if not cid:
                 continue
-            raw_amb = out.iloc[i].get("ambiguous_owner")
             amb_map[cid] = (
                 bool(raw_amb)
                 if raw_amb is not None and not (isinstance(raw_amb, float) and not math.isfinite(raw_amb))
                 else False
             )
-        for ci in range(len(census)):
-            cid = _norm_cid_strip_dotzero(census.iloc[ci].get("catalog_id"))
-            if amb_map.get(cid):
-                census.loc[census.index[ci], "ambiguous_owner"] = True
+        _c_id2 = census["catalog_id"].tolist() if "catalog_id" in census.columns else [None] * len(census)
+        _amb_rows = [ci for ci, _cid_c in enumerate(_c_id2) if amb_map.get(_norm_cid_strip_dotzero(_cid_c))]
+        for ci in _amb_rows:
+            census.loc[census.index[ci], "ambiguous_owner"] = True
     return census
 
 
@@ -1302,6 +1364,8 @@ def enrich_masterstar_gaia_complete(
 
     if gaia_on_chip is None or gaia_on_chip.empty:
         return out, pd.DataFrame(), meta
+    # G04-20: every write below addresses one masterstars row per label - check before the first one
+    _require_unique_index(out, "masterstars")
 
     gaia_owner, gdf, identity_lock_only, det_pass, n_g = _acc_identity_locks(
         catalog_derived_membership=catalog_derived_membership,

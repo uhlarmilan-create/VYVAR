@@ -141,9 +141,9 @@ def load_frames(platesolve_dir: Path, live_cfg: Any) -> dict[str, Any]:
         meta = at_df[["_cid"] + meta_cols].drop_duplicates("_cid")
         summary_df = summary_df.merge(meta, how="left", on="_cid", suffixes=("", "_at"))
 
-    from pipeline_ui_helpers import resolve_masterstars_metadata_csv  # noqa: PLC0415
+    from platesolve_ui_paths import masterstars_csv_in_dir  # noqa: PLC0415
 
-    ms_csv = resolve_masterstars_metadata_csv(platesolve_dir)
+    ms_csv = masterstars_csv_in_dir(platesolve_dir)
     if ms_csv is not None and "_cid" in summary_df.columns:
         try:
             ms_df = pd.read_csv(ms_csv, low_memory=False, dtype=_GAIA_ID_DTYPE)
@@ -257,7 +257,8 @@ class TargetPages:
 
     def lc_df(self, cid: str) -> pd.DataFrame | None:
         if cid not in self._lc:
-            p = self.lc_dir / f"lightcurve_{cid}.csv"
+            from report_methods import lc_csv_path  # noqa: PLC0415
+            p = lc_csv_path(self.lc_dir, cid)
             try:
                 self._lc[cid] = pd.read_csv(p, low_memory=False) if p.is_file() else None
             except (OSError, ValueError):
@@ -558,7 +559,8 @@ class TargetPages:
         band = str(gz.get("band") or zp.get("band") or "").strip()
         if band.upper() == "NONE":
             band = str(gz.get("band") or "").strip()
-        lc_csv = self.lc_dir / f"lightcurve_{cid}.csv"
+        from report_methods import lc_csv_path  # noqa: PLC0415
+        lc_csv = lc_csv_path(self.lc_dir, cid)
         facts_lc = m3.lc_facts(lc_csv, mag_column=self.export_mag_column(cid)) if lc_csv.is_file() else {}
 
         # header
@@ -713,6 +715,8 @@ class TargetPages:
                           + (f" +- {float(_sg):.3f}" if _sg is not None else "") + f" ({int(gz.get('n_comp') or 0)} comps)"))
         facts.append(("Export", exp_val))
         warn = {a for a, b in facts if "NOT CAL" in b or a in warn_rows}
+        from report_methods import check_kmag_sidecar_path  # noqa: PLC0415
+
         return {
             "cid": cid,
             "name": m3.target_display_name(at_row, cid),
@@ -728,7 +732,7 @@ class TargetPages:
             "uncalibrated": uncal,
             "show_gspc": show_gspc,
             "lc_csv": lc_csv,
-            "check_csv": self.lc_dir / f"check_kmag_{cid}.csv",
+            "check_csv": check_kmag_sidecar_path(self.lc_dir, cid),
             "at_row": at_row,
             "ra_deg": _ra,
             "dec_deg": _de,

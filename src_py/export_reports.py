@@ -14,6 +14,7 @@ import pandas as pd
 
 from gaia_catalog_id import read_vyvar_csv
 import numpy as np
+from stats_core import coerce_bool
 from astropy.time import Time
 
 from config import AppConfig
@@ -795,7 +796,7 @@ def export_lightcurve_reports(
     # drafts repeats it on every row (ct_correction there = ct_corr of the summary)
     ct_mode = _summary_str(summary_row, "ct_mode") or _lc_first_str(lc_normal, "ct_mode")
     ct_order = _ct_order_from_mode(ct_mode)
-    ct_ok = (_summary_str(summary_row, "ct_ok") or _lc_first_str(lc_normal, "ct_ok")).lower() in ("true", "1", "yes")
+    ct_ok = coerce_bool(_summary_str(summary_row, "ct_ok") or _lc_first_str(lc_normal, "ct_ok"))
     ct_c1 = _summary_float(summary_row, "ct_c1", lc_normal, "ct_c1")
     ct_corr = _summary_float(summary_row, "ct_corr", lc_normal, "ct_correction")
     trans_yes = bool(fb.transformable and ct_ok and ct_order >= 1) and not differential and not gspc_std

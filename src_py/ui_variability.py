@@ -12,6 +12,7 @@ Everything is plotly; nothing is a PNG.
 """
 from __future__ import annotations
 
+import functools
 import json
 import math
 from pathlib import Path
@@ -112,8 +113,9 @@ def star_class(row: pd.Series) -> str:
 
 
 @st.cache_resource(show_spinner=False, max_entries=4)
-def _group_data(phot_s: str, _stamp_key: tuple) -> dict[str, Any]:
-    """Everything the tab shows for one setup, loaded once (cache follows file mtimes)."""
+def _group_data(phot_s: str, stamp_key: tuple) -> dict[str, Any]:
+    """Everything the tab shows for one setup, loaded once (cache follows file mtimes: ``stamp_key`` is
+    hashed - a ``_`` name would be left out of the key, G14-27)."""
     phot = Path(phot_s)
     ps = phot.parent
     meta = _read_json(phot / "variability_meta.json")
@@ -240,7 +242,7 @@ def night_figure(lc: pd.DataFrame, time_label: str) -> go.Figure:
 
 
 @st.cache_data(show_spinner=False, max_entries=16)
-def _tess_files(tdir_s: str, _stamp_key: tuple) -> dict[str, Any]:
+def _tess_files(tdir_s: str, stamp_key: tuple) -> dict[str, Any]:
     tdir = Path(tdir_s)
     out: dict[str, Any] = {"lc": None, "pgram": None, "pix": None}
     if (tdir / "tess_lc.csv").is_file():
@@ -410,6 +412,12 @@ def render_variability_dashboard(
 KIND_TEXT = {"appeared": "appeared during the night", "faded": "faded during the night", "present": "present all night"}
 
 
+@st.cache_data(show_spinner=False, max_entries=4)
+def _field_table(path_s: str, stamp: tuple) -> pd.DataFrame:
+    """variability_field.csv as written, once per file state (G14-27)."""
+    return pd.read_csv(path_s, dtype={"catalog_id": str}, low_memory=False)
+
+
 def _transient_section(phot: Path, ps: Path, frames_dir: Path, og: str) -> None:
     """New sources, stars brighter than Gaia, minor planets and comets (transient search; off by default)."""
     tm = _read_json(phot / "transient_meta.json")
@@ -422,7 +430,9 @@ def _transient_section(phot: Path, ps: Path, frames_dir: Path, og: str) -> None:
         return
     T = _csv(phot / "transient_candidates.csv")
     cand = T[T["candidate"].astype(str).str.lower() == "true"].copy() if not T.empty else T
-    F = pd.read_csv(phot / "variability_field.csv", dtype={"catalog_id": str}, low_memory=False)
+    from ui_cache import file_stamp  # noqa: PLC0415
+
+    F = _field_table(str(phot / "variability_field.csv"), file_stamp(phot / "variability_field.csv"))
     br = F[F.get("brightened", pd.Series(False, index=F.index)).astype(str).str.lower() == "true"] if "brightened" in F else F.iloc[0:0]
     B = _csv(phot / "minor_bodies_in_field.csv")
     M = _csv(phot / "moving_objects.csv")
@@ -552,7 +562,8 @@ def _cutout_figure(r: pd.Series, ps: Path, frames_dir: Path) -> go.Figure:
     x, y = int(round(float(r["x"]))), int(round(float(r["y"])))
     for j, (_t, p) in enumerate(panels, start=1):
         try:
-            d = fits.getdata(p).astype(float)[max(0, y - h): y + h + 1, max(0, x - h): x + h + 1]
+            # G14-27: cut the box out of the (memory-mapped) frame first, then convert only the box
+            d = fits.getdata(p)[max(0, y - h): y + h + 1, max(0, x - h): x + h + 1].astype(float)
             lo, hi = np.nanpercentile(d, [5, 99.5])
             fig.add_trace(go.Heatmap(z=d, zmin=lo, zmax=hi, colorscale="gray", showscale=False, hoverinfo="skip"), row=1, col=j)
         except (OSError, ValueError, IndexError):
@@ -685,7 +696,9 @@ def _star_section(rows: pd.DataFrame, cid: str, og: str, sel_key: str, phot: Pat
     t1, t2 = st.columns([4, 1])
     t1.markdown("#### Night light curve (this processed field, field zero point)")
     if night is not None and not night.empty:
-        t2.download_button("Export for Peranso (.txt)", peranso_text(lc_csv), file_name=f"vyvar_{cid}.txt", key=f"var_per_{cid}", width="stretch")
+        # G14-29: export text built on click (deferred data)
+        t2.download_button("Export for Peranso (.txt)", functools.partial(peranso_text, lc_csv), file_name=f"vyvar_{cid}.txt",
+                           key=f"var_per_{cid}", width="stretch")
         st.plotly_chart(night_figure(night, "BJD_TDB" if "bjd" in str(meta.get("time_column", "")).lower() else "JD"), width="stretch", config=_PLOT_CFG, key=f"var_night_{cid}")
     else:
         st.caption("No night light curve for this star.")
@@ -791,7 +804,8 @@ def _tess_section(cid: str, r: pd.Series, phot: Path, night: pd.DataFrame | None
                     kwargs={"rebase": False, "t_lc": t, "m_lc": m})
         show_bins = d[2].checkbox("Binned mean", value=True, key=f"var_bins_{cid}")
         show_night = d[3].checkbox("Overlay this night", value=night is not None, disabled=night is None, key=f"var_ovl_{cid}")
-        d[4].download_button("Export phased (Peranso .txt)", phased_text(t, m, e, period, t0, f"TESS {r['name']}"),
+        d[4].download_button("Export phased (Peranso .txt)",
+                             functools.partial(phased_text, t, m, e, period, t0, f"TESS {r['name']}"),  # G14-29
                              file_name=f"vyvar_{cid}_phased.txt", key=f"var_phx_{cid}", width="stretch")
         if r["kind"] == "NEW":
             d[5].button("Use this period in the report", key=f"var_adopt_{cid}", type="primary", width="stretch",

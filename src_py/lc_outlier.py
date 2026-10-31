@@ -35,6 +35,7 @@ import re
 import numpy as np
 import pandas as pd
 
+from fits_suffixes import path_suffix_is_fits
 from mag_constants import MAG_ERR_SCALE
 
 LOGGER = logging.getLogger(__name__)
@@ -330,7 +331,7 @@ def _stamp_metrics(img: np.ndarray, x0: float, y0: float, *, half: int = 11) -> 
         wx2 = min(w, int(math.ceil(float(x0) + 15.0)) + 2)
         yy2, xx2 = np.ogrid[wy1:wy2, wx1:wx2]
         rr = np.hypot(xx2 - float(x0), yy2 - float(y0))
-        ann = img[wy1:wy2, wx1:wx2][(rr >= 8.0) & (rr <= 15.0)]
+        ann = np.asarray(img[wy1:wy2, wx1:wx2], dtype=np.float64)[(rr >= 8.0) & (rr <= 15.0)]  # float64 (G08-19)
     else:
         ann = np.empty(0)
     asigma = float(np.std(ann)) if ann.size > 10 else float("nan")
@@ -515,7 +516,7 @@ def frame_key_from_source(source_file: str) -> str:
     m = _PROC_RE.match(name)
     if m:
         return m.group(1)
-    if name.lower().endswith(".fits"):
+    if path_suffix_is_fits(name):
         return Path(name).stem
     if name.lower().endswith(".csv"):
         return Path(name).stem
@@ -688,6 +689,36 @@ def assign_lc_flags(
     )
 
 
+#: G08-19: spike-evidence frames kept per process (all targets of a night share them); a frame is read
+#: once while it stays among the last EVIDENCE_FRAME_LRU_SIZE used ones.
+EVIDENCE_FRAME_LRU_SIZE: int = 3
+_FRAME_LRU: dict[tuple[str, int, int], np.ndarray] = {}
+
+
+def _night_frame(fits_path: Path) -> np.ndarray | None:
+    """Primary-HDU data of ``fits_path`` in its stored dtype, through a small LRU keyed by path, mtime and
+    size (a rewritten file is read again)."""
+    try:
+        st = fits_path.stat()
+    except OSError:
+        return None
+    key = (str(fits_path.resolve()), int(st.st_mtime_ns), int(st.st_size))
+    hit = _FRAME_LRU.pop(key, None)
+    if hit is None:
+        try:
+            from astropy.io import fits  # noqa: PLC0415
+
+            with fits.open(fits_path, memmap=True) as hdul:
+                hit = np.array(hdul[0].data)  # copy out of the memmap, stored dtype
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.debug("[LC-OUTLIER] FITS open failed %s: %s", fits_path, exc)
+            return None
+        while len(_FRAME_LRU) >= EVIDENCE_FRAME_LRU_SIZE:
+            _FRAME_LRU.pop(next(iter(_FRAME_LRU)))
+    _FRAME_LRU[key] = hit  # most recently used last
+    return hit
+
+
 class EvidenceCache:
     """Lazy FITS / peer cache for per-target spike evidence during aperture photometry."""
 
@@ -703,7 +734,6 @@ class EvidenceCache:
         self.catalog_id = str(catalog_id)
         self.n_sigma = float(n_sigma)
         self.proc_cache = proc_cache if proc_cache is not None else {}
-        self._img_cache: dict[str, np.ndarray] = {}
         self._night_sky_sig: list[float] | None = None
 
     def _load_proc(self, source_file: str) -> pd.DataFrame | None:
@@ -726,9 +756,9 @@ class EvidenceCache:
         return df
 
     def _load_img(self, source_file: str) -> np.ndarray | None:
+        """The frame as stored in the FITS (native dtype; the stamp metrics cast their cut-outs to float64,
+        which gives the values a float64 copy of the whole frame gives). From the night-level LRU (G08-19)."""
         key = frame_key_from_source(source_file)
-        if key in self._img_cache:
-            return self._img_cache[key]
         if self.frames_dir is None:
             return None
         proc_name = Path(str(source_file)).name
@@ -739,16 +769,7 @@ class EvidenceCache:
             fits_path = cand if cand.is_file() else None
         if fits_path is None:
             return None
-        try:
-            from astropy.io import fits  # noqa: PLC0415
-
-            with fits.open(fits_path, memmap=True) as hdul:
-                data = np.asarray(hdul[0].data, dtype=np.float64)
-        except Exception as exc:  # noqa: BLE001
-            LOGGER.debug("[LC-OUTLIER] FITS open failed %s: %s", fits_path, exc)
-            return None
-        self._img_cache[key] = data
-        return data
+        return _night_frame(Path(fits_path))
 
     def night_annulus_sky_sigma(self, source_files: Sequence[str]) -> list[float]:
         """Collect target annulus sky sigma across the night (from proc)."""

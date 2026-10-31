@@ -8,6 +8,7 @@ import logging
 import math
 import numpy as np
 import pandas as pd
+from stats_core import coerce_bool
 from catalog_match_trust import is_wcs_untrusted_catalog_match_mode, normalize_catalog_match_mode
 from infolog import log_event
 from photometry_shared import _normalize_gaia_id, _target_display_name
@@ -15,7 +16,6 @@ from photometry_shared import _normalize_gaia_id, _target_display_name
 from aperture_photometry import (
     _AperturePhotometryState,
     _measured_aperture_from_proc_cache,
-    _resolve_photometric_aperture_px_for_gs11,
     apply_reporting_postprocess,
     read_flux_from_csv,
 )
@@ -228,10 +228,7 @@ def _tgt_choose_check_star(
             except Exception:  # noqa: BLE001
                 _chk_row_pref = None
             if _chk_row_pref is None:
-                _chk_ms = state.masterstars_df.loc[
-                    state.masterstars_df["catalog_id"].astype(str).str.strip().eq(_chk_cid_pref)
-                ]
-                _chk_row_pref = _chk_ms.iloc[0] if not _chk_ms.empty else None
+                _chk_row_pref = state.masterstar_row(_chk_cid_pref)  # G06-40
             if _chk_row_pref is not None:
                 # BANDAUTH-2026-10: check-star reference magnitude in the same band as the comps.
                 for _mk in ("mag", "phot_g_mean_mag"):
@@ -258,8 +255,6 @@ def _tgt_frame_rows(
     _rn_phot,
     all_ids,
     apertures_px,
-    chip_fh,
-    chip_fw,
     csv_files,
     frame_time_lookup,
     sat_limit_resolved,
@@ -278,16 +273,6 @@ def _tgt_frame_rows(
             df_frame = _df_sub.copy()
             _ft = frame_time_lookup.get(csv_path.stem)
             _cached_df = _aperture_csv_cache.get(str(csv_path))
-            if (chip_fw is None or chip_fh is None) and ("x" in df_frame.columns and "y" in df_frame.columns):
-                try:
-                    _xm = float(pd.to_numeric(df_frame["x"], errors="coerce").max())
-                    _ym = float(pd.to_numeric(df_frame["y"], errors="coerce").max())
-                except Exception:  # noqa: BLE001
-                    _xm, _ym = float("nan"), float("nan")
-                if chip_fw is None and math.isfinite(_xm) and _xm > 0:
-                    chip_fw = int(math.ceil(_xm)) + 2
-                if chip_fh is None and math.isfinite(_ym) and _ym > 0:
-                    chip_fh = int(math.ceil(_ym)) + 2
             # G06-07: the chip / footprint edge verdict comes from the flux grid only (AP-FOOTPRINT-2026-10)
             frame_results.append(df_frame)
     else:
@@ -309,27 +294,14 @@ def _tgt_frame_rows(
                 read_noise=float(_rn_phot),
             )
             if not df_frame.empty:
-                if (chip_fw is None or chip_fh is None) and ("x" in df_frame.columns and "y" in df_frame.columns):
-                    try:
-                        _xm = float(pd.to_numeric(df_frame["x"], errors="coerce").max())
-                        _ym = float(pd.to_numeric(df_frame["y"], errors="coerce").max())
-                    except Exception:  # noqa: BLE001
-                        _xm, _ym = float("nan"), float("nan")
-                    if chip_fw is None and math.isfinite(_xm) and _xm > 0:
-                        chip_fw = int(math.ceil(_xm)) + 2
-                    if chip_fh is None and math.isfinite(_ym) and _ym > 0:
-                        chip_fh = int(math.ceil(_ym)) + 2
-
                 # G06-07: edge verdict from the flux grid only
                 frame_results.append(df_frame)
-    return chip_fh, chip_fw, frame_results
+    return frame_results
 
 
 def _tgt_apply_night_k(
     *,
     _chk_cid_pref,
-    annulus_inner_fwhm,
-    annulus_outer_fwhm,
     comp_ids,
     frame_results,
     state,
@@ -352,10 +324,8 @@ def _tgt_apply_night_k(
             _pt_grid,
             catalog_ids=_apply_ids,
             f_star=float(_pt_choice.f_star),
-            gain=float(state._gain_phot) if state._gain_phot is not None else None,
-            read_noise=float(state._rn_phot) if state._rn_phot is not None else None,
-            annulus_inner_fwhm=float(annulus_inner_fwhm),
-            annulus_outer_fwhm=float(annulus_outer_fwhm),
+            gain=state._gain_phot,
+            read_noise=state._rn_phot,
         )
         logging.info(
             "[APERTURE-DYNAMIC] target %s f*=%.3f r_ap(night_scale)=%.3f px (n_comp=%d)",
@@ -423,8 +393,6 @@ def _tgt_dilution(
     *,
     _cfg,
     _dilution_result,
-    apertures_px,
-    fwhm_px,
     mag_calib,
     obs_group,
     state,
@@ -460,31 +428,21 @@ def _tgt_dilution(
             if math.isfinite(_gv):
                 _target_g_mag = _gv
                 break
-        _dilution_skipped_ap = False
-        _ap_px, _ap_src = _resolve_photometric_aperture_px_for_gs11(
-            target_cid,
-            apertures_px,
-        )
-        if _ap_px is None:
-            logging.warning(
-                "[GS11] target %s: photometric aperture unavailable - dilution skipped",
-                target_cid or "?",
-            )
-            log_event(
-                f"[GS11] target {target_cid or '?'}: photometric aperture unavailable - dilution skipped"
-            )
-            _dilution_skipped_ap = True
-            _ap_arcsec = float("nan")
-        else:
-            _ap_arcsec = float(_ap_px) * float(state.plate_scale_arcsec)
-        _cid_int = None
-        try:
-            from dilution import _normalize_exclude_source_id  # noqa: PLC0415
-
-            _cid_int = _normalize_exclude_source_id(target_cid)
-        except Exception:  # noqa: BLE001
-            _cid_int = None
-        if _dilution_skipped_ap:
+        # DILUTION-ONE-2026-10 (G07-33): the light-curve aperture k* x FWHM (x PSF-LOCAL scale) of this
+        # target, its production annulus and the Moffat PSF measured for the target blend - the model of the
+        # comparison-star gate (comp_blend.contamination_fractions)
+        _skip_reason = ""
+        _ch_gs = (getattr(state, "per_target_aperture", None) or {}).get(str(target_cid))
+        _grid_gs = getattr(state, "aperture_grid_night", None)
+        _psf_gs = getattr(state, "blend_psf", None) or {}
+        _ps = float(state.plate_scale_arcsec)
+        if _ch_gs is None or _grid_gs is None:
+            _skip_reason = "no light-curve aperture (per-target k) for this target"
+        elif not math.isfinite(float(_psf_gs.get("beta", float("nan")))):
+            _skip_reason = "no measured PSF (target blend not computed)"
+        if _skip_reason:
+            logging.warning("[GS11] target %s: %s - dilution skipped", target_cid or "?", _skip_reason)
+            log_event(f"[GS11] target {target_cid or '?'}: {_skip_reason} - dilution skipped")
             _dilution_result = {
                 "dilution_factor": 1.0,
                 "dilution_delta_mag": 0.0,
@@ -493,19 +451,29 @@ def _tgt_dilution(
                 "aperture_arcsec": float("nan"),
                 "search_radius_arcsec": float("nan"),
                 "dilution_skipped": True,
-                "dilution_skip_reason": "photometric_aperture_unavailable",
+                "dilution_skip_reason": _skip_reason,
             }
         else:
+            from aperture_policy import resolve_aperture_geometry  # noqa: PLC0415
+            from dilution import _normalize_exclude_source_id  # noqa: PLC0415
             from gaia_bands import band_for_obs_group  # noqa: PLC0415
 
+            _fw_gs = float(_grid_gs.fwhm_night_px) * float(_grid_gs.scale_by_cid.get(str(target_cid), 1.0))
+            _r_ap_gs = float(_ch_gs.r_ap_px)
+            _, _r_in_gs, _r_out_gs = resolve_aperture_geometry(
+                f=max(float(k) for k in _grid_gs.f_grid), fwhm_px=_fw_gs,
+                annulus_inner_fwhm=float(_cfg.annulus_inner_fwhm), annulus_outer_fwhm=float(_cfg.annulus_outer_fwhm),
+            )
             _dilution_result = compute_dilution_factor(
                 _target_ra,
                 _target_dec,
                 _target_g_mag,
-                _ap_arcsec,
+                _r_ap_gs * _ps,
                 str(state.gaia_db_path),
-                catalog_id=_cid_int,
-                fwhm_arcsec=float(fwhm_px) * float(state.plate_scale_arcsec),
+                catalog_id=_normalize_exclude_source_id(target_cid),
+                fwhm_arcsec=_fw_gs * _ps,
+                beta=float(_psf_gs["beta"]),
+                annulus_arcsec=(_r_in_gs * _ps, _r_out_gs * _ps),
                 band=band_for_obs_group(obs_group),
                 target_bp_rp=float(target_bp_rp_by_cid.get(target_cid, float("nan"))),
             )
@@ -560,6 +528,8 @@ def _tgt_k2(
         _cfg,
         site=(state.site_lat, state.site_lon, state.site_alt) if state.site_ok else None,
         fallback=(_tf_am["airmass"].to_numpy(dtype=float) if "airmass" in _tf_am.columns else None),
+        grid=getattr(state, "target_time_grid", None),
+        cid=target_cid,
     )
 
     from k2_extinction import K2Source, apply_k2_per_frame, bp_rp_comp_median, ensemble_bp_rp  # noqa: PLC0415
@@ -721,6 +691,8 @@ def _tgt_time_and_errors(
         _target_dec,
         _cfg,
         site=(state.site_lat, state.site_lon, state.site_alt) if state.site_ok else None,
+        grid=getattr(state, "target_time_grid", None),
+        cid=target_cid,
     )
 
     err = target_frames["err"].to_numpy(dtype=float)
@@ -735,37 +707,16 @@ def _tgt_time_and_errors(
     # Per-point uncertainty = photon/SNR base error (term-1) (+) ensemble zeropoint uncertainty
     # (term-3, ``ensemble_scatter``). Joined by EXACT ``source_file`` (G2-F004), not positional index.
     _src_for_err = target_frames["source_file"].astype(str).tolist()
-    from sigma_budget import resolve_rig_scintillation_params  # noqa: PLC0415
-    from utils import exposure_seconds  # noqa: PLC0415
-    from sigma_floor_core import resolve_sigma_sys_mag, scintillation_mag_per_epoch  # noqa: PLC0415
+    from aperture_photometry import _rig_scint_params, _rig_sigma_sys_mag  # noqa: PLC0415
+    from sigma_floor_core import scintillation_mag_per_epoch  # noqa: PLC0415
 
-    _sigma_sys_mag = resolve_sigma_sys_mag(
-        state.equipment_id,
-        _cfg,
-        rig_label=str(state.obs_group or ""),
-    )
+    # G06-33 / G08-15: the rig floor and scintillation parameters are resolved once per run (state)
+    _sigma_sys_mag = _rig_sigma_sys_mag(state)
     # SIGMA-SYS-NIGHT-2026-10: the floor measured on this night's comps replaces the constant
     _ssn = getattr(state, "sigma_sys_night", None)
     if _ssn is not None and math.isfinite(float(_ssn)):
         _sigma_sys_mag = float(_ssn)
-    _draft_id_lc: int | None = None
-    try:
-        from processed_field import processed_field_id  # noqa: PLC0415
-
-        _draft_id_lc = processed_field_id(output_dir)
-    except Exception:  # noqa: BLE001
-        _draft_id_lc = None
-    _rig_scint = resolve_rig_scintillation_params(
-        draft_id=_draft_id_lc,
-        setup=str(state.obs_group or ""),
-        exposure_s=exposure_seconds(state._ms_header),
-        cfg=_cfg,
-        pipeline_meta=(
-            {"observer_location": {"alt_m": float(state.site_alt)}}
-            if state.site_ok and state.site_alt is not None
-            else None
-        ),
-    )
+    _rig_scint = _rig_scint_params(state, output_dir)
     _scint_mag_arr = np.array(
         [
             scintillation_mag_per_epoch(
@@ -1199,7 +1150,8 @@ def _tgt_write_outputs(
     time_base,
 ):
     """Write the light curve CSV, comp_quality JSON, LC PNG and the target field map."""
-    lc_csv = lc_dir / f"lightcurve_{target_cid}.csv"
+    from report_methods import lc_csv_path  # noqa: PLC0415
+    lc_csv = lc_csv_path(lc_dir, target_cid)
     # I-04: exclude epochs with unmatched ensemble scatter from LC export.
     if err_scatter_unmatched_arr is not None and np.any(err_scatter_unmatched_arr):
         _keep_lc = ~np.asarray(err_scatter_unmatched_arr, dtype=bool)
@@ -1501,8 +1453,6 @@ def _aperture_process_one_target(
     lc_dir: Path,
     output_dir: Path,
     progress_cb: Any,
-    annulus_inner_fwhm: float,
-    annulus_outer_fwhm: float,
     _apt_fw: float,
     _save_png: bool,
 ) -> tuple[list, int]:
@@ -1510,13 +1460,9 @@ def _aperture_process_one_target(
 
     Returns updated (summary_rows, n_lc).
     """
-    def _p2(msg: str) -> None:
-        if progress_cb is None:
-            return
-        try:
-            progress_cb(str(msg))
-        except UnicodeEncodeError:
-            progress_cb(str(msg).encode("ascii", "backslashreplace").decode("ascii"))
+    from infolog import safe_progress  # noqa: PLC0415
+
+    _p2 = safe_progress(progress_cb)
 
     _comp_index = state._comp_index
     target_bp_rp_by_cid = state.target_bp_rp_by_cid
@@ -1526,8 +1472,6 @@ def _aperture_process_one_target(
     frame_time_lookup = state.frame_time_lookup
     fwhm_px = state.fwhm_px
     apertures_px = state.apertures_px
-    chip_fw = state.chip_fw
-    chip_fh = state.chip_fh
     _flux_matrix = state._flux_matrix
     obs_group = state.obs_group
     _gain_phot = state._gain_phot
@@ -1539,11 +1483,7 @@ def _aperture_process_one_target(
     target_cid = _normalize_gaia_id(target_row.get("catalog_id", ""))
     target_name = _target_display_name(target_row, fallback_cid=target_cid)
     target_vsx_type = str(target_row.get("vsx_type", "") or "").strip()
-    _sp = target_row.get("skip_photometry", False)
-    if isinstance(_sp, (bool, np.bool_)):
-        skip_photo = bool(_sp)
-    else:
-        skip_photo = str(_sp).strip().lower() in ("1", "true", "yes", "t")
+    skip_photo = coerce_bool(target_row.get("skip_photometry", False))
     _zf_row = str(target_row.get("zone_flag", "")).strip()
     # skip_photometry / skip_reason carry the whole decision (target-selection cuts + per-frame saturation)
     if not skip_photo:
@@ -1615,7 +1555,7 @@ def _aperture_process_one_target(
     )
 
     # Step 2: photometry per frame (PERF-8: slice shared flux matrix when built)
-    chip_fh, chip_fw, frame_results = _tgt_frame_rows(
+    frame_results = _tgt_frame_rows(
         _aperture_csv_cache=_aperture_csv_cache,
         _aperture_lookup_cache=_aperture_lookup_cache,
         _flux_matrix=_flux_matrix,
@@ -1623,8 +1563,6 @@ def _aperture_process_one_target(
         _rn_phot=_rn_phot,
         all_ids=all_ids,
         apertures_px=apertures_px,
-        chip_fh=chip_fh,
-        chip_fw=chip_fw,
         csv_files=csv_files,
         frame_time_lookup=frame_time_lookup,
         sat_limit_resolved=sat_limit_resolved,
@@ -1636,8 +1574,6 @@ def _aperture_process_one_target(
 
     all_frames, = _tgt_apply_night_k(
         _chk_cid_pref=_chk_cid_pref,
-        annulus_inner_fwhm=annulus_inner_fwhm,
-        annulus_outer_fwhm=annulus_outer_fwhm,
         comp_ids=comp_ids,
         frame_results=frame_results,
         state=state,
@@ -1656,8 +1592,6 @@ def _aperture_process_one_target(
     _dilution_result, mag_calib = _tgt_dilution(
         _cfg=_cfg,
         _dilution_result=_dilution_result,
-        apertures_px=apertures_px,
-        fwhm_px=fwhm_px,
         mag_calib=mag_calib,
         obs_group=obs_group,
         state=state,
@@ -1761,8 +1695,8 @@ def _aperture_process_one_target(
         """Per-epoch k'' + colour-term corrections of the check star, as applied to the target."""
         _n = len(src_files)
         _corr = np.zeros(_n, dtype=np.float64)
-        _row = state.masterstars_df.loc[state.masterstars_df["catalog_id"].astype(str).map(_normalize_gaia_id) == chk_cid]
-        _c = float(pd.to_numeric(_row["bp_rp"], errors="coerce").iloc[0]) if len(_row) and "bp_rp" in _row else float("nan")
+        _row = state.masterstar_row(chk_cid)  # G06-40 (ids normalised at load: stripped == normalised)
+        _c = float(pd.to_numeric(_row["bp_rp"], errors="coerce")) if _row is not None and "bp_rp" in _row else float("nan")
         _notes = []
         if k2_source_target != "none" and math.isfinite(k2_value_lc) and math.isfinite(k2_colour_ref) and math.isfinite(_c):
             _am = np.asarray(_target_airmass_arr, dtype=np.float64)[:_n]
@@ -1880,7 +1814,4 @@ def _aperture_process_one_target(
         target_vsx_type=target_vsx_type,
     )
 
-
-    state.chip_fw = chip_fw
-    state.chip_fh = chip_fh
     return summary_rows, n_lc

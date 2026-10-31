@@ -6,6 +6,7 @@ import logging
 import math
 
 import numpy as np
+from stats_core import parse_bool
 from astropy.io import fits
 
 LOGGER = logging.getLogger(__name__)
@@ -34,16 +35,7 @@ def _header_bool(hdr: fits.Header, key: str) -> bool | None:
     if key not in hdr:
         return None
     v = hdr.get(key)
-    if isinstance(v, bool):
-        return v
-    if isinstance(v, (int, float)):
-        return bool(v)
-    s = str(v).strip().lower()
-    if s in ("true", "1", "t", "yes"):
-        return True
-    if s in ("false", "0", "f", "no"):
-        return False
-    return None
+    return parse_bool(v)
 
 
 def _header_has_vy_skysf(hdr: fits.Header) -> bool:

@@ -21,12 +21,4 @@ def _resolve_light_fits_for_quality_inspection(archive: Path, raw_fp: Path | str
     return None
 
 
-def resolve_masterstars_metadata_csv(platesolve_dir: Path | str) -> Path | None:
-    """Return masterstars metadata CSV in a platesolve setup dir (full_match preferred)."""
-    ps = Path(platesolve_dir)
-    for name in ("masterstars_full_match.csv", "masterstars.csv"):
-        p = ps / name
-        if p.is_file():
-            return p
-    return None
 

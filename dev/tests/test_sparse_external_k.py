@@ -74,16 +74,12 @@ def test_n2_external_k_end_to_end_synthetic() -> None:
 
 
 def test_build_comp_photon_matches_production_err() -> None:
-    """Sidecar photon derivation mirrors production empirical-bkg relative err."""
+    """The sidecar photon sigma is the row's production err (CCD-ONE-2026-10: no recomputation with a
+    default gain / read noise when the row has none - such a row has no photon sigma)."""
     import math
 
     import pandas as pd
-    from config import AppConfig
     from mag_constants import MAG_ERR_SCALE
-    from photometry_core import (
-        _photometric_error_with_bkg_mode,
-        _sky_pp_for_photometric_error,
-    )
 
     row = pd.Series(
         {
@@ -95,22 +91,10 @@ def test_build_comp_photon_matches_production_err() -> None:
             "sky_adu_per_px_annulus": 1200.0,
         }
     )
-    flux = float(row["dao_flux"])
-    sig_ap = float(row["sigma_bkg_ap"])
-    area = math.pi * float(row["aperture_r_px"]) ** 2
-    sky = _sky_pp_for_photometric_error(row)
-    prod, _ = _photometric_error_with_bkg_mode(
-        flux,
-        sky_pp=sky,
-        area=area,
-        gain=1.0,
-        read_noise=10.0,
-        sigma_bkg_ap=sig_ap,
-    )
+    prod = 1.234e-3
     mag = build_comp_photon_mag_from_frames(
         pd.DataFrame([row]), ["999"], ["proc_test.csv"], )["999"][0]
-    derived_rel = float(mag) / MAG_ERR_SCALE
-    assert derived_rel == pytest.approx(prod, rel=1e-9)
+    assert math.isnan(float(mag))
 
     row_with_err = row.copy()
     row_with_err["err"] = prod

@@ -1,6 +1,6 @@
 """RUN VYVAR as a separate process (JOB-2026-10).
 
-The GUI writes a job spec (JSON) and starts ``python -m night_run --job <spec>``.
+The GUI writes a job spec (JSON) and starts ``python -m run_job --job <spec>``.
 The child process runs exactly the same ``run_night_pipeline`` as the night
 runner and reports progress into ``run_status.json`` next to the spec. The GUI
 only reads that file, so a Streamlit rerun (any widget click) no longer stops
@@ -11,10 +11,17 @@ Files in the job directory:
   run_status.json   - state running|done|failed, pid, process, message, timestamps
   result.pkl        - pickled NightRunResult (best effort, for the GUI session state)
   run_stdout.log    - stdout/stderr of the child process
+
+G12-25: the child is started as ``-m run_job`` (was ``-m night_run``). Each spawned worker process
+imports the main module again as ``__mp_main__``; this module imports only the standard library
+and ``astro_env`` (the astropy IERS settings every process of the run had through night_run), not
+the whole night_run graph (~1700 modules, ~150 MB per worker). ``night_run`` is imported by the
+child when the job runs.
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import pickle
@@ -25,6 +32,8 @@ from dataclasses import fields
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+import astro_env  # noqa: F401  (IERS-OFF-2026-10, in the job process and its spawned workers)
 
 JOB_FILE = "job.json"
 STATUS_FILE = "run_status.json"
@@ -111,7 +120,7 @@ def launch_job(params: Any, data_root: Path | str, label: str = "RUN VYVAR") -> 
     write_status(job_dir, state="starting", label=label, process=label, message="Starting...",
                  started_utc=_now())
     src_py = Path(__file__).resolve().parent
-    cmd = [sys.executable, "-m", "night_run", "--job", str(job_dir / JOB_FILE)]
+    cmd = [sys.executable, "-m", "run_job", "--job", str(job_dir / JOB_FILE)]
     kw: dict[str, Any] = {"cwd": str(src_py)}
     if os.name == "nt":
         kw["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP | getattr(subprocess, "CREATE_NO_WINDOW", 0)
@@ -216,3 +225,14 @@ def run_job_file(job_path: Path | str) -> int:
         finished_utc=_now(),
     )
     return 0 if result.success else 1
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Child entry of a RUN VYVAR job (``python -m run_job --job <job.json>``)."""
+    ap = argparse.ArgumentParser(prog="run_job", description="Run one RUN VYVAR job spec.")
+    ap.add_argument("--job", type=Path, required=True, help="job.json written by launch_job")
+    return run_job_file(ap.parse_args(argv).job)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

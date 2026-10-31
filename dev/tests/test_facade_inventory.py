@@ -42,7 +42,6 @@ PIPELINE_CALLABLE_E1 = (
     "generate_observation_hash",
     "log_lights_binning_from_headers_preflight",
     "_resolve_light_fits_for_quality_inspection",
-    "resolve_masterstars_metadata_csv",
 )
 
 PHOTOMETRY_CALLABLE_E1 = (
@@ -53,7 +52,6 @@ PHOTOMETRY_CALLABLE_E1 = (
     "_assert_inv_err_sigma_acct_01",
     "_labbe_content_seed_from_header",
     "bkg_scale_ratio_empirical_over_howell",
-    "_howell_bkg_variance_adu2",
     "scaled_sigma_bkg_ap_from_howell",
     "comp_quality_quality_strings",
     "_sigma_bkg_r_key",
@@ -99,7 +97,6 @@ PHOTOMETRY_E3_COMP = (
     "_count_gate_passing_comps",
     "_dedupe_comp_pool_by_gaia_key",
     "_bprp_tier_ladder_for_selection",
-    "_bool_col",
 )
 
 PHOTOMETRY_E4_APERTURE = (
@@ -141,7 +138,6 @@ PIPELINE_E5 = (
     "_match_and_crop_pair",
     "_qc_enrich_calibrated_in_place",
     "_qc_enrich_one_frame",
-    "_qc_fwhm_elongation",
     "_saturate_limit_adu_from_header",
     "_sync_obs_calibration_state_with_retry",
     "apply_perf10_dao_qc_to_obs_files",
@@ -190,7 +186,6 @@ PIPELINE_E6A_CATALOG = (
     "_compute_airmass_from_altaz",
     "_dao_convolved_background_rms_adu",
     "_dao_detection_threshold_adu",
-    "_dao_noise_sigma_adu",
     "_effective_field_catalog_cone_radius_deg",
     "_exo_host_annotation_arrays",
     "_extract_airmass_from_header",
@@ -198,7 +193,6 @@ PIPELINE_E6A_CATALOG = (
     "_init_export_per_frame_worker",
     "_lock_matched_centroids_to_master_grid",
     "_masterstar_zone_linear_threshold",
-    "_pixel_noise_sigma_pp_adu",
     "_proc_deduplicate_matched_catalog_rows",
     "_query_exoplanet_local",
     "_query_vsx_local",
@@ -236,7 +230,6 @@ MOVED_HOMES_2026_10 = {
     "cone_sky_box": "catalog_db",
     "observation_group_folder_name": "fits_meta",
     "parse_comp_quality_json_map": "comp_table",
-    "_howell_variance_adu2": "photometry_gate_helpers",
     "_photometric_error": "photometry_gate_helpers",
     "_photometric_error_with_bkg_mode": "photometry_gate_helpers",
     "resolve_apply_color_term": "band_classify",

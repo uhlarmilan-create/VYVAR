@@ -60,8 +60,9 @@ def noise_curves(field: pd.DataFrame, meta: dict[str, Any]) -> tuple[np.ndarray,
     lq = lq[np.isfinite(lq)]
     if not len(lq) or not math.isfinite(zt):
         return mids_a, sexp, None
-    md = float(np.median(lq))
-    sc = 1.4826 * float(np.median(np.abs(lq - md)))
+    from variability_field import scatter_index_center_scale  # noqa: PLC0415
+
+    md, sc = scatter_index_center_scale(lq.to_numpy(float))
     return mids_a, sexp, sexp * np.exp(md + zt * sc)
 
 
@@ -154,17 +155,24 @@ def field_png(masterstar: Path, cand: pd.DataFrame, out: Path) -> Path | None:
     return out
 
 
-def candidate_lc_png(lc_csv: Path, out: Path, title: str, time_label: str = "JD", ylabel: str = "dmag") -> Path | None:
+def candidate_lc_png(lc_csv: Path | pd.DataFrame, out: Path, title: str, time_label: str = "JD",
+                     ylabel: str = "dmag") -> Path | None:
     """Night light curve of one star with FWHM and airmass under it. Error bars: the
-    field noise model ((a e)^2 + floor^2), the scatter a constant star of this brightness has."""
+    field noise model ((a e)^2 + floor^2), the scatter a constant star of this brightness has.
+    ``lc_csv``: the light-curve CSV or the table itself (G11-44: no temporary file)."""
     plt = _mpl()
-    p = Path(lc_csv)
-    if not p.is_file():
-        return None
-    d = pd.read_csv(p)
+    if isinstance(lc_csv, pd.DataFrame):
+        d = lc_csv
+    else:
+        p = Path(lc_csv)
+        if not p.is_file():
+            return None
+        d = pd.read_csv(p)
     fig, axs = plt.subplots(2, 1, figsize=(9, 4.6), dpi=110, sharex=True, gridspec_kw={"height_ratios": [3, 1]})
     t = pd.to_numeric(d["time"], errors="coerce")
-    t0 = math.floor(float(t.min())) if t.notna().any() else 0.0
+    from jd_axis_format import jd_offset  # noqa: PLC0415
+
+    t0 = jd_offset(t) or 0
     axs[0].errorbar(t - t0, d["dmag"], yerr=d["err"], fmt="o", ms=3, c="#1B1F24", ecolor="#9AA3AE", lw=0.8)
     axs[0].invert_yaxis()
     axs[0].set_ylabel(ylabel)

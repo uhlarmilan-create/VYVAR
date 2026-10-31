@@ -15,16 +15,28 @@ from pathlib import Path
 MANIFEST_NAME = "draft_manifest.json"
 
 
+_LEGACY_FIELD_RE = re.compile(r"draft_\d+(_snapshot.*)?", re.IGNORECASE)
+
+
 def processed_field_root(path: Path | str | None) -> Path | None:
-    """The run folder containing ``path`` (``path`` itself or a parent with ``draft_manifest.json``)."""
+    """The run folder containing ``path``: ``path`` itself or the nearest parent with ``draft_manifest.json``;
+    without a manifest, the nearest legacy ``draft_NNNNNN`` (or ``draft_NNNNNN_snapshot...``) folder.
+
+    G12-19: the ONE "field root from a path" rule, for calibrated and pre-calibrated fields alike (a
+    pre-calibrated field has ``non_calibrated/`` and no ``calibrated/``; the rule never looks at either)."""
     if path is None:
         return None
     p = Path(path).expanduser().resolve()
+    chain: list[Path] = []
     for cand in (p, *p.parents):
         if (cand / MANIFEST_NAME).is_file():
             return cand
         if cand.name == "Drafts":
             break
+        chain.append(cand)
+    for cand in chain:
+        if _LEGACY_FIELD_RE.fullmatch(cand.name):
+            return cand
     return None
 
 

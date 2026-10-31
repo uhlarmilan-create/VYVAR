@@ -20,13 +20,14 @@ def _night(sys_mag: float, seed: int = 3):
     flux, skyd = {}, {}
     for i in range(n_c):
         f0 = 10 ** (-0.4 * (9.0 + 0.25 * i - 25.0))
-        var = f0 / g + area * (1 + area / n_sky) * (sky / g)
+        var = f0 / g + area * (1 + (math.pi / 2) * area / n_sky) * (sky / g)  # CCD-ONE-2026-10: median sky
         e_ph = 1.0857 * math.sqrt(var) / f0
         dm = rng.normal(0, e_ph, n_f) + rng.normal(0, 0.004, n_f) + rng.normal(0, sys_mag, n_f)
         flux[str(i)] = f0 * 10 ** (-0.4 * dm)
         skyd[str(i)] = np.full(n_f, sky)
+    nsk = {c: np.full(n_f, n_sky) for c in flux}
     return night_sigma_sys_from_comps(flux, skyd, np.full(n_f, fw), k=k, gain=g, read_noise=0.0,
-                                      annulus_inner_fwhm=4.0, annulus_outer_fwhm=6.0, scint_mag_by_frame=scint)
+                                      n_sky_by_cid=nsk, scint_mag_by_frame=scint)
 
 
 def test_no_floor_gives_no_floor():

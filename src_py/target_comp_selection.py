@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
-import json
 import logging
 import math
 import time
@@ -15,11 +14,10 @@ from config import AppConfig
 from gaia_catalog_id import normalize_gaia_source_id
 from infolog import log_event
 from photometry_comp import (
-    _batch_enrich_targets_bp_rp_from_gaia_db,
     _enrich_target_bp_rp_from_gaia_db,
+    gaia_bp_rp,
     _normalize_id_series,
     _target_selection_effective_frame_hw_px,
-    _read_field_density_inputs,
     _refresh_variable_targets_xy,
     _resolve_frame_hw_px_from_masterstar,
     build_global_comp_pool,
@@ -61,10 +59,16 @@ def _comp_safe_bbox(
         from aperture_pertarget import frame_stem_from_source  # noqa: PLC0415
         from aperture_policy import fwhm_from_header_vy_fwhm  # noqa: PLC0415
 
+        from fits_suffixes import list_fits_files  # noqa: PLC0415
+
         fws: list[float] = []
+        fits_by_dir: dict[Path, dict[str, Path]] = {}  # G02-05: the frame keeps its own suffix (.fit / .fts)
         for cp in csv_paths:
-            fp = Path(cp).with_name(frame_stem_from_source(Path(cp).name) + ".fits")
-            if fp.is_file():
+            d = Path(cp).parent
+            if d not in fits_by_dir:
+                fits_by_dir[d] = {p.stem: p for p in list_fits_files(d)}
+            fp = fits_by_dir[d].get(frame_stem_from_source(Path(cp).name))
+            if fp is not None:
                 # same clamp as the aperture-photometry grid (measure_night_grid / _fwhm_from_fits_header)
                 v = fwhm_from_header_vy_fwhm(_fits.getheader(fp))
                 if v is not None:
@@ -101,6 +105,26 @@ def _split_comp_reserve(comps: pd.DataFrame, ) -> tuple[pd.DataFrame, pd.DataFra
     return prim.reset_index(drop=True), resv.reset_index(drop=True)
 
 
+#: Field density class limits in stars/Mpx (diagnostic label only, COMP-RULES-2026-10: the comparison
+#: rules are the same for every field; recorded in pipeline_meta["field_density"]).
+FIELD_DENSITY_SPARSE_BELOW_PER_MPX = 300.0
+FIELD_DENSITY_DENSE_ABOVE_PER_MPX = 1000.0
+
+
+def _read_masterstar_header(ms_fits: Path) -> Any:
+    """The MASTERSTAR primary header (one read for the field density, the WCS scale and the WCS); None if
+    the file is missing or unreadable."""
+    if not ms_fits.is_file():
+        return None
+    try:
+        with astrofits.open(ms_fits, memmap=False) as hdul:
+            return hdul[0].header.copy()
+    except Exception as exc:  # noqa: BLE001
+        logging.error("[EXC-0196] MASTERSTAR header read fails - field density uses the masterstars count, "
+                      "no WCS refresh: %s", exc)
+        return None
+
+
 def _tcs_field_geometry(
     *,
     _cfg_base,
@@ -108,20 +132,24 @@ def _tcs_field_geometry(
     _p,
     frame_h_px,
     frame_w_px,
-    masterstars_csv,
+    ms_raw,
     output_dir,
     plate_scale_arcsec_px,
     variable_targets_csv,
 ):
     """Field density (diagnostic), plate scale of the MASTERSTAR WCS and the MASTERSTAR WCS / variable-target inputs."""
-    _n_field, _cw_fd, _ch_fd, _nsrc_fd, _vy_ndao_raw = _read_field_density_inputs(
-        _ms_density,
-        Path(masterstars_csv),
+    from photometry_comp import field_density_inputs  # noqa: PLC0415
+
+    _ms_hdr = _read_masterstar_header(_ms_density)  # G07-19: one MASTERSTAR header read
+    _n_field, _cw_fd, _ch_fd, _nsrc_fd, _vy_ndao_raw = field_density_inputs(
+        _ms_hdr,
+        ms_raw["catalog_id"] if "catalog_id" in ms_raw.columns else None,
         int(frame_w_px),
         int(frame_h_px),
     )
     _density = compute_field_density(_n_field, _cw_fd, _ch_fd)
-    _d_class = classify_field_density(float(_density), 300.0, 1000.0)  # diagnostic label only
+    _d_class = classify_field_density(
+        float(_density), FIELD_DENSITY_SPARSE_BELOW_PER_MPX, FIELD_DENSITY_DENSE_ABOVE_PER_MPX)
     logging.info(
         "[FIELD DENSITY] %.0f stars/Mpx -> class: %s (n_stars=%d, chip=%dx%dpx, n_src=%s)",
         float(_density),
@@ -162,12 +190,11 @@ def _tcs_field_geometry(
     # same WCS (never failed), so the pixel-distance mode was unreachable; comp distances are RA/Dec.
     # The WCS determinant scale is kept for the minimum target-comp separation below.
     _actual_scale: float | None = None
-    if _ms_density.is_file():
+    if _ms_hdr is not None:
         try:
             from astropy.wcs import WCS as _WCS_check  # noqa: PLC0415
 
-            with astrofits.open(_ms_density, memmap=False) as _hdul_wcs:
-                _wcs_check = _WCS_check(_hdul_wcs[0].header)
+            _wcs_check = _WCS_check(_ms_hdr)
             _psm_chk = np.asarray(_wcs_check.pixel_scale_matrix, dtype=np.float64)
             _actual_scale = float(np.sqrt(np.abs(np.linalg.det(_psm_chk))) * 3600.0)
         except Exception as _wcs_exc:  # noqa: BLE001
@@ -190,9 +217,8 @@ def _tcs_field_geometry(
             f"[BORDER] {plan_path} has no safe_bbox_px (overlap of the aligned frames) - re-run the alignment"
         )
     _safe_bbox: tuple[float, float, float, float] = (float(sb[0]), float(sb[1]), float(sb[2]), float(sb[3]))
-    _ms_fits_p01 = Path(variable_targets_csv).resolve().parent / "MASTERSTAR.fits"
     _masterstar_wcs: Any = None
-    if _ms_fits_p01.is_file():
+    if _ms_hdr is not None:
         try:
             import warnings
 
@@ -200,8 +226,7 @@ def _tcs_field_geometry(
 
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", FITSFixedWarning)
-                with astrofits.open(_ms_fits_p01, memmap=False) as hdul:
-                    _masterstar_wcs = WCS(hdul[0].header)
+                _masterstar_wcs = WCS(_ms_hdr)
         except Exception as exc:  # noqa: BLE001
             logging.warning("[VT REFRESH] could not load MASTERSTAR WCS: %s - x/y in variable_targets.csv unchanged", exc)
             _masterstar_wcs = None
@@ -219,6 +244,7 @@ def _tcs_field_geometry(
 
 def _tcs_selection_inputs(
     *,
+    ms_raw,
     _cfg_base,
     _p,
     _safe_bbox,
@@ -235,7 +261,7 @@ def _tcs_selection_inputs(
     variable_targets_csv,
 ):
     """Inputs of comparison selection: frame size, comp-safe bbox, proc CSV list and the shared CSV cache."""
-    ms_df = pd.read_csv(masterstars_csv, low_memory=False, dtype=VYVAR_CSV_DTYPE)
+    ms_df = ms_raw.copy()  # masterstars_full_match.csv as read once (G07-19)
     # Normalize Gaia ID to string
     if "catalog_id" in ms_df.columns:
         ms_df["catalog_id"] = _normalize_id_series(ms_df["catalog_id"])
@@ -264,7 +290,7 @@ def _tcs_selection_inputs(
     # astrometric gate, which is measured on the MASTERSTAR image itself.
     from photometry_comp import night_median_fwhm_px  # noqa: PLC0415
 
-    fwhm_night_px, _fwn_src = night_median_fwhm_px(csv_paths, float(fwhm_px))
+    fwhm_night_px, _fwn_src = night_median_fwhm_px(csv_paths, float(fwhm_px), store=_proc_store)
     logging.info(
         "[COMP-SELECT] neighbour-geometry FWHM %.3f px (%s); MASTERSTAR %.3f px; iso %.1f px",
         float(fwhm_night_px),
@@ -307,9 +333,9 @@ def _tcs_selection_inputs(
 
     _sat_may_exclude = True
     try:
-        _sd_path = Path(per_frame_csv_dir).resolve().parent.parent.parent / "sat_diag.json"
-        if not _sd_path.is_file():
-            _sd_path = Path(output_dir).resolve().parent.parent / "sat_diag.json"
+        from sat_diag import sat_diag_json_for_photometry  # noqa: PLC0415
+
+        _sd_path = sat_diag_json_for_photometry(per_frame_csv_dir, output_dir)
         if _sd_path.is_file():
             from sat_diag import load_sat_diag_json  # noqa: PLC0415
 
@@ -322,22 +348,6 @@ def _tcs_selection_inputs(
                     _sd_ctx.sat_source,
                     _sd_ctx.sat_adu,
                 )
-                # SAT-LIN-2026-10: linearity check from the science frames (report only).
-                try:
-                    import infolog as _infolog_lin  # noqa: PLC0415
-                    from sat_diag import linearity_check, linearity_check_infolog_lines  # noqa: PLC0415
-
-                    _lin = linearity_check(csv_paths, _sd_ctx.sat_adu)
-                    for _ln in linearity_check_infolog_lines(_lin):
-                        _infolog_lin.log_event(_ln)
-                    try:
-                        _sd_js = json.loads(_sd_path.read_text(encoding="utf-8"))
-                        _sd_js["linearity_check"] = _lin
-                        _sd_path.write_text(json.dumps(_sd_js, indent=2), encoding="ascii")
-                    except Exception as _lin_w_exc:  # noqa: BLE001
-                        logging.debug("[LINEARITY] sat_diag.json update skipped: %s", _lin_w_exc)
-                except Exception as _lin_exc:  # noqa: BLE001
-                    logging.warning("[LINEARITY] check failed: %s", _lin_exc)
     except Exception as _sd_p1_exc:  # noqa: BLE001
         logging.debug("[SAT-DIAG] comp_selection context load skipped: %s", _sd_p1_exc)
 
@@ -364,6 +374,9 @@ def _tcs_global_pool(
     flux_col,
     fwhm_night_px,
     fwhm_px,
+    gain,
+    read_noise,
+    scint_params,
     min_dist_arcsec,
     min_frames_frac,
     ms_df,
@@ -390,6 +403,9 @@ def _tcs_global_pool(
         masterstar_fits=Path(variable_targets_csv).resolve().parent / "MASTERSTAR.fits",
         field_catalog_csv=Path(variable_targets_csv).resolve().parent / "field_catalog_cone.csv",
         sat_may_exclude=bool(_sat_may_exclude),
+        gain=float(gain),
+        read_noise=float(read_noise),
+        scint_params=scint_params,
     )
     if _global_pool_df is None or getattr(_global_pool_df, "empty", True):
         _global_pool_df = None
@@ -399,13 +415,13 @@ def _tcs_global_pool(
             drop=True
         )
 
-    _gaia_batch: dict[str, dict[str, Any]] = {}
+    _gaia_batch: dict[str, float | None] = {}
     if _gaia_db_targets:
         _cids_batch = [
             str(normalize_gaia_source_id(r.get("catalog_id") or ""))
             for _, r in active.iterrows()
         ]
-        _gaia_batch = _batch_enrich_targets_bp_rp_from_gaia_db(_cids_batch, _gaia_db_targets)
+        _gaia_batch = gaia_bp_rp(_cids_batch, _gaia_db_targets)
         logging.info(
             "[COMP-SELECT] Gaia batch lookup: %d/%d targets enriched",
             len(_gaia_batch),
@@ -413,7 +429,7 @@ def _tcs_global_pool(
         )
 
     # PERF-3: prefetch Gaia bp_rp for the masterstars comp pool (before per-target loop).
-    _comp_gaia_prefetch: dict[str, dict[str, Any]] = {}
+    _comp_gaia_prefetch: dict[str, float | None] = {}
     _comp_source_ids_n = 0
     try:
         _comp_id_seen: set[str] = set()
@@ -429,10 +445,7 @@ def _tcs_global_pool(
                 _comp_source_ids.append(g)
         _comp_source_ids_n = len(_comp_source_ids)
         if _comp_source_ids and _gaia_db_targets:
-            _comp_gaia_prefetch = _batch_enrich_targets_bp_rp_from_gaia_db(
-                _comp_source_ids,
-                _gaia_db_targets,
-            )
+            _comp_gaia_prefetch = gaia_bp_rp(_comp_source_ids, _gaia_db_targets)
             logging.info(
                 "[PERF-3] Comp Gaia prefetch: %d source_ids -> %d hits",
                 _comp_source_ids_n,
@@ -711,15 +724,9 @@ def run_target_and_comp_selection(
         float(fwhm_px),
     )
 
-    def _p(msg: str) -> None:
-        if progress_cb is None:
-            return
-        try:
-            progress_cb(str(msg))
-        except UnicodeEncodeError:
-            # Some Windows consoles use legacy encodings (cp1252) and crash on diacritics.
-            # Use ASCII escapes so printing never raises again.
-            progress_cb(str(msg).encode("ascii", "backslashreplace").decode("ascii"))
+    from infolog import safe_progress  # noqa: PLC0415
+
+    _p = safe_progress(progress_cb)
 
     _cfg_base = cfg
     # CODE-REVIEW step 7B: the edge margin is the sky-annulus radius (was a fixed 50 px key).
@@ -729,13 +736,14 @@ def run_target_and_comp_selection(
         _ms_density, db=db, draft_id=draft_id
     )
     logging.info("[TARGET-SELECT] Frame dimensions %dx%d px from %s", int(frame_w_px), int(frame_h_px), _frame_hw_src)
+    ms_raw = pd.read_csv(masterstars_csv, low_memory=False, dtype=VYVAR_CSV_DTYPE)
     _actual_scale, _cfg_p01, _d_class, _density, _expected_scale, _n_field, _safe_bbox = _tcs_field_geometry(
         _cfg_base=_cfg_base,
         _ms_density=_ms_density,
         _p=_p,
         frame_h_px=frame_h_px,
         frame_w_px=frame_w_px,
-        masterstars_csv=masterstars_csv,
+        ms_raw=ms_raw,
         output_dir=output_dir,
         plate_scale_arcsec_px=plate_scale_arcsec_px,
         variable_targets_csv=variable_targets_csv,
@@ -780,6 +788,7 @@ def run_target_and_comp_selection(
 
     # Read as strings to prevent Gaia ID precision loss (float64/scientific notation).
     _cfg_gaia_targets, _cfg_gp, _comp_bbox, _fh_chip, _fw_chip, _gaia_db_targets, _proc_store, _sat_may_exclude, _vt_cid_exclude, all_comp_rows, all_reserve_rows, csv_paths, fwhm_night_px, ms_df, shared_csv_cache, targets_without_comps = _tcs_selection_inputs(
+        ms_raw=ms_raw,
         _cfg_base=_cfg_base,
         _p=_p,
         _safe_bbox=_safe_bbox,
@@ -794,6 +803,29 @@ def run_target_and_comp_selection(
         output_dir=output_dir,
         per_frame_csv_dir=per_frame_csv_dir,
         variable_targets_csv=variable_targets_csv,
+    )
+    # COMP-CEIL-FIELDK-2026-10: the gain / read noise of the comp_rms ceiling's CCD-equation photon error -
+    # the authority the light-curve errors use (GAIN-ONE-2026-10: MASTERSTAR header, draft equipment)
+    from aperture_photometry import _resolve_aperture_equipment_id  # noqa: PLC0415
+    from rig_photometry import photometric_gain_read_noise  # noqa: PLC0415
+
+    _ms_hdr_comp = _read_masterstar_header(_ms_density)
+    _pg_comp = photometric_gain_read_noise(
+        _ms_hdr_comp,
+        cfg,
+        _resolve_aperture_equipment_id(db, draft_id=draft_id, output_dir=output_dir, masterstar_fits_path=_ms_density),
+    )
+    logging.info("[COMP-SELECT] photon error of the comp_rms ceiling: gain=%.4f e-/ADU, RN=%.2f e- (%s / %s)",
+                 float(_pg_comp.gain), float(_pg_comp.read_noise), _pg_comp.gain_source, _pg_comp.read_noise_source)
+    # COMP-CEIL-NOISEMODEL-2026-10: scintillation of the ceiling reference with the rig parameters the
+    # light-curve errors use (same draft, MASTERSTAR exposure, resolved site altitude)
+    from aperture_photometry import rig_scint_params_for_run  # noqa: PLC0415
+    from param_resolver import resolve_site  # noqa: PLC0415
+
+    _site_comp = resolve_site(_ms_hdr_comp, db=db, draft_id=draft_id, cfg=cfg)
+    _scint_comp = rig_scint_params_for_run(
+        output_dir, Path(variable_targets_csv).resolve().parent.name, _ms_hdr_comp, cfg,
+        site_alt_m=_site_comp.elev if _site_comp.ok else None,
     )
     # CONSOLIDATE-01D: global pool is always on (COMP-POOL-01); False branch deleted.
     # COMP-POOL-ONLY-2026-10: no try - a failed pool build stops the run (no ungated fallback).
@@ -814,6 +846,9 @@ def run_target_and_comp_selection(
         flux_col=flux_col,
         fwhm_night_px=fwhm_night_px,
         fwhm_px=fwhm_px,
+        gain=float(_pg_comp.gain),
+        read_noise=float(_pg_comp.read_noise),
+        scint_params=_scint_comp,
         min_dist_arcsec=min_dist_arcsec,
         min_frames_frac=min_frames_frac,
         ms_df=ms_df,

@@ -85,7 +85,7 @@ def test_sigma_sys_holds_slow_systematics() -> None:
         flux[f"c{i}"] = 10 ** (-0.4 * m)
         sky[f"c{i}"] = np.full(n_f, 10.0)
     out = night_sigma_sys_from_comps(flux, sky, np.full(n_f, 4.0), k=1.0, gain=1.0e6, read_noise=0.0,
-                                     annulus_inner_fwhm=2.7, annulus_outer_fwhm=5.2)
+                                     n_sky_by_cid={c: np.full(n_f, 500.0) for c in flux})
     assert "total scatter" in out["method"]
     assert out["sigma_sys_mag"] > 0.003  # p2p would see only the 1 mmag white noise
 

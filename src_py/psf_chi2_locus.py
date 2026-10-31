@@ -27,6 +27,7 @@ from typing import Any, Sequence
 
 import numpy as np
 import pandas as pd
+from stats_core import coerce_bool_series
 
 from gaia_catalog_id import read_vyvar_csv
 
@@ -239,22 +240,21 @@ def fit_night_locus_from_proc_dir(proc_dir: Path) -> Chi2Locus | None:
         "is_saturated",
     ]
     for fp in files:
-        hdr = pd.read_csv(fp, nrows=0).columns.tolist()
-        cols = [c for c in usecols if c in hdr]
-        if "psf_flux" not in cols or "psf_chi2" not in cols:
+        # G09-27: one read (no nrows=0 header read); the same columns in file order
+        df = read_vyvar_csv(fp, usecols=lambda c: c in usecols, low_memory=False)
+        if "psf_flux" not in df.columns or "psf_chi2" not in df.columns:
             continue
-        df = read_vyvar_csv(fp, usecols=cols, low_memory=False)
         f = pd.to_numeric(df["psf_flux"], errors="coerce").to_numpy(dtype=np.float64)
         c = pd.to_numeric(df["psf_chi2"], errors="coerce").to_numpy(dtype=np.float64)
         if "psf_converged" in df.columns:
-            cv = df["psf_converged"].fillna(False).astype(bool).to_numpy()
+            cv = coerce_bool_series(df["psf_converged"]).to_numpy()
         else:
             cv = np.isfinite(f) & (f > 0) & np.isfinite(c)
         sat = np.zeros(len(df), dtype=bool)
         if "likely_saturated" in df.columns:
-            sat |= df["likely_saturated"].fillna(False).astype(bool).to_numpy()
+            sat |= coerce_bool_series(df["likely_saturated"]).to_numpy()
         if "is_saturated" in df.columns:
-            sat |= df["is_saturated"].fillna(False).astype(bool).to_numpy()
+            sat |= coerce_bool_series(df["is_saturated"]).to_numpy()
         fluxes.append(f)
         chi2s.append(c)
         convs.append(cv)
@@ -299,27 +299,21 @@ def reapply_night_locus_to_proc_dir(
         flux = pd.to_numeric(df["psf_flux"], errors="coerce").to_numpy(dtype=np.float64)
         chi2 = pd.to_numeric(df["psf_chi2"], errors="coerce").to_numpy(dtype=np.float64)
         if "psf_converged" in df.columns:
-            conv = df["psf_converged"].fillna(False).astype(bool).to_numpy()
+            conv = coerce_bool_series(df["psf_converged"]).to_numpy()
         else:
             conv = np.isfinite(flux) & (flux > 0)
         sat = np.zeros(len(df), dtype=bool)
         if "likely_saturated" in df.columns:
-            sat |= df["likely_saturated"].fillna(False).astype(bool).to_numpy()
+            sat |= coerce_bool_series(df["likely_saturated"]).to_numpy()
         if "is_saturated" in df.columns:
-            sat |= df["is_saturated"].fillna(False).astype(bool).to_numpy()
+            sat |= coerce_bool_series(df["is_saturated"]).to_numpy()
         locus = frame_offset_locus(flux, chi2, night=night, converged=conv, saturated=sat)
         source = locus.source
         resid = locus_residual_sigma(flux, chi2, locus)
         if not isinstance(resid, np.ndarray):
             resid = np.asarray([resid], dtype=np.float64)
-        ok = np.zeros(len(df), dtype=bool)
-        for i in range(len(df)):
-            ok[i] = chi2_ok_from_locus(
-                converged=bool(conv[i]),
-                chi2=float(chi2[i]) if math.isfinite(chi2[i]) else float("nan"),
-                resid_sigma=float(resid[i]) if math.isfinite(resid[i]) else float("nan"),
-                n_sigma=ns,
-            )
+        # G09-29: chi2_ok_from_locus for every row at once (converged, finite chi2, resid <= n_sigma)
+        ok = np.asarray(conv, dtype=bool) & np.isfinite(chi2) & np.isfinite(resid) & (resid <= float(ns))
         df["psf_converged"] = conv
         from proc_frame_store import round_proc_columns  # noqa: PLC0415
 
@@ -365,11 +359,7 @@ def _count_psf_fit_ok_in_sidecar(sidecar: Path) -> int:
     if not sidecar.is_file():
         return 0
     df = pd.read_csv(sidecar, usecols=["psf_fit_ok"], low_memory=False)
-    col = df["psf_fit_ok"]
-    if col.dtype == bool:
-        return int(col.fillna(False).sum())
-    s = col.astype(str).str.strip().str.lower()
-    return int(s.isin(("true", "1", "yes")).sum())
+    return int(coerce_bool_series(df["psf_fit_ok"]).sum())
 
 
 def finalize_night_locus_for_inv_psf_frame_01(

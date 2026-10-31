@@ -10,7 +10,7 @@ import pytest
 from astropy.io import fits
 
 from osc_extract import average_bin_2d, bayer_planes_from_mosaic, derive_channel_planes, effective_gain_rn, validate_bayer_crosscheck, valid_bayer_pattern_4
-from photometry_core import _howell_variance_adu2
+from ccd_noise import ccd_variance_adu2
 
 
 def _synthetic_mosaic(pattern: str, *, h: int = 8, w: int = 8) -> np.ndarray:
@@ -80,7 +80,7 @@ def _monte_carlo_channel_variance(
     ch_plane = derive_channel_planes(r0, g1s, g2s, b0)[channel]
     mean_adu = float(np.mean(average_bin_2d(ch_plane, osc_bin)))
     g_eff, rn_eff = effective_gain_rn(gain, rn, channel, osc_bin)
-    var_pred = _howell_variance_adu2(mean_adu, 0.0, 1.0, gain=g_eff, read_noise=rn_eff)
+    var_pred = ccd_variance_adu2(mean_adu, 0.0, 1.0, math.inf, gain=g_eff, read_noise=rn_eff)
     return var_mean, float(var_pred)
 
 

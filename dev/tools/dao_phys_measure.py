@@ -35,12 +35,12 @@ from param_resolver import (  # noqa: E402
     resolve_gain,
     resolve_read_noise,
 )
-from pipeline import (  # noqa: E402
+from pipeline_catalog import (  # noqa: E402
+    _bin2d_mean,
     _dao_auto_binning_factor,
     _dao_convolved_background_rms_adu,
     _dao_detection_threshold_adu,
     _dao_xy_binned_to_full,
-    _mean_bin2d_for_dao,
     _prefilter_dao_table_brightest,
 )
 from utils import DAO_STAR_FINDER_NO_ROUNDNESS_FILTER, dao_detection_fwhm_pixels  # noqa: E402
@@ -593,7 +593,7 @@ def _preprocess_dao(arr: np.ndarray) -> tuple[np.ndarray, np.ndarray, float, flo
     mean, med, std = sigma_clipped_stats(arr, sigma=3.0, maxiters=3)
     data0 = np.nan_to_num((arr - med).astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
     bfac = _dao_auto_binning_factor(*data0.shape)
-    data_dao, bfac = _mean_bin2d_for_dao(data0, bfac)
+    data_dao, bfac = _bin2d_mean(data0, bfac)
     return data0, data_dao, float(med), float(std), int(bfac), float(mean), float(std)
 
 

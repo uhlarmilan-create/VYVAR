@@ -62,6 +62,17 @@ def _warn_git_unavailable() -> None:
     LOGGER.warning("[PHOT] pipeline provenance: git unavailable; git_hash/git_dirty set to null")
 
 
+def git_head_hash(*, short: bool = False) -> str | None:
+    """HEAD of the VYVAR source tree (G10-37: run in the VYVAR folder, never the process CWD, which may be
+    another repository or none). None when git or the repository is unavailable."""
+    cmd = ["git", "rev-parse", "--short", "HEAD"] if short else ["git", "rev-parse", "HEAD"]
+    try:
+        out = subprocess.check_output(cmd, cwd=_REPO_ROOT_FOR_PROVENANCE, text=True, stderr=subprocess.DEVNULL)
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return out.strip() or None
+
+
 def _resolve_git_provenance() -> tuple[str | None, bool | None, list[dict[str, str]]]:
     """Return (HEAD hash, dirty flag, dirty file rows) from repo root; nulls when git unavailable.
 
@@ -69,12 +80,9 @@ def _resolve_git_provenance() -> tuple[str | None, bool | None, list[dict[str, s
     ``git status --porcelain`` (F-431 provenance hardening).
     """
     try:
-        head = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"],
-            cwd=_REPO_ROOT_FOR_PROVENANCE,
-            text=True,
-            stderr=subprocess.DEVNULL,
-        ).strip()
+        head = git_head_hash()
+        if head is None:
+            raise OSError("git rev-parse HEAD failed")
         status = subprocess.check_output(
             ["git", "status", "--porcelain"],
             cwd=_REPO_ROOT_FOR_PROVENANCE,

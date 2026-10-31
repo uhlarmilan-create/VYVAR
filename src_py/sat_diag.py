@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+import warnings
 from collections import Counter
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -17,8 +18,11 @@ from pathlib import Path
 from typing import Any, Sequence
 
 import numpy as np
+from stats_core import coerce_bool_series
 
+from fits_suffixes import list_fits_files
 from gaia_catalog_id import read_vyvar_csv
+from stats_core import flux_to_mag
 from astropy.io import fits
 from astropy.wcs import WCS
 
@@ -226,7 +230,7 @@ def sample_light_paths(
         root = ap / sub
         if not root.is_dir():
             continue
-        files = sorted(root.rglob("*.fits"))
+        files = list_fits_files(root, recursive=True)
         if not files:
             continue
         if len(files) <= max_frames:
@@ -281,12 +285,19 @@ def _star_peak_plateau(paths: Sequence[Path]) -> PileupResult:
     return PileupResult(False, None, n_b, n_s, max_px, n_frames, None, method="star_peak_plateau")
 
 
+#: G02-12: largest pixel value (exclusive) counted by np.bincount (2**20 bins = 8 MB of int64)
+_HIST_BINCOUNT_MAX = 1 << 20
+
+
 def derive_ceiling_from_paths(paths: Sequence[Path]) -> PileupResult:
     """Check A: pile-up detection from raw frame histograms."""
     if not paths:
         return PileupResult(False, None, 0, 0, float("nan"), 0, None)
 
     counts: Counter[int] = Counter()
+    # G02-12: values in [0, _HIST_BINCOUNT_MAX) are counted with np.bincount (same counts as
+    # np.unique + the Counter merge, ~3x faster); other frames take the unique path.
+    hist = np.zeros(0, dtype=np.int64)
     max_px = -math.inf
     bitpix_ceil: float | None = None
 
@@ -303,17 +314,33 @@ def derive_ceiling_from_paths(paths: Sequence[Path]) -> PileupResult:
             if finite.size == 0:
                 continue
             max_px = max(max_px, float(np.max(finite)))
-            vals, cnts = np.unique(finite.astype(np.int64), return_counts=True)
+            iv = finite.astype(np.int64)
+            if int(iv.min()) >= 0 and int(iv.max()) < _HIST_BINCOUNT_MAX:
+                b = np.bincount(iv)
+                if b.size > hist.size:
+                    hist = np.concatenate([hist, np.zeros(b.size - hist.size, dtype=np.int64)])
+                hist[: b.size] += b
+                continue
+            vals, cnts = np.unique(iv, return_counts=True)
             for v, c in zip(vals, cnts, strict=False):
                 counts[int(v)] += int(c)
 
-    if not counts:
+    nz = np.flatnonzero(hist)
+    if counts:
+        for v in nz:
+            counts[int(v)] += int(hist[v])
+    if not counts and nz.size == 0:
         return PileupResult(False, None, 0, 0, max_px, len(paths), bitpix_ceil)
 
-    v_max = max(counts)
-    n_max = counts[v_max]
-    lower_vals = [v for v in counts if v < v_max]
-    n_shoulder = counts[max(lower_vals)] if lower_vals else 0
+    if counts:
+        v_max = max(counts)
+        n_max = counts[v_max]
+        lower_vals = [v for v in counts if v < v_max]
+        n_shoulder = counts[max(lower_vals)] if lower_vals else 0
+    else:
+        v_max = int(nz[-1])
+        n_max = int(hist[v_max])
+        n_shoulder = int(hist[nz[-2]]) if nz.size > 1 else 0
     pileup = False
     if n_max >= N_PILEUP_MIN and bitpix_ceil is not None and v_max >= int(bitpix_ceil) - 1:
         if n_shoulder <= 0:
@@ -520,14 +547,13 @@ def _drift_offset_at_wcs(arr: np.ndarray, wx: float, wy: float, *, use_mag_guide
 
 def alignment_inverse_from_header(hdr: fits.Header | None) -> np.ndarray | None:
     """Inverse of the frame->reference 3x3 transform stored as VY_AM0..VY_AM8, or None."""
+    from frame_footprint import alignment_matrix  # noqa: PLC0415
+
     if hdr is None:
         return None
     try:
-        vals = [float(hdr[f"VY_AM{k}"]) for k in range(9)]
-    except (KeyError, TypeError, ValueError):
-        return None
-    m = np.asarray(vals, dtype=np.float64).reshape(3, 3)
-    if not np.all(np.isfinite(m)):
+        m = alignment_matrix(hdr)
+    except ValueError:
         return None
     try:
         return np.linalg.inv(m)
@@ -538,6 +564,76 @@ def alignment_inverse_from_header(hdr: fits.Header | None) -> np.ndarray | None:
 def box_peak_max(arr: np.ndarray, x: float, y: float, half: int = PEAK_BOX_HALF) -> float:
 
     return _box_peak_max_adu(arr, x, y, half=half)
+
+
+def _round_index(v: np.ndarray) -> np.ndarray:
+    """``int(round(v))`` per element (round half to even, as Python's round). Positions beyond
+    +-1e9 px are clamped first (they stay outside any frame; no int64 overflow)."""
+    return np.rint(np.clip(np.asarray(v, dtype=np.float64), -1e9, 1e9)).astype(np.int64)
+
+
+def _box_peaks_nanmax(arr: np.ndarray, x: np.ndarray, y: np.ndarray, half: int) -> np.ndarray:
+    """:func:`box_peak_max` for many positions (finite x, y): the nanmax of the box clipped to the
+    frame, NaN when the box lies outside it. Gathering with clipped indices repeats edge pixels,
+    which does not change the maximum."""
+    h, w = arr.shape
+    xi = _round_index(x)
+    yi = _round_index(y)
+    off = np.arange(-int(half), int(half) + 1, dtype=np.int64)
+    rows = np.clip(yi[:, None] + off[None, :], 0, h - 1)
+    cols = np.clip(xi[:, None] + off[None, :], 0, w - 1)
+    patches = arr[rows[:, :, None], cols[:, None, :]].reshape(xi.size, -1)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)  # all-NaN box -> NaN, as np.nanmax per star
+        out = np.nanmax(patches, axis=1) if patches.shape[1] else np.full(xi.size, np.nan)
+    empty = (yi + half < 0) | (yi - half >= h) | (xi + half < 0) | (xi - half >= w)
+    out = np.asarray(out, dtype=np.float64)
+    out[empty] = np.nan
+    return out
+
+
+def _refine_placement_com(arr: np.ndarray, x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Per star: move the placement to the 11 px COM centroid when its box peak is at least
+    max(0.75 x the placed box peak, 2500 ADU) - the rule of the former per-star loop, vectorised.
+    Stars whose cutout is cut by the frame edge use the scalar :func:`_centroid_com_cutout`."""
+    h, w = arr.shape
+    half = DRIFT_CENTROID_BOX_HALF
+    n = int(x.size)
+    seed = _box_peaks_nanmax(arr, x, y, PEAK_BOX_HALF)
+    cx = np.full(n, np.nan)
+    cy = np.full(n, np.nan)
+    xi = _round_index(x)
+    yi = _round_index(y)
+    inner = (xi - half >= 0) & (xi + half < w) & (yi - half >= 0) & (yi + half < h)
+    ii = np.flatnonzero(inner)
+    if ii.size:
+        off = np.arange(-half, half + 1, dtype=np.int64)
+        rows = yi[ii][:, None] + off[None, :]
+        cols = xi[ii][:, None] + off[None, :]
+        sub = arr[rows[:, :, None], cols[:, None, :]]  # (m, 11, 11), as the scalar cutout
+        bg = np.percentile(sub.reshape(ii.size, -1), 20, axis=1)
+        wt = sub - bg[:, None, None]
+        wt = np.where(wt > 0, wt, 0.0)
+        s = wt.reshape(ii.size, -1).sum(axis=1)
+        yy, xx = np.indices((2 * half + 1, 2 * half + 1))
+        sx = (wt * xx).reshape(ii.size, -1).sum(axis=1)
+        sy = (wt * yy).reshape(ii.size, -1).sum(axis=1)
+        good = s > 0
+        with np.errstate(invalid="ignore", divide="ignore"):
+            cx[ii] = np.where(good, (xi[ii] - half).astype(np.float64) + sx / s, np.nan)
+            cy[ii] = np.where(good, (yi[ii] - half).astype(np.float64) + sy / s, np.nan)
+    for i in np.flatnonzero(~inner):
+        com = _centroid_com_cutout(arr, float(x[i]), float(y[i]), half)
+        if com is not None:
+            cx[i], cy[i] = com
+    has = np.isfinite(cx) & np.isfinite(cy)
+    trial = np.full(n, np.nan)
+    if has.any():
+        trial[has] = _box_peaks_nanmax(arr, cx[has], cy[has], PEAK_BOX_HALF)
+    a = seed * 0.75
+    thr = np.where(2500.0 > a, 2500.0, a)  # Python max(a, 2500.0): a when NaN
+    move = has & (trial >= thr)
+    return np.where(move, cx, x), np.where(move, cy, y)
 
 
 def measure_raw_peaks_frame(
@@ -671,30 +767,24 @@ def measure_raw_peaks_frame(
         ay_arr = _R[1] / _R[2]
         method = method + "+align_matrix"
 
-    for i in range(n):
-        if ax_arr is not None and ay_arr is not None:
-            if math.isfinite(float(ax_arr[i])) and math.isfinite(float(ay_arr[i])):
-                placed_x = float(ax_arr[i])
-                placed_y = float(ay_arr[i])
-            elif math.isfinite(float(wx[i])) and math.isfinite(float(wy[i])):
-                placed_x = float(wx[i]) + drift_x
-                placed_y = float(wy[i]) + drift_y
-            else:
-                continue
-        elif math.isfinite(float(wx[i])) and math.isfinite(float(wy[i])):
-            placed_x = float(wx[i]) + drift_x
-            placed_y = float(wy[i]) + drift_y
-        else:
-            continue
-        seed_peak = box_peak_max(arr, placed_x, placed_y)
-        com = _centroid_com_cutout(arr, placed_x, placed_y, DRIFT_CENTROID_BOX_HALF)
-        if com is not None:
-            trial_peak = box_peak_max(arr, com[0], com[1])
-            if trial_peak >= max(seed_peak * 0.75, 2500.0):
-                placed_x, placed_y = float(com[0]), float(com[1])
-        px[i] = placed_x
-        py[i] = placed_y
-        peaks[i] = box_peak_max(arr, placed_x, placed_y)
+    # G02-13: placement + peaks for all stars at once (was a Python loop per star; same values).
+    wx_a = np.asarray(wx, dtype=np.float64)
+    wy_a = np.asarray(wy, dtype=np.float64)
+    w_ok = np.isfinite(wx_a) & np.isfinite(wy_a)
+    pl_x = wx_a + drift_x
+    pl_y = wy_a + drift_y
+    ok = w_ok.copy()
+    if ax_arr is not None and ay_arr is not None:
+        a_ok = np.isfinite(ax_arr) & np.isfinite(ay_arr)
+        pl_x = np.where(a_ok, ax_arr, pl_x)
+        pl_y = np.where(a_ok, ay_arr, pl_y)
+        ok = a_ok | w_ok
+    idx = np.flatnonzero(ok)
+    if idx.size:
+        fx, fy = _refine_placement_com(arr, pl_x[idx], pl_y[idx])
+        px[idx] = fx
+        py[idx] = fy
+        peaks[idx] = _box_peaks_nanmax(arr, fx, fy, PEAK_BOX_HALF)
 
     frame_drift = FrameDriftResult(drift_x, drift_y, n_refs, rms, method)
     return peaks, px, py, frame_drift
@@ -743,7 +833,7 @@ def run_sat_diag(
 ) -> SatDiagContext:
     """Run Check A + B for a draft archive root."""
     paths = list(raw_paths) if raw_paths is not None else sample_light_paths(archive_root)
-    pileup = derive_ceiling_from_paths(paths)
+    pileup = _pileup_for_paths(paths)
     ref_hdr = hdr if hdr is not None else fits.Header()
     if not ref_hdr and paths:
         with fits.open(paths[0], memmap=False) as hdul:
@@ -752,6 +842,31 @@ def run_sat_diag(
     if not paths:
         ctx.warnings.append("UNVERIFIED_INPUT: no light frames found (Raw/lights, non_calibrated/lights)")
     return ctx
+
+
+#: G02-12: Check A (the frame histogram / star-peak plateau) depends only on the sampled frames; the
+#: MASTERSTAR build and the per-frame export both run SAT-DIAG on the same sample, with different
+#: headers / equipment values (resolve_sat_limit stays per call). Keyed by path, size and mtime.
+_PILEUP_CACHE: dict[tuple[tuple[str, int, int], ...], PileupResult] = {}
+_PILEUP_CACHE_MAX = 8
+
+
+def _pileup_for_paths(paths: Sequence[Path]) -> PileupResult:
+    """:func:`derive_ceiling_from_paths` once per sampled frame set and process (a copy per call)."""
+    import copy  # noqa: PLC0415
+
+    try:
+        key = tuple((str(Path(p).resolve()), int(Path(p).stat().st_size), int(Path(p).stat().st_mtime_ns))
+                    for p in paths)
+    except OSError:
+        return derive_ceiling_from_paths(paths)  # a frame is gone: the read reports it
+    hit = _PILEUP_CACHE.get(key)
+    if hit is None:
+        hit = derive_ceiling_from_paths(paths)
+        if len(_PILEUP_CACHE) >= _PILEUP_CACHE_MAX:
+            _PILEUP_CACHE.pop(next(iter(_PILEUP_CACHE)))
+        _PILEUP_CACHE[key] = hit
+    return copy.deepcopy(hit)
 
 
 def write_sat_diag_json(ctx: SatDiagContext, out_path: Path) -> None:
@@ -911,9 +1026,7 @@ def apply_raw_peaks_to_proc_df(
     # peak of the same star is already bright (>= half the limit).
     if sat is not None and pk_finite.any():
         if "likely_saturated" in df.columns:
-            prev = df["likely_saturated"].map(
-                lambda v: str(v).strip().lower() in ("true", "1", "1.0", "yes")
-            ).to_numpy(dtype=bool)
+            prev = coerce_bool_series(df["likely_saturated"]).to_numpy(dtype=bool)
         else:
             prev = np.zeros(len(df), dtype=bool)
         _lim_ls = float(sat) * float(LINEARITY_FRAC)
@@ -923,9 +1036,8 @@ def apply_raw_peaks_to_proc_df(
         df["likely_saturated"] = new_ls
         # G02-37: combine with the existing verdict (a row already not ok stays not ok)
         if "photometry_ok" in df.columns:
-            prev_ok = ~df["photometry_ok"].map(  # only an explicit False is "not ok" (missing = no verdict)
-                lambda v: str(v).strip().lower() in ("false", "0", "0.0", "no")
-            ).to_numpy(dtype=bool)
+            # only an explicit False is "not ok" (missing = no verdict)
+            prev_ok = coerce_bool_series(df["photometry_ok"], default=True).to_numpy(dtype=bool)
         else:
             prev_ok = np.ones(len(df), dtype=bool)
         df["photometry_ok"] = prev_ok & ~new_ls
@@ -983,9 +1095,7 @@ def resolve_drift_ref_sky_deg(
             ):
                 work = at.copy()
                 if "skip_photometry" in work.columns:
-                    sk = work["skip_photometry"].astype(str).str.lower().isin(
-                        ("true", "1", "yes")
-                    )
+                    sk = coerce_bool_series(work["skip_photometry"])
                     work = work.loc[~sk]
                 if not work.empty and frame_name_hint and "name" in work.columns:
                     stem = Path(frame_name_hint).stem.replace("proc_", "")
@@ -1117,9 +1227,7 @@ def linearity_check(csv_paths: Sequence[Path], sat_adu: float | None) -> dict[st
     n_frames = 0
     for fp in paths:
         try:
-            hdr = pd.read_csv(fp, nrows=0)
-            cols = [c for c in want if c in hdr.columns]
-            df = read_vyvar_csv(fp, usecols=cols)
+            df = read_vyvar_csv(fp, usecols=lambda c: c in want)  # G07-18: one read (no header sniff)
         except Exception:  # noqa: BLE001
             continue
         fcol = "dao_flux" if "dao_flux" in df.columns else ("flux" if "flux" in df.columns else None)
@@ -1135,7 +1243,7 @@ def linearity_check(csv_paths: Sequence[Path], sat_adu: float | None) -> dict[st
             continue
         pk, fl, g, c = pk[ok], fl[ok], g[ok], c[ok]
         frac = pk / sat
-        d = -2.5 * np.log10(fl) - g
+        d = flux_to_mag(fl) - g  # fl > 0 and finite here
         # SAT-LIN-2026-10: the reference is the brighter half of the stars below 0.6 x SAT,
         # so the check works for fields without bright stars too (draft 524: 3 stars > 0.15 SAT).
         below = frac < LINCHECK_REF_MAX_FRAC
@@ -1185,6 +1293,45 @@ def linearity_check(csv_paths: Sequence[Path], sat_adu: float | None) -> dict[st
                 "tested_up_to_frac": float(max(tested)) if tested else None,
                 "linearity_frac": float(LINEARITY_FRAC), "tol_mag": LINCHECK_TOL_MAG})
     return out
+
+
+def sat_diag_json_for_photometry(per_frame_csv_dir: Path | str, output_dir: Path | str) -> Path:
+    """The draft's sat_diag.json seen from a photometry run (per-frame dir three levels below the draft,
+    else the output dir two levels below)."""
+    p = Path(per_frame_csv_dir).resolve().parent.parent.parent / "sat_diag.json"
+    return p if p.is_file() else Path(output_dir).resolve().parent.parent / "sat_diag.json"
+
+
+def record_linearity_check(sd_path: Path, csv_paths: Sequence[Path]) -> dict[str, Any] | None:
+    """SAT-LIN-2026-10: linearity check from the science frames (report only): infolog lines and the
+    ``linearity_check`` block of ``sd_path``. Nothing without a readable sat_diag.json."""
+    import json  # noqa: PLC0415
+
+    import infolog  # noqa: PLC0415
+
+    try:
+        if not Path(sd_path).is_file():
+            return None
+        ctx = load_sat_diag_json(Path(sd_path))
+        if ctx is None:
+            return None
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.debug("[SAT-DIAG] linearity check: context load skipped: %s", exc)
+        return None
+    try:
+        lin = linearity_check(csv_paths, ctx.sat_adu)
+        for ln in linearity_check_infolog_lines(lin):
+            infolog.log_event(ln)
+        try:
+            js = json.loads(Path(sd_path).read_text(encoding="utf-8"))
+            js["linearity_check"] = lin
+            Path(sd_path).write_text(json.dumps(js, indent=2), encoding="ascii")
+        except Exception as w_exc:  # noqa: BLE001
+            LOGGER.debug("[LINEARITY] sat_diag.json update skipped: %s", w_exc)
+        return lin
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.warning("[LINEARITY] check failed: %s", exc)
+        return None
 
 
 def linearity_check_infolog_lines(chk: dict[str, Any]) -> list[str]:

@@ -18,6 +18,7 @@ import calib_library as cl
 import calib_masters as cm
 import calib_plan as cp
 from database import VyvarDatabase
+from fits_suffixes import list_fits_files
 from importer import _collect_fits_by_type, _looks_like_master
 
 _KIND_LABEL = {cl.KIND_DARK: "DARK", cl.KIND_DARKFLAT: "DARKFLAT", cl.KIND_FLAT: "FLAT"}
@@ -150,7 +151,7 @@ def _render_table(db: VyvarDatabase, root: Path, dark_days: int, flat_days: int)
                 st.rerun()
     registered = {str(Path(m.path).resolve()).casefold() for m in cl.list_masters(db)}
     loose = [
-        p for pat in ("*.fits", "*.fit", "*.fts") for p in root.rglob(pat)
+        p for p in list_fits_files(root, recursive=True)
         if str(p.resolve()).casefold() not in registered
     ]
     if loose:
@@ -248,7 +249,7 @@ def _render_import(db: VyvarDatabase, root: Path) -> None:
     if st.button("Import", type="primary", key="clib_i_go", disabled=not path.strip()):
         src = Path(path.strip())
         files = (
-            sorted(f for pat in ("*.fits", "*.fit", "*.fts") for f in src.rglob(pat) if _looks_like_master(f))
+            [f for f in list_fits_files(src, recursive=True) if _looks_like_master(f)]
             if src.is_dir() else [src]
         )
         if not files:

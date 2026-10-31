@@ -18,7 +18,7 @@ def test_selector_old_4p3_loo_016_passes() -> None:
                 "comp_rms": 0.016,
                 "_dist_deg": 0.1,
                 "_nn_dist_fwhm": 5.0,
-                "snr_ap_pixscaled": 40.0,
+                "comp_sigma_ref_fieldk": 1.0857362047581294 / 40.0,
             },
             {
                 "catalog_id": "FAINTNOISY",
@@ -26,7 +26,7 @@ def test_selector_old_4p3_loo_016_passes() -> None:
                 "comp_rms": 0.187,
                 "_dist_deg": 0.1,
                 "_nn_dist_fwhm": 5.0,
-                "snr_ap_pixscaled": 1.0857362047581294 / 0.025,
+                "comp_sigma_ref_fieldk": 0.025,
             },
             {
                 "catalog_id": "OK2",
@@ -34,7 +34,7 @@ def test_selector_old_4p3_loo_016_passes() -> None:
                 "comp_rms": 0.02,
                 "_dist_deg": 0.2,
                 "_nn_dist_fwhm": 5.0,
-                "snr_ap_pixscaled": 40.0,
+                "comp_sigma_ref_fieldk": 1.0857362047581294 / 40.0,
             },
             {
                 "catalog_id": "OK3",
@@ -42,7 +42,7 @@ def test_selector_old_4p3_loo_016_passes() -> None:
                 "comp_rms": 0.03,
                 "_dist_deg": 0.3,
                 "_nn_dist_fwhm": 5.0,
-                "snr_ap_pixscaled": 40.0,
+                "comp_sigma_ref_fieldk": 1.0857362047581294 / 40.0,
             },
         ]
     )

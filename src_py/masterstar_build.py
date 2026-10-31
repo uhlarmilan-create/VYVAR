@@ -532,6 +532,25 @@ def _ms_selected_reference_path(*, info):
     return _selected_ref_path,
 
 
+#: G04-22: field_catalog_cone.csv of the MASTERSTAR being built, parsed once (it was read three
+#: times: catalogue membership, Gaia-complete enrich, identity enrich). Keyed by resolved path, size
+#: and mtime, so a rewritten cone (catalogue top-up re-runs the detection) is read again.
+_CONE_CSV_CACHE: dict[tuple[str, int, int], pd.DataFrame] = {}
+
+
+def _read_field_cone_csv(path: Path) -> pd.DataFrame:
+    """``read_vyvar_csv(path, low_memory=False)``, parsed once per file version; a copy per call."""
+    p = Path(path).resolve()
+    st = p.stat()
+    key = (str(p), int(st.st_size), int(st.st_mtime_ns))
+    hit = _CONE_CSV_CACHE.get(key)
+    if hit is None:
+        hit = read_vyvar_csv(p, low_memory=False)
+        _CONE_CSV_CACHE.clear()
+        _CONE_CSV_CACHE[key] = hit
+    return hit.copy(deep=True)
+
+
 def _ms_plate_scale_hint(*, app_config, draft_id, equipment_id, masterstar_fits, telescope_id):
     """Read the MASTERSTAR and resolve the expected plate scale (DB optics, FITS, bundle) for the solver."""
     import numpy as np  # noqa: PLC0415
@@ -1025,21 +1044,25 @@ def _ms_wcs_roundtrip_and_identity_qa(*, _cfg_ms, df_final, masterstar_fits):
         with fits.open(masterstar_fits, memmap=False) as _hf:
             _hdr_fin = _hf[0].header
             _w_fin = WCS(_hdr_fin)
+        _gaia_fin: dict[str, tuple[float, float]] = {}
         df_final = finalize_masterstar_sky_coords(
             df_final,
             _w_fin,
             gaia_db_path=str(_cfg_ms.gaia_db_path or ""),
             log_fn=log_event,
+            gaia_coords_out=_gaia_fin,
         )
         _nax1f = int(_hdr_fin.get("NAXIS1") or 0)
         _nax2f = int(_hdr_fin.get("NAXIS2") or 0)
         _rt_fin = evaluate_wcs_roundtrip(_w_fin, naxis1=_nax1f, naxis2=_nax2f)
         _wcs_rt_p99 = _rt_fin.get("wcs_roundtrip_p99_px")
         _wcs_rt_pass = bool(_rt_fin.get("pass"))
+        # G02-44: reuse the finalize lookup (same ids, same DB); query only when it found nothing / failed
         _identity_qa = evaluate_matched_world2pix_identity_px(
             df_final,
             _w_fin,
-            gaia_db_path=str(_cfg_ms.gaia_db_path or ""),
+            gaia_ra_dec_by_cid=_gaia_fin,
+            gaia_db_path="" if _gaia_fin else str(_cfg_ms.gaia_db_path or ""),
             log_fn=log_event,
         )
         _p95 = _identity_qa.get("matched_world2pix_identity_p95_px")
@@ -1109,7 +1132,7 @@ def _ms_expand_catalog_membership(
             True,
             int(len(df_final)),
         )
-        _cone_df_pre = read_vyvar_csv(_cone_gaia_pre, low_memory=False)
+        _cone_df_pre = _read_field_cone_csv(_cone_gaia_pre)
         _nax1_pre = int(hdr.get("NAXIS1") or 0)
         _nax2_pre = int(hdr.get("NAXIS2") or 0)
         with warnings.catch_warnings():
@@ -1198,7 +1221,7 @@ def _ms_gaia_accounting_and_reconcile(
             raise RuntimeError("MASTERSTAR Gaia-complete enrich: missing field_catalog_cone.csv")
         if not _has_valid_wcs(hdr):
             raise RuntimeError("MASTERSTAR Gaia-complete enrich: MASTERSTAR WCS missing/invalid")
-        _cone_df = read_vyvar_csv(_cone_gaia, low_memory=False)
+        _cone_df = _read_field_cone_csv(_cone_gaia)
         _nax1_g = int(hdr.get("NAXIS1") or 0)
         _nax2_g = int(hdr.get("NAXIS2") or 0)
         with warnings.catch_warnings():
@@ -1592,7 +1615,7 @@ def _ms_enrich_from_gaia_db(
         logging.warning("[INV-SAT-LIMIT] MASTERSTAR sat_thr unresolved; using peak-test %.1f ADU (%.2f x container clip)",
                         sat_thr, float(SAT_LIMIT_NO_KNEE_FRAC))
     _cone_p = det_meta.get("field_catalog_cone_csv")
-    _cone = read_vyvar_csv(Path(_cone_p), low_memory=False) if _cone_p and Path(_cone_p).is_file() else None
+    _cone = _read_field_cone_csv(Path(_cone_p)) if _cone_p and Path(_cone_p).is_file() else None
     df_final = enrich_masterstars_by_identity(df_final, _cone, sat_thr)
     _vyvar_df_to_csv(df_final, csv_path)
     try:

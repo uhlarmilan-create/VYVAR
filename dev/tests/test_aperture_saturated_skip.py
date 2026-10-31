@@ -123,8 +123,6 @@ def test_saturated_target_skips_with_zero_frames(tmp_path: Path) -> None:
             lc_dir=lc_dir,
             output_dir=out_dir,
             progress_cb=None,
-            annulus_inner_fwhm=2.0,
-            annulus_outer_fwhm=3.0,
             _apt_fw=1.5,
             _save_png=False,
         )

@@ -10,7 +10,8 @@ import pandas as pd
 import pytest
 
 from config import AppConfig
-from photometry_core import ERR_BKG_SOURCE_COL, ERR_BKG_SOURCE_EMPIRICAL, ERR_BKG_SOURCE_HOWELL_FALLBACK, ERR_BKG_SOURCE_HOWELL_SCALED, SIGMA_BKG_AP_COL, _assert_inv_err_sigma_acct_01, _clamp_bkg_scale_r, _clamp_err_empty_apertures_n, _howell_bkg_variance_adu2, _aperture_cache_columns, _aperture_proc_column_requirements, _photometric_error, _aperture_empirical_sigma_bkg_ap, _photometric_error_with_bkg_mode, _sigma_bkg_r_key, bkg_scale_ratio_empirical_over_howell, compute_setup_bkg_scale_r, enhance_catalog_dataframe_aperture, finalize_hybrid_bkg_fallback_proc_dir, measure_empty_aperture_sigma_bkg, read_flux_from_csv, scaled_sigma_bkg_ap_from_howell
+from ccd_noise import ccd_sky_variance_adu2
+from photometry_core import ERR_BKG_SOURCE_COL, ERR_BKG_SOURCE_EMPIRICAL, ERR_BKG_SOURCE_HOWELL_FALLBACK, ERR_BKG_SOURCE_HOWELL_SCALED, SIGMA_BKG_AP_COL, _assert_inv_err_sigma_acct_01, _clamp_bkg_scale_r, _clamp_err_empty_apertures_n, _aperture_cache_columns, _aperture_proc_column_requirements, _photometric_error, _aperture_empirical_sigma_bkg_ap, _photometric_error_with_bkg_mode, _sigma_bkg_r_key, bkg_scale_ratio_empirical_over_howell, compute_setup_bkg_scale_r, enhance_catalog_dataframe_aperture, finalize_hybrid_bkg_fallback_proc_dir, measure_empty_aperture_sigma_bkg, read_flux_from_csv, scaled_sigma_bkg_ap_from_howell
 from invariants_runtime import InvariantViolation
 
 
@@ -27,6 +28,7 @@ def test_howell_key_flip_ignored_uses_empirical_when_sigma_present() -> None:
         flux,
         sky_pp=sky,
         area=area,
+        n_sky=500.0,
         gain=g,
         read_noise=rn,
         sigma_bkg_ap=sig_ap,
@@ -38,11 +40,12 @@ def test_howell_key_flip_ignored_uses_empirical_when_sigma_present() -> None:
 
 def test_howell_fallback_when_sigma_missing() -> None:
     flux, sky, area, g, rn = 5000.0, 1200.0, math.pi * 5.0**2, 12.48, 14.08
-    legacy = _photometric_error(flux, sky, area, gain=g, read_noise=rn)
+    legacy = _photometric_error(flux, sky, area, 500.0, gain=g, read_noise=rn)
     err, src = _photometric_error_with_bkg_mode(
         flux,
         sky_pp=sky,
         area=area,
+        n_sky=500.0,
         gain=g,
         read_noise=rn,
         sigma_bkg_ap=None,
@@ -57,6 +60,7 @@ def test_empirical_mode_formula() -> None:
         flux,
         sky_pp=0.0,
         area=math.pi * 6.0**2,
+        n_sky=500.0,
         gain=g,
         read_noise=14.0,
         sigma_bkg_ap=sig_ap,
@@ -192,9 +196,9 @@ def test_config_defaults_and_clamps() -> None:
 
 def test_bkg_scale_ratio_and_clamp() -> None:
     sky, area, g, rn = 1200.0, math.pi * 5.0**2, 12.48, 14.08
-    hb = _howell_bkg_variance_adu2(sky, area, gain=g, read_noise=rn)
+    hb = ccd_sky_variance_adu2(sky, area, 500.0, gain=g, read_noise=rn)
     sig = 50.0
-    r = bkg_scale_ratio_empirical_over_howell(sig, sky, area, gain=g, read_noise=rn)
+    r = bkg_scale_ratio_empirical_over_howell(sig, sky, area, 500.0, gain=g, read_noise=rn)
     assert r == pytest.approx(sig * sig / hb, rel=1e-9)
     assert _clamp_bkg_scale_r(0.01) == 0.05
     assert _clamp_bkg_scale_r(99.0) == 2.0
@@ -205,8 +209,8 @@ def test_bkg_scale_ratio_and_clamp() -> None:
 
 def test_scaled_sigma_bkg_ap_from_howell() -> None:
     sky, area, g, rn, r_setup = 1200.0, math.pi * 4.0**2, 12.48, 14.08, 0.5
-    hb = _howell_bkg_variance_adu2(sky, area, gain=g, read_noise=rn)
-    sig = scaled_sigma_bkg_ap_from_howell(sky, area, gain=g, read_noise=rn, r_setup=r_setup)
+    hb = ccd_sky_variance_adu2(sky, area, 500.0, gain=g, read_noise=rn)
+    sig = scaled_sigma_bkg_ap_from_howell(sky, area, 500.0, gain=g, read_noise=rn, r_setup=r_setup)
     assert sig == pytest.approx(math.sqrt(r_setup * hb), rel=1e-9)
 
 
@@ -214,7 +218,7 @@ def test_finalize_hybrid_bkg_fallback(tmp_path: Path) -> None:
     area = math.pi * 3.0**2
     g, rn = 12.48, 14.08
     sky = 800.0
-    hb = _howell_bkg_variance_adu2(sky, area, gain=g, read_noise=rn)
+    hb = ccd_sky_variance_adu2(sky, area, 500.0, gain=g, read_noise=rn)
     sig_emp = math.sqrt(0.55 * hb)
     df = pd.DataFrame(
         [
@@ -224,6 +228,7 @@ def test_finalize_hybrid_bkg_fallback(tmp_path: Path) -> None:
                 "sky_adu_per_px_annulus": sky,
                 "aperture_r_px": 3.0,
                 "aperture_area_px": area,
+                "sky_n_px": 500,
                 SIGMA_BKG_AP_COL: sig_emp,
                 ERR_BKG_SOURCE_COL: ERR_BKG_SOURCE_EMPIRICAL,
             },
@@ -233,6 +238,7 @@ def test_finalize_hybrid_bkg_fallback(tmp_path: Path) -> None:
                 "sky_adu_per_px_annulus": sky,
                 "aperture_r_px": 3.0,
                 "aperture_area_px": area,
+                "sky_n_px": 500,
                 SIGMA_BKG_AP_COL: float("nan"),
                 ERR_BKG_SOURCE_COL: ERR_BKG_SOURCE_HOWELL_FALLBACK,
             },
@@ -257,6 +263,7 @@ def test_finalize_zero_empirical_keeps_raw_fallback(tmp_path: Path) -> None:
                 "sky_adu_per_px_annulus": 800.0,
                 "aperture_r_px": 3.0,
                 "aperture_area_px": area,
+                "sky_n_px": 500,
                 SIGMA_BKG_AP_COL: float("nan"),
                 ERR_BKG_SOURCE_COL: ERR_BKG_SOURCE_HOWELL_FALLBACK,
             },
@@ -489,7 +496,7 @@ def test_ram_flush_finalize_scales_fallback_rows(tmp_path: Path) -> None:
 
     area = math.pi * 4.3546**2
     g, rn, sky = 3.12, 2.6, 33488.0
-    hb = _howell_bkg_variance_adu2(sky, area, gain=g, read_noise=rn)
+    hb = ccd_sky_variance_adu2(sky, area, 500.0, gain=g, read_noise=rn)
     sig_emp = math.sqrt(0.55 * hb)
     df = pd.DataFrame(
         [
@@ -500,6 +507,7 @@ def test_ram_flush_finalize_scales_fallback_rows(tmp_path: Path) -> None:
                 "sky_adu_per_px_annulus": sky,
                 "aperture_r_px": 4.3546,
                 "aperture_area_px": area,
+                "sky_n_px": 500,
             },
             {
                 "catalog_id": "2",
@@ -508,6 +516,7 @@ def test_ram_flush_finalize_scales_fallback_rows(tmp_path: Path) -> None:
                 "sky_adu_per_px_annulus": sky,
                 "aperture_r_px": 4.3546,
                 "aperture_area_px": area,
+                "sky_n_px": 500,
             },
         ]
     )
@@ -539,6 +548,7 @@ def test_ram_flush_finalize_noop_on_all_fallback(tmp_path: Path) -> None:
                 "sky_adu_per_px_annulus": 800.0,
                 "aperture_r_px": 4.0,
                 "aperture_area_px": area,
+                "sky_n_px": 500,
             },
         ]
     )

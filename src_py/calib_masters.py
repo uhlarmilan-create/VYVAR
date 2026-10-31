@@ -48,20 +48,33 @@ def cfa_pattern(hdr: fits.Header, equipment_mask: str | None = None) -> str | No
     return None
 
 
+def flat_valid_median(a: np.ndarray) -> float:
+    """Median of the valid flat pixels (finite and > 0); NaN when there is none (G01-23: the one rule)."""
+    v = np.asarray(a)
+    ok = np.isfinite(v) & (v > 0)
+    if not np.any(ok):
+        return float("nan")
+    return float(np.median(v[ok]))
+
+
 def normalise_flat(a: np.ndarray, pattern: str | None) -> tuple[np.ndarray, list[float]]:
-    """Divide by the median (mono) or by each CFA channel's median (OSC, equalised CFA)."""
+    """Divide by the median (mono) or by each CFA channel's median (OSC, equalised CFA).
+
+    The one flat normaliser (G01-23): master build, VYFLNRD flats after the resample and flats without
+    VYFLNRD at calibrate time. The median is over the valid pixels (``flat_valid_median``).
+    """
     out = _f32(a).copy()
     if pattern:
         meds = []
         for dy in (0, 1):
             for dx in (0, 1):
                 v = out[dy::2, dx::2]
-                m = float(np.nanmedian(v))
+                m = flat_valid_median(v)
                 meds.append(m)
                 if math.isfinite(m) and m > 0:
                     out[dy::2, dx::2] = v / m
         return out, meds
-    m = float(np.nanmedian(out))
+    m = flat_valid_median(out)
     if math.isfinite(m) and m > 0:
         out /= m
     return out, [m]

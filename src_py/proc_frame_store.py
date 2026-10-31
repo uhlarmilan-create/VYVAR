@@ -41,6 +41,7 @@ PROC_STORE_COLS = [
     # Photometry
     "dao_flux",
     "sky_adu_per_px_annulus",
+    "sky_n_px",  # CCD-ONE-2026-10: n_sky of the CCD equation
     "sigma_bkg_ap",
     "err_bkg_source",
     "aperture_r_px",

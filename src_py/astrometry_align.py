@@ -52,10 +52,6 @@ from pipeline_astrometry import (
     compute_plate_scale_from_db,
     write_photometry_plan_files,
 )
-from pipeline_catalog import (
-    _finalize_hybrid_bkg_fallback_sidecar,
-    _pick_reference_frame_by_star_count,
-)
 from pipeline_constants import ALIGN_MIN_DETECTED_STARS, CATALOG_MATCH_SEP_ARCSEC, FRAME_MAX_DAO_ROWS  # noqa: E402
 
 LOGGER = logging.getLogger("pipeline")
@@ -203,7 +199,7 @@ def _al_reference_stars(
             ref_hdr = hdul[0].header.copy()
             ref_data = _as_fits_float32_image(hdul[0].data).astype(np.float32, copy=False)
 
-    print(f"  Plate solve: {time.time() - _t_platesolve:.1f}s")
+    LOGGER.info("  Plate solve: %.1fs", time.time() - _t_platesolve)
     _t_align = time.time()
 
     # Use the same FWHM rule as per-frame alignment (VY_FWHM / header), not a fixed kernel.
@@ -695,7 +691,7 @@ def _al_alignment_checks(
             frames=_osc_registration_capture,
         )
 
-    print(f"  Alignment: {time.time() - _t_align:.1f}s")
+    LOGGER.info("  Alignment: %.1fs", time.time() - _t_align)
     _t_csv = time.time()
 
     # If we aligned in RAM, flush aligned FITS to disk before MASTERSTAR (needs files on disk).
@@ -856,35 +852,22 @@ def _al_export_catalogs(
                     header=hdr,
                     overwrite=True,
                 )
-        for pcsv, df in per_cat.get("deferred_csv_writes", []):
-            try:
-                from gaia_catalog_id import normalize_gaia_source_id_series  # noqa: PLC0415
+        # G05-36: the same tail as the disk export (the workers' proc CSVs are already rounded and
+        # their catalog_id normalised; the CSV writer applies the export form again)
+        from frame_export import write_per_frame_outputs  # noqa: PLC0415
 
-                if isinstance(df, pd.DataFrame) and "catalog_id" in df.columns:
-                    df = df.copy()
-                    df["catalog_id"] = normalize_gaia_source_id_series(df["catalog_id"])
-            except Exception:  # noqa: BLE001
-                pass
-            from proc_frame_store import write_proc_csv  # noqa: PLC0415
-
-            write_proc_csv(df, pcsv)
-        if per_cat.get("frame_rows"):
-            from proc_frame_store import write_frame_tables  # noqa: PLC0415
-
-            write_frame_tables(per_cat["frame_rows"])
-        from frame_export import write_per_frame_index  # noqa: PLC0415
-
-        write_per_frame_index(per_cat.get("frames", []), per_cat["index_csv"])
-        if per_cat.get("deferred_csv_writes"):
-            _hybrid_ram = _finalize_hybrid_bkg_fallback_sidecar(
-                aligned_root,
-                write_sidecar=True,
-                gain=float(per_cat["photometric_gain"]),  # GAIN-ONE-2026-10
-                read_noise=float(per_cat["photometric_read_noise"]),
-                setup_label=str(aligned_root.name),
-            )
-            if _hybrid_ram:
-                per_cat["hybrid_bkg_fallback"] = _hybrid_ram
+        _hybrid_ram = write_per_frame_outputs(
+            root=aligned_root,
+            index_path=per_cat["index_csv"],
+            rows_out=per_cat.get("frames", []),
+            frame_rows=per_cat.get("frame_rows") or {},
+            deferred_csv_writes=per_cat.get("deferred_csv_writes", []),
+            write_sidecar=per_cat.get("per_frame_csv_mode") == "sidecar",
+            gain=float(per_cat["photometric_gain"]),  # GAIN-ONE-2026-10
+            read_noise=float(per_cat["photometric_read_noise"]),
+        )
+        if _hybrid_ram:
+            per_cat["hybrid_bkg_fallback"] = _hybrid_ram
     else:
         per_cat = export_per_frame_catalogs(
             frames_root=aligned_root,
@@ -901,8 +884,8 @@ def _al_export_catalogs(
 
     _assert_alignment_produced_fits(aligned_root)
 
-    print(f"  Per-frame CSV: {time.time() - _t_csv:.1f}s")
-    print(f"TOTAL step 3 ({obs_group_key or detrended_root.name}): {time.time() - _t_step3_start:.1f}s")
+    LOGGER.info("  Per-frame CSV: %.1fs", time.time() - _t_csv)
+    LOGGER.info("TOTAL step 3 (%s): %.1fs", obs_group_key or detrended_root.name, time.time() - _t_step3_start)
 
     LOGGER.info(
         "Astrometry done: aligned %s / %s frames; per-frame CSV: %s; MASTERSTAR: %s; RAM handoff: %s",
@@ -933,8 +916,6 @@ def _astrometry_align_impl_body(
     osc_write_registration_handoff: bool = False,
 ) -> dict[str, Any]:
     """Internal: astrometry + alignment + per-frame CSV for one observation subtree (``job``)."""
-
-    import numpy as np
 
     ap = Path(archive_path)
     obs_group_key = str(job.get("gkey", "") or "")
@@ -980,17 +961,15 @@ def _astrometry_align_impl_body(
 
     _t_step3_start = time.time()
     n_files = len(files)
-    ref_fp, ref_star_scores = _pick_reference_frame_by_star_count(files)
-    if osc_registration_handoff is not None:
-        ref_name = str(osc_registration_handoff.get("reference_file") or "")
-        for _rf in files:
-            if _rf.name == ref_name:
-                ref_fp = _rf
-                break
-    # Read reference once (no lock during solve step).
+    # G05-30: the alignment reference is this setup's MASTERSTAR (G02-09): _al_masterstar_for_reference
+    # replaces ref_fp / ref_hdr / ref_data with it or stops the run (MASTER-LOCK). The former pick of a
+    # processed frame by DAO star count (a serial full read + DAO of every frame; and the OSC handoff
+    # override of that pick) was always replaced. Until then the header of files[0] gives the binning
+    # of the plate scale below (one setup folder = one binning) and the progress total.
+    ref_fp = files[0]
     with fits.open(ref_fp, memmap=False) as hdul:
         ref_hdr = hdul[0].header.copy()
-        ref_data = _as_fits_float32_image(hdul[0].data).astype(np.float32, copy=False)
+    ref_data = None
     _scale_pf: float | None = None
     _db_pf = _vyvar_open_database(_cfg_align)
     if _db_pf is not None:
@@ -1176,7 +1155,6 @@ def _astrometry_align_impl_body(
         "detrended_input_root": str(detrended_root),
         "detrended_files_used": len(files),
         "reference_frame": str(ref_fp),
-        "reference_star_counts": dict(ref_star_scores),
         "reference_hint_ra_dec_deg": {"ra": hint_ra, "dec": hint_dec} if hint_ra is not None else None,
         "extra_platesolve": extra_platesolve_results,
         "alignment_max_control_points_used": align_cp,

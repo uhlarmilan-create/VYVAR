@@ -16,12 +16,12 @@ from config import AppConfig
 from gaia_catalog_id import normalize_gaia_id_set, normalize_gaia_source_id
 from infolog import log_event
 from photometry_comp import (
-    _bool_col,
     _enrich_comp_bp_rp,
     _select_comps_by_rms_then_color,
     _warn_zero_compstars_edge,
 )
 from photometry_shared import _normalize_gaia_id
+from stats_core import coerce_bool_series
 from sky_separation import (
     angular_distance_deg_vectorized as _angular_distance_deg_vectorized,
     quantize_dist_deg,
@@ -151,9 +151,9 @@ def _filter_comp_candidates_spatial_static(
         ) or None
 
     _base_mask = (
-        ~_bool_col(ms.get("is_saturated", pd.Series(False, index=ms.index)))
-        & ~_bool_col(ms.get("vsx_known_variable", pd.Series(False, index=ms.index)))
-        & ~_bool_col(ms.get("likely_saturated", pd.Series(False, index=ms.index)))
+        ~coerce_bool_series(ms.get("is_saturated", pd.Series(False, index=ms.index)))
+        & ~coerce_bool_series(ms.get("vsx_known_variable", pd.Series(False, index=ms.index)))
+        & ~coerce_bool_series(ms.get("likely_saturated", pd.Series(False, index=ms.index)))
     )
     if "zone" in ms.columns:
         _base_mask &= ~ms["zone"].astype(str).str.strip().str.lower().eq("saturated")
@@ -442,6 +442,35 @@ def _tier_colour_tiers(
     return _cfg_w, candidate_pool_df, comp_bprp_map, comp_color_tier_src_map, comp_delta_bprp_map, comp_tier_final_map
 
 
+def _color_rms_sel_note(fc: pd.DataFrame | None, _cfg_w) -> str:
+    """Selection note of a final comparison set: the colour step its largest |dBP-RP| needs."""
+    if fc is None or getattr(fc, "empty", True):
+        sel_note = "no_candidates"
+    elif "_delta_bprp_abs" not in fc.columns and "delta_bprp_abs" not in fc.columns:
+        sel_note = "color_rms"
+    else:
+        _col = "_delta_bprp_abs" if "_delta_bprp_abs" in fc.columns else "delta_bprp_abs"
+        mx = float(pd.to_numeric(fc[_col], errors="coerce").max())
+        _wlims = _cfg_w.comp_tier_bprp_limits()
+        t1 = float(_wlims[0])
+        t2 = float(_wlims[1])
+        t3 = float(_wlims[2])
+        cap = float(_cfg_w.comp_max_delta_bprp)
+        if mx <= t1:
+            sel_note = "color_rms_t1"
+        elif mx <= t2:
+            sel_note = "color_rms_t2"
+        elif mx <= t3:
+            sel_note = "color_rms_t3"
+        elif mx <= cap:
+            sel_note = "color_rms_cap"
+        else:
+            sel_note = "color_rms_wide"
+    if fc is not None and bool(getattr(fc, "attrs", {}).get("color_fallback")):
+        sel_note = "color_rms_t4_fallback"
+    return sel_note
+
+
 def _tier_select_final(
     *,
     _cfg_w,
@@ -526,35 +555,22 @@ def _tier_select_final(
         int(0 if final_comps is None else len(final_comps)),
     )
 
-    def _color_rms_sel_note(fc: pd.DataFrame) -> str:
-        if fc is None or getattr(fc, "empty", True):
-            return "no_candidates"
-        if "_delta_bprp_abs" in fc.columns:
-            _col = "_delta_bprp_abs"
-        elif "delta_bprp_abs" in fc.columns:
-            _col = "delta_bprp_abs"
-        else:
-            return "color_rms"
-        mx = float(pd.to_numeric(fc[_col], errors="coerce").max())
-        _wlims = _cfg_w.comp_tier_bprp_limits()
-        t1 = float(_wlims[0])
-        t2 = float(_wlims[1])
-        t3 = float(_wlims[2])
-        cap = float(_cfg_w.comp_max_delta_bprp)
-        if mx <= t1:
-            return "color_rms_t1"
-        if mx <= t2:
-            return "color_rms_t2"
-        if mx <= t3:
-            return "color_rms_t3"
-        if mx <= cap:
-            return "color_rms_cap"
-        return "color_rms_wide"
+    return final_comps, _color_rms_sel_note(final_comps, _cfg_w)
 
-    sel_note = _color_rms_sel_note(final_comps)
-    if final_comps is not None and bool(getattr(final_comps, "attrs", {}).get("color_fallback")):
-        sel_note = "color_rms_t4_fallback"
-    return final_comps, sel_note
+
+def _head_of_final_comps(final_comps: pd.DataFrame, n: int) -> pd.DataFrame:
+    """The first ``n`` rows of a ranked final set, with the attrs a selection capped at ``n`` has
+    (``max_delta_bprp_used`` is the largest |dBP-RP| of those rows, as in _sel_rank_and_cap)."""
+    if len(final_comps) <= n:
+        return final_comps
+    head = final_comps.head(n).copy()
+    head.attrs = dict(final_comps.attrs)
+    _d = float(pd.to_numeric(head.get("_delta_bprp_abs"), errors="coerce").max())
+    if not math.isfinite(_d):
+        _lim = float(head.attrs.get("color_ladder_lim", float("nan")))
+        _d = _lim if math.isfinite(_lim) else float("nan")
+    head.attrs["max_delta_bprp_used"] = float(_d)
+    return head
 
 
 def _tier_summary(*, final_comps, id_col_cand, n_comp_min, sel_note, target_cid):
@@ -635,7 +651,7 @@ def _assign_comp_tiers_to_pool(
     _individual_tier: Callable[[float], int],
     _target_name: str,
     gaia_db_path: str | None,
-    gaia_prefetch: dict[str, dict[str, Any]] | None,
+    gaia_prefetch: dict[str, float | None] | None,
     n_comp_min: int,
     n_comp_max: int,
     chip_fw: int | None,
@@ -646,7 +662,11 @@ def _assign_comp_tiers_to_pool(
     fwhm_px: float | None = None,
     field_x: np.ndarray | None = None,
     field_y: np.ndarray | None = None,
+    n_primary: int | None = None,
 ) -> dict[str, Any]:
+    """Rank the candidates once and admit up to ``n_comp_max``. With ``n_primary`` (G07-09) the result also
+    holds ``"primary"``: the selection with ``n_comp_max = n_primary``, i.e. the head of this ranking (the
+    ranking does not depend on n_comp_max, only the cap does), with its own selection note and tier counts."""
     # Build candidate pool DF with comp_rms, then select by tier + RMS.
     _active_keys = sorted(active.keys(), key=str)
     candidate_pool_df = candidates[
@@ -719,6 +739,22 @@ def _assign_comp_tiers_to_pool(
             "comp_color_tier_src_map": {},
         }
 
+    primary: dict[str, Any] | None = None
+    if n_primary is not None:
+        # same cap as _select_comps_by_rms_then_color: max(n_comp_min, n_comp_max)
+        fc_p = _head_of_final_comps(final_comps, max(max(1, int(n_comp_min)), int(n_primary)))
+        sel_p = _color_rms_sel_note(fc_p, _cfg_w)
+        bt, ng, p1, p2, p3, p4, ids_p, t4w = _tier_summary(
+            final_comps=fc_p, id_col_cand=id_col_cand, n_comp_min=n_comp_min, sel_note=sel_p, target_cid=target_cid,
+        )
+        primary = {
+            "final_comps": fc_p, "sel_note": sel_p, "selected_ids": ids_p,
+            "n_t1": p1, "n_t2": p2, "n_t3": p3, "n_t4": p4, "n_good": ng, "tier4_warning": t4w, "best_tier": bt,
+            "comp_bprp_map": comp_bprp_map,
+            "comp_tier_final_map": comp_tier_final_map,
+            "comp_delta_bprp_map": comp_delta_bprp_map,
+            "comp_color_tier_src_map": comp_color_tier_src_map,
+        }
     # Logging (selection summary)
     best_tier, n_good, n_t1, n_t2, n_t3, n_t4, selected_ids, tier4_warning = _tier_summary(
         final_comps=final_comps,
@@ -728,6 +764,7 @@ def _assign_comp_tiers_to_pool(
         target_cid=target_cid,
     )
     return {
+        "primary": primary,
         "final_comps": final_comps,
         "sel_note": sel_note,
         "selected_ids": selected_ids,

@@ -223,22 +223,13 @@ def normalize_flat_master(
             "Master flat: global normalization is used after binning (binning mixes the Bayer planes)."
         )
 
+    import calib_masters as _cm  # noqa: PLC0415  (G01-23: the one median normaliser, also used at build)
+
     if use_bayer and pat is not None:
-        m = m[: h - (h % 2), : w - (w % 2)]
-        slices = (
-            m[0::2, 0::2],
-            m[0::2, 1::2],
-            m[1::2, 0::2],
-            m[1::2, 1::2],
-        )
         labels = (f"[0,0]={pat[0]}", f"[0,1]={pat[1]}", f"[1,0]={pat[2]}", f"[1,1]={pat[3]}")
-        medians: list[float] = []
-        for sl, lab in zip(slices, labels, strict=True):
-            mv = float(np.nanmedian(sl))
-            medians.append(mv)
-            if np.isfinite(mv) and mv > 0:
-                sl /= mv
-            else:
+        m, medians = _cm.normalise_flat(m, pat)
+        for mv, lab in zip(medians, labels, strict=True):
+            if not (np.isfinite(mv) and mv > 0):
                 log_event(f"Master flat: warning - invalid median for tile {lab}, division skipped.")
         note = f"Bayer {pat}" + (" (from EQUIPMENTS.BAYERMASK)" if assumed_pat else "")
         log_event(
@@ -253,10 +244,8 @@ def normalize_flat_master(
         if np.isfinite(gpost):
             header["VYFLTMD"] = (gpost, "Global median ADU after per-tile norm")
     else:
-        gmed = float(np.nanmedian(m))
-        if np.isfinite(gmed) and abs(gmed) > 0:
-            m = (m / gmed).astype(np.float32)
-        else:
+        m, (gmed,) = _cm.normalise_flat(m, None)
+        if not (np.isfinite(gmed) and gmed > 0):
             log_event("Master flat: warning - global median invalid, normalization skipped.")
         log_event(f"Master flat: global median (normalization factor): {gmed:.6g} ADU.")
         header["VYFLTNRM"] = ("GLOBAL", "Global median flat normalization")
@@ -450,13 +439,14 @@ def prepare_flat_for_division(
             f"FLAT {name}: {flat.size - int(np.count_nonzero(valid))} of {flat.size} pixels are <= 0 or "
             "invalid - not a usable flat."
         )
+    import calib_masters as _cm  # noqa: PLC0415  (G01-23: the one flat normaliser)
+
     if pmf.flat_normalized_at_calibrate:
         fm = pmf.flat_median_adu_before_norm
         if fm is None or not np.isfinite(fm) or fm <= 0:
-            fm = float(np.median(flat[valid]))
+            fm = _cm.flat_valid_median(flat)
     else:
-        fm = float(np.median(flat[valid]))
-        flat = (flat / fm).astype(np.float32)
+        flat, (fm,) = _cm.normalise_flat(flat, None)
     bad = flat_bad_pixel_mask(flat, cfa=cfa)
     n_bad = int(np.count_nonzero(bad))
     if n_bad:
@@ -556,8 +546,10 @@ def get_processed_master(
 
     flat_median_adu_before_norm: float | None = None
     flat_normalized_at_calibrate = False
+    import calib_masters as _cm  # noqa: PLC0415  (G01-23: one valid-pixel median rule)
+
     if kind == "flat" and _flat_saved_unnormalized(hdr):
-        fm_pre = float(np.nanmedian(out))
+        fm_pre = _cm.flat_valid_median(out)
         hdr_norm = hdr.copy()
         out = normalize_flat_master(
             out,
@@ -575,7 +567,7 @@ def get_processed_master(
         _ok_fl, _det_fl = check_flat_mean_near_one(out)
         inv_check({"invariants": []}, "INV-FLUX-02", _ok_fl, policy="FAIL", detail=_det_fl)
     elif kind == "flat":
-        flat_median_adu_before_norm = float(np.nanmedian(out))
+        flat_median_adu_before_norm = _cm.flat_valid_median(out)
 
     return ProcessedMasterResult(
         data=out,

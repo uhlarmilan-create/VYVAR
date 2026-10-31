@@ -175,8 +175,8 @@ def _p1_ui_chain(mini: Path, *, output_dir: Path | None = None) -> Path:
     ms_csv = og_dir / "masterstars_full_match.csv"
     vt_csv = og_dir / "variable_targets.csv"
     pf_dir = Path(p["per_frame_csv_dir"])
-    dt_dir = Path(p["detrended_aligned_dir"])
-    out = Path(output_dir) if output_dir is not None else Path(p["output_dir"])
+    dt_dir = pf_dir  # G03-34: one key per path (detrended_aligned_dir == per_frame_csv_dir)
+    out = Path(output_dir) if output_dir is not None else Path(p["photometry_dir"])
     if out.exists():
         shutil.rmtree(out)
     out.mkdir(parents=True)

@@ -38,6 +38,7 @@ from gaia_catalog_id import read_vyvar_csv
 
 from gaia_catalog_id import norm_id_or_empty as norm_id
 from photometry_defs import LC_QUALITY_INFORMATIONAL
+from report_methods import lc_csv_path
 
 LOGGER = logging.getLogger(__name__)
 
@@ -93,13 +94,67 @@ def coverage_insufficient(n_export: int, n_frames: int) -> bool:
     return int(n_export) < max(min(COVERAGE_MIN_POINTS, 0.5 * n), COVERAGE_RED_FRAC * n)
 
 
-def lc_epoch_counts(photometry_dir: Path, target_id: str) -> tuple[int | None, int | None]:
+class TargetTrustFiles:
+    """G08-44: the files of one target the trust flags read - ``check_kmag_<t>.csv``, ``lightcurve_<t>.csv``,
+    ``comp_quality_<t>.json`` and the check-star block - each read once (lazily). A failed read is kept and
+    raised again at every use, so each helper keeps its own error handling."""
+
+    def __init__(self, photometry_dir: Path, target_id: str) -> None:
+        self.lc_dir = Path(photometry_dir) / "lightcurves"
+        self.tid = str(target_id)
+        self._memo: dict[str, Any] = {}
+
+    def _once(self, key: str, fn) -> Any:
+        if key not in self._memo:
+            try:
+                self._memo[key] = (True, fn())
+            except Exception as exc:  # noqa: BLE001 - re-raised below, at every use
+                self._memo[key] = (False, exc)
+        ok, val = self._memo[key]
+        if not ok:
+            raise val
+        return val
+
+    def _csv(self, p: Path) -> pd.DataFrame | None:
+        return read_vyvar_csv(p, low_memory=False) if p.is_file() else None
+
+    def kmag(self) -> pd.DataFrame | None:
+        from check_star_kmag import check_kmag_sidecar_path  # noqa: PLC0415
+
+        return self._once("kmag", lambda: self._csv(check_kmag_sidecar_path(self.lc_dir, self.tid.strip())))
+
+    def lc(self) -> pd.DataFrame | None:
+        return self._once("lc", lambda: self._csv(lc_csv_path(self.lc_dir, self.tid)))
+
+    def exported_stats(self) -> Any:
+        """``check_star_kmag.exported_check_stats`` of the target (sidecar read before the light curve)."""
+        from check_star_kmag import exported_check_stats  # noqa: PLC0415
+
+        def _st() -> Any:
+            sc = self.kmag()
+            return exported_check_stats(self.lc_dir, self.tid, lc_df=self.lc(), sidecar=sc)
+
+        return self._once("stats", _st)
+
+    def check_block(self) -> dict[str, Any]:
+        from check_star_kmag import load_check_star  # noqa: PLC0415
+
+        return dict(self._once("check", lambda: load_check_star(self.lc_dir, self.tid)))
+
+    def comp_quality(self) -> Any:
+        return self._once("cq", lambda: json.loads(
+            (self.lc_dir / f"comp_quality_{self.tid}.json").read_text(encoding="utf-8")))
+
+
+def lc_epoch_counts(photometry_dir: Path, target_id: str, files: TargetTrustFiles | None = None
+                    ) -> tuple[int | None, int | None]:
     """(n_exportable, n_frames) from the target's light curve (export rules of lc_outlier)."""
-    p = Path(photometry_dir) / "lightcurves" / f"lightcurve_{target_id}.csv"
+    from report_methods import lc_csv_path  # noqa: PLC0415
+    p = lc_csv_path(Path(photometry_dir) / "lightcurves", target_id)
     if not p.is_file():
         return None, None
     try:
-        df = read_vyvar_csv(p, low_memory=False)
+        df = (files or TargetTrustFiles(photometry_dir, target_id)).lc()
     except (OSError, ValueError):
         return None, None
     # same row rule as the exporters (photometry_lightcurve.export_row_mask, G11-12)
@@ -131,14 +186,13 @@ def comp_thresholds_from_config(cfg: Any) -> CompTrustThresholds:
 CHECK_STAR_MIN_EPOCHS = 5
 
 
-def check_star_scatter(photometry_dir: Path, target_id: str) -> tuple[float, int]:
+def check_star_scatter(photometry_dir: Path, target_id: str, files: TargetTrustFiles | None = None
+                       ) -> tuple[float, int]:
     """(scatter mag, epoch count) of the check star over the target's exported epochs
     (``check_star_kmag.exported_check_stats``, G11-11: the number the export header and the PDF print).
     Missing file -> (nan, 0)."""
-    from check_star_kmag import exported_check_stats  # noqa: PLC0415
-
     try:
-        st = exported_check_stats(Path(photometry_dir) / "lightcurves", str(target_id))
+        st = (files or TargetTrustFiles(photometry_dir, target_id)).exported_stats()
     except Exception as exc:  # noqa: BLE001
         from except_fix_counters import get_except_fix_counters
 
@@ -148,21 +202,23 @@ def check_star_scatter(photometry_dir: Path, target_id: str) -> tuple[float, int
     return st.scatter, st.n
 
 
-def check_star_chi2(photometry_dir: Path, target_id: str) -> tuple[float, float]:
+def check_star_chi2(photometry_dir: Path, target_id: str, files: TargetTrustFiles | None = None
+                    ) -> tuple[float, float]:
     """(ratio, chi2_p) for the check-star series.
 
     ratio = 1.4826 MAD of (K_i - median K) / sigma_i - the robust "scatter in units of the
     reported errors" (1 = consistent); chi2_p = chi2 survival of the plain chi2 (info only).
     Needs ``kmag_err`` in the sidecar; otherwise (nan, nan).
     """
-    p = Path(photometry_dir) / "lightcurves" / f"check_kmag_{target_id}.csv"
+    from report_methods import check_kmag_sidecar_path  # noqa: PLC0415
+    p = check_kmag_sidecar_path(Path(photometry_dir) / "lightcurves", target_id)
     if not p.is_file():
         return float("nan"), float("nan")
     try:
-        sdf = read_vyvar_csv(p, low_memory=False)
+        sdf = (files or TargetTrustFiles(photometry_dir, target_id)).kmag()
     except Exception:  # noqa: BLE001
         return float("nan"), float("nan")
-    if sdf.empty or "kmag" not in sdf.columns or "kmag_err" not in sdf.columns:
+    if sdf is None or sdf.empty or "kmag" not in sdf.columns or "kmag_err" not in sdf.columns:
         return float("nan"), float("nan")
     k = pd.to_numeric(sdf["kmag"], errors="coerce").to_numpy(dtype=np.float64)
     e = pd.to_numeric(sdf["kmag_err"], errors="coerce").to_numpy(dtype=np.float64)
@@ -197,12 +253,11 @@ def error_model_check(photometry_dir: Path) -> dict[str, Any]:
     seen: dict[str, float] = {}
     for f in sorted(lc.glob("check_kmag_*.csv")) if lc.is_dir() else []:
         tid = f.stem[len("check_kmag_"):]
-        r, _ = check_star_chi2(Path(photometry_dir), tid)
+        tf = TargetTrustFiles(Path(photometry_dir), tid)
+        r, _ = check_star_chi2(Path(photometry_dir), tid, tf)
         if not np.isfinite(r):
             continue
-        from check_star_kmag import load_check_star  # noqa: PLC0415
-
-        kc = str(load_check_star(lc, tid).get("catalog_id", "") or tid)
+        kc = str(tf.check_block().get("catalog_id", "") or tid)
         seen.setdefault(kc, float(r))  # one value per check star (shared check stars count once)
     vals = np.array(list(seen.values()), dtype=np.float64)
     n = int(vals.size)
@@ -213,13 +268,14 @@ def error_model_check(photometry_dir: Path) -> dict[str, Any]:
     return {"n": n, "ratio": med, "status": status}
 
 
-def check_delta_and_zp_sigma(photometry_dir: Path, target_id: str) -> tuple[float, float]:
+def check_delta_and_zp_sigma(photometry_dir: Path, target_id: str, files: TargetTrustFiles | None = None
+                             ) -> tuple[float, float]:
     """TRUST-LEVEL-2026-10: (median measured check-star magnitude minus its catalogue magnitude in the
     zero-point band, zero-point uncertainty from the comparison-star scatter - model value when the
     data value is missing). NaN when the target has no zero point or no check star."""
-    lc_dir = Path(photometry_dir) / "lightcurves"
+    tf = files or TargetTrustFiles(photometry_dir, target_id)
     try:
-        cq = json.loads((lc_dir / f"comp_quality_{target_id}.json").read_text(encoding="utf-8"))
+        cq = tf.comp_quality()
     except (OSError, ValueError):
         return float("nan"), float("nan")
     if not isinstance(cq, dict) or str(cq.get("band_system", "") or "").upper() in ("", "NONE"):
@@ -230,17 +286,13 @@ def check_delta_and_zp_sigma(photometry_dir: Path, target_id: str) -> tuple[floa
         zs = zp.get("sigma_zp_model_mag")
     zp_sigma = float(zs) if zs is not None else float("nan")
     delta = float("nan")
-    from check_star_kmag import load_check_star  # noqa: PLC0415
-
-    kc = str(load_check_star(lc_dir, str(target_id)).get("catalog_id", "") or "")
+    kc = str(tf.check_block().get("catalog_id", "") or "")
     bm = cq.get("comp_band_mag") if isinstance(cq.get("comp_band_mag"), dict) else {}
     kref = pd.to_numeric(pd.Series([bm.get(kc)]), errors="coerce").iloc[0] if kc else float("nan")
     if kc and pd.notna(kref):
         # G11-11: median over the target's exported epochs, as the export header and the PDF
-        from check_star_kmag import exported_check_stats  # noqa: PLC0415
-
         try:
-            med = exported_check_stats(lc_dir, str(target_id)).median
+            med = tf.exported_stats().median
         except (OSError, ValueError):
             med = float("nan")
         if np.isfinite(med):
@@ -248,11 +300,10 @@ def check_delta_and_zp_sigma(photometry_dir: Path, target_id: str) -> tuple[floa
     return delta, zp_sigma
 
 
-def read_sparse_trust_sidecar(photometry_dir: Path, target_id: str) -> dict[str, Any] | None:
+def read_sparse_trust_sidecar(photometry_dir: Path, target_id: str, files: TargetTrustFiles | None = None
+                              ) -> dict[str, Any] | None:
     """The check-star trust statistics of a target (``check_star_kmag.load_check_star``)."""
-    from check_star_kmag import load_check_star  # noqa: PLC0415
-
-    blk = load_check_star(Path(photometry_dir) / "lightcurves", str(target_id))
+    blk = (files or TargetTrustFiles(photometry_dir, target_id)).check_block()
     if "check_sparse" not in blk:
         return None
 
@@ -660,9 +711,10 @@ def compute_trust_for_photometry_dir(
         vsx = str(row.get("vsx_name", "") or "")
         nf_raw = pd.to_numeric(row.get("n_frames"), errors="coerce")
         n_frames = int(nf_raw) if math.isfinite(float(nf_raw)) else None
-        chk, n_chk = check_star_scatter(phot, cid)
-        _chi2_nu, _chi2_p = check_star_chi2(phot, cid)
-        _sparse_side = read_sparse_trust_sidecar(phot, cid)
+        _tf = TargetTrustFiles(phot, cid)  # G08-44: each file of the target read once
+        chk, n_chk = check_star_scatter(phot, cid, _tf)
+        _chi2_nu, _chi2_p = check_star_chi2(phot, cid, _tf)
+        _sparse_side = read_sparse_trust_sidecar(phot, cid, _tf)
         if _sparse_side is not None:
             _sparse_side["n_comps"] = int(n_clean)
         _stab_sus_raw = pd.to_numeric(row.get("n_stability_suspect"), errors="coerce")
@@ -680,11 +732,11 @@ def compute_trust_for_photometry_dir(
             # skipped in this run: a light curve on disk is from an earlier run (stale)
             _n_exp, _n_lc = None, None
         else:
-            _n_exp, _n_lc = lc_epoch_counts(phot, cid)
+            _n_exp, _n_lc = lc_epoch_counts(phot, cid, _tf)
         if _n_lc is not None and _n_lc > 0:
             n_frames = _n_lc
         _bl_raw = pd.to_numeric(row.get("target_blend_frac"), errors="coerce")
-        _chk_delta, _zp_sigma = check_delta_and_zp_sigma(phot, cid)
+        _chk_delta, _zp_sigma = check_delta_and_zp_sigma(phot, cid, _tf)
         info = evaluate_target(
             skip_reason=_skip,
             n_export=_n_exp,

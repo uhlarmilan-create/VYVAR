@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import logging
 import math
-import subprocess
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,6 +15,7 @@ import pandas as pd
 from gaia_catalog_id import normalize_gaia_source_id
 from infolog import log_event
 from net_call import call_with_timeout, mark_unavailable, unavailable_reason
+from photometry_provenance import git_head_hash
 
 logger = logging.getLogger(__name__)
 
@@ -53,18 +53,6 @@ def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
-def _git_head_short() -> str:
-    try:
-        out = subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"],
-            stderr=subprocess.DEVNULL,
-            text=True,
-        )
-        return out.strip() or "unknown"
-    except (OSError, subprocess.CalledProcessError):
-        return "unknown"
-
-
 def _enrich_summary(*, skip_reason: str | None, attempts: int) -> dict[str, Any]:
     """Record of the last enrichment run, kept in ``hrd_enrich.json`` under ``last_enrich``.
 
@@ -72,7 +60,7 @@ def _enrich_summary(*, skip_reason: str | None, attempts: int) -> dict[str, Any]
     """
     out: dict[str, Any] = {
         "generated_at_utc": _utc_now_iso(),
-        "git_head": _git_head_short(),
+        "git_head": git_head_hash(short=True) or "unknown",
         "enrich_attempts": int(attempts),
     }
     if skip_reason:

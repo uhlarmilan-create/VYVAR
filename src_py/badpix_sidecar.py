@@ -34,7 +34,9 @@ def repaired_xy_on_reference(bp_native: Any, hdr: Any) -> list[list[float]]:
     a = np.zeros((0, 3)) if bp_native is None else np.asarray(bp_native, dtype=float).reshape(-1, 3)
     if len(a) == 0:
         return []
-    m = np.array([float(hdr[f"VY_AM{i}"]) for i in range(9)]).reshape(3, 3)
+    from frame_footprint import alignment_matrix  # noqa: PLC0415
+
+    m = alignment_matrix(hdr)
     p = m @ np.c_[a[:, 0], a[:, 1], np.ones(len(a))].T
     x, y = p[0] / p[2], p[1] / p[2]
     return [[round(float(u), 2), round(float(v), 2), int(k)] for u, v, k in zip(x, y, a[:, 2], strict=True)]

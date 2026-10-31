@@ -27,20 +27,6 @@ if TYPE_CHECKING:
 
 # Gaia ID must be str - float64 loses digits
 
-# Time + airmass columns only (PDF cover airmass summary from lightcurve_*.csv).
-_AIRMASS_COLS = {
-    "bjd",
-    "bjd_tdb_mid",
-    "bjd_tdb",
-    "hjd",
-    "jd",
-    "airmass",
-    "air_mass",
-    "AIRMASS",
-    "am",
-}
-
-
 # G11-36: method texts of the PDF formatted from the constants of the code they describe (they drifted
 # when a constant changed). Pure functions, no reportlab.
 def variability_method_text(meta: dict[str, Any], *, snr_min: float) -> str:
@@ -498,6 +484,49 @@ def _publication_lc_mag_column(columns: Any) -> str | None:
     return next((c for c in LC_PUBLISHED_MAG_COLUMNS if c in cols), None)
 
 
+def _pil_image() -> Any:
+    """``PIL.Image`` (Pillow is required for the PDF image compression)."""
+    try:
+        from PIL import Image as PILImage  # noqa: PLC0415
+    except Exception as exc:  # noqa: BLE001
+        raise RuntimeError("Pillow required for PDF image compression") from exc
+    return PILImage
+
+
+def _jpeg_for_pdf(im0: Any, max_width_px: int, jpeg_quality: int) -> BytesIO:
+    """PIL image -> progressive optimised JPEG (BytesIO at 0) for the PDF: transparency flattened onto
+    white, downscaled (LANCZOS, aspect kept) when wider than ``max_width_px``. G11-30: the one encoder."""
+    PILImage = _pil_image()
+
+    def _to_rgb_white_bg(im: Any) -> Any:
+        if im.mode == "RGBA":
+            bg = PILImage.new("RGB", im.size, (255, 255, 255))
+            bg.paste(im, mask=im.split()[3])
+            return bg
+        if im.mode == "LA":
+            bg = PILImage.new("RGB", im.size, (255, 255, 255))
+            bg.paste(im, mask=im.split()[1])
+            return bg
+        if im.mode == "P":
+            if "transparency" in im.info:
+                return _to_rgb_white_bg(im.convert("RGBA"))
+            return im.convert("RGB")
+        return im.convert("RGB")
+
+    im = _to_rgb_white_bg(im0)
+    w, h = im.size
+    mw = int(max_width_px)
+    if w > mw and w > 0:
+        scale = float(mw) / float(w)
+        nw = max(1, int(round(w * scale)))
+        nh = max(1, int(round(h * scale)))
+        im = im.resize((nw, nh), resample=PILImage.Resampling.LANCZOS)
+    buf = BytesIO()
+    im.save(buf, format="JPEG", quality=int(jpeg_quality), optimize=True, progressive=True)
+    buf.seek(0)
+    return buf
+
+
 class _PhotometryReportBuilder:
     """Internal PDF builder; section renderers extracted from generate_photometry_report."""
 
@@ -721,15 +750,24 @@ class _PhotometryReportBuilder:
             return []
         return [p for p in sorted(self.lc_dir.glob("lightcurve_*.csv")) if not p.name.endswith("_psf.csv")]
 
+    def _lc_tables(self) -> list[pd.DataFrame]:
+        """G11-28: this run's aperture light curves, each read once (the target pages' cache, which the
+        pages use too); an unreadable file is left out."""
+        out: list[pd.DataFrame] = []
+        for p in self._lc_files():
+            df = self._pages.lc_df(p.stem[len("lightcurve_"):])
+            if df is not None:
+                out.append(df)
+        return out
+
     def _measured_jd_range(self) -> tuple[float, float]:
         """(first, last) UTC JD of the epochs measured in this run (the light curves)."""
         if not hasattr(self, "_jd_range_cache"):
             lo, hi = float("inf"), float("-inf")
-            for p in self._lc_files():
-                try:
-                    jd = pd.to_numeric(pd.read_csv(p, usecols=["jd"])["jd"], errors="coerce").dropna()
-                except (OSError, ValueError):
+            for dfl in self._lc_tables():
+                if "jd" not in dfl.columns:
                     continue
+                jd = pd.to_numeric(dfl["jd"], errors="coerce").dropna()
                 if len(jd):
                     lo, hi = min(lo, float(jd.min())), max(hi, float(jd.max()))
             self._jd_range_cache = (lo, hi) if math.isfinite(lo) else (float("nan"), float("nan"))
@@ -790,11 +828,10 @@ class _PhotometryReportBuilder:
         from collections import Counter  # noqa: PLC0415
 
         epoch_flags: Counter[str] = Counter()
-        for p in self._lc_files():
-            try:
-                fl = pd.read_csv(p, usecols=["flag"])["flag"]
-            except (OSError, ValueError, KeyError):
+        for dfl in self._lc_tables():
+            if "flag" not in dfl.columns:
                 continue
+            fl = dfl["flag"]
             epoch_flags.update(fl.astype(str).str.strip().str.lower().tolist())
         for key in ("artifact", "frame_qc", "high_err", "spike_unconfirmed", "saturated"):
             c = int(epoch_flags.get(key, 0))
@@ -1118,7 +1155,11 @@ class _PhotometryReportBuilder:
             try:
                 from database import VyvarDatabase
 
-                row = VyvarDatabase.for_config(self._live_cfg).fetch_obs_draft_telescope_equipment(int(draft_id))
+                _db_eq = VyvarDatabase.for_config(self._live_cfg)
+                try:
+                    row = _db_eq.fetch_obs_draft_telescope_equipment(int(draft_id))
+                finally:
+                    _db_eq.conn.close()  # G13-15: was left open
                 if isinstance(row, dict):
                     tel = str(row.get("telescope_name", "") or "").strip()
                     cam = str(row.get("equipment_name", "") or "").strip()
@@ -1171,9 +1212,8 @@ class _PhotometryReportBuilder:
     def _add_lc_bjd_span(self, out: dict[str, Any]) -> dict[str, Any]:
         # BJD span from the light curves (the QC table carries a UTC inspection JD, not BJD)
         bjd_vals: list[float] = []
-        for lp in self._lc_files():
+        for dfl in self._lc_tables():
             try:
-                dfl = pd.read_csv(lp, usecols=lambda c: c in {"bjd", "bjd_tdb", "hjd", "jd"}, low_memory=False)
                 xcol = next((xc for xc in ("bjd_tdb", "bjd", "hjd", "jd") if xc in dfl.columns), None)
                 if xcol:
                     xv = pd.to_numeric(dfl[xcol], errors="coerce").dropna()
@@ -1197,101 +1237,27 @@ class _PhotometryReportBuilder:
         max_width_px: int = 1200,
         jpeg_quality: int = 72,
     ) -> tuple[BytesIO, str]:
-        """
-        Open image, resize if wider than max_width_px (preserve aspect ratio),
-        convert to JPEG, return (BytesIO, "JPEG"). RGBA is flattened onto white.
-        ``force_jpeg`` reserved for API compatibility with the Phase 4 spec.
-        """
+        """Image file -> (JPEG BytesIO, "JPEG") for the PDF (see :func:`_jpeg_for_pdf`). A JPEG at or below
+        ``max_width_px`` is embedded as it is (no second lossy encode)."""
         src = Path(src_path)
         if not src.is_file():
             raise FileNotFoundError(str(src))
-        try:
-            from PIL import Image as PILImage
-        except Exception as exc:  # noqa: BLE001
-            raise RuntimeError("Pillow required for PDF image compression") from exc
-
         # OUTPUT-REVIEW-2026-10 step 7: in memory (a disk cache keyed by the path never hit for the
         # images the report draws again every run)
-
-        def _to_rgb_white_bg(im: Any) -> Any:
-            if im.mode == "RGBA":
-                bg = PILImage.new("RGB", im.size, (255, 255, 255))
-                bg.paste(im, mask=im.split()[3])
-                return bg
-            if im.mode == "LA":
-                bg = PILImage.new("RGB", im.size, (255, 255, 255))
-                bg.paste(im, mask=im.split()[1])
-                return bg
-            if im.mode == "P":
-                if "transparency" in im.info:
-                    im = im.convert("RGBA")
-                    return _to_rgb_white_bg(im)
-                return im.convert("RGB")
-            return im.convert("RGB")
-
-        with PILImage.open(src) as im0:
+        with _pil_image().open(src) as im0:
             if im0.format == "JPEG" and im0.size[0] <= int(max_width_px):
-                # already a JPEG at or below the embed width: no second lossy encode
                 return BytesIO(src.read_bytes()), "JPEG"
-            im = _to_rgb_white_bg(im0)
-            w, h = im.size
-            mw = int(max_width_px)
-            if w > mw and w > 0:
-                scale = float(mw) / float(w)
-                nw = max(1, int(round(w * scale)))
-                nh = max(1, int(round(h * scale)))
-                im = im.resize((nw, nh), resample=PILImage.Resampling.LANCZOS)
+            return _jpeg_for_pdf(im0, max_width_px, jpeg_quality), "JPEG"
 
-            buf = BytesIO()
-            im.save(
-                buf,
-                format="JPEG",
-                quality=int(jpeg_quality),
-                optimize=True,
-                progressive=True,
-            )
-            buf.seek(0)
-            return buf, "JPEG"
     def _compress_png_bytes_for_pdf(self, 
         png_bytes: bytes,
         max_width_px: int = 1200,
         jpeg_quality: int = 72,
     ) -> tuple[BytesIO, str]:
         """Same as _compress_image_for_pdf but from an in-memory PNG (e.g. matplotlib buffer)."""
-        try:
-            from PIL import Image as PILImage
-        except Exception as exc:  # noqa: BLE001
-            raise RuntimeError("Pillow required for PDF image compression") from exc
+        with _pil_image().open(BytesIO(png_bytes)) as im0:
+            return _jpeg_for_pdf(im0, max_width_px, jpeg_quality), "JPEG"
 
-        def _to_rgb_white_bg(im: Any) -> Any:
-            if im.mode == "RGBA":
-                bg = PILImage.new("RGB", im.size, (255, 255, 255))
-                bg.paste(im, mask=im.split()[3])
-                return bg
-            if im.mode == "LA":
-                bg = PILImage.new("RGB", im.size, (255, 255, 255))
-                bg.paste(im, mask=im.split()[1])
-                return bg
-            if im.mode == "P":
-                if "transparency" in im.info:
-                    im = im.convert("RGBA")
-                    return _to_rgb_white_bg(im)
-                return im.convert("RGB")
-            return im.convert("RGB")
-
-        with PILImage.open(BytesIO(png_bytes)) as im0:
-            im = _to_rgb_white_bg(im0)
-            w, h = im.size
-            mw = int(max_width_px)
-            if w > mw and w > 0:
-                scale = float(mw) / float(w)
-                nw = max(1, int(round(w * scale)))
-                nh = max(1, int(round(h * scale)))
-                im = im.resize((nw, nh), resample=PILImage.Resampling.LANCZOS)
-            buf = BytesIO()
-            im.save(buf, format="JPEG", quality=int(jpeg_quality), optimize=True, progressive=True)
-            buf.seek(0)
-            return buf, "JPEG"
     def _page_footer(self, c: "canvas.Canvas") -> None:
         try:
             c.setFont(self.FONT_REG, 9)
@@ -1457,7 +1423,6 @@ class _PhotometryReportBuilder:
         h: float,
         *,
         image_type: str = "default",
-        force_jpeg: bool = False,
     ) -> None:
         """Draw image fitted into (w,h) box, top-left. Raster sources are JPEG-compressed before ImageReader."""
         try:
@@ -1715,13 +1680,8 @@ class _PhotometryReportBuilder:
                         v = pd.to_numeric(qc_df0[cnm], errors="coerce").dropna()
                         am_vals.extend(float(x) for x in v.to_numpy(dtype=float) if np.isfinite(x))
             if not am_vals:
-                for lp in self._lc_files():
+                for dfl in self._lc_tables():
                     try:
-                        dfl = pd.read_csv(
-                            lp,
-                            usecols=lambda c: c in _AIRMASS_COLS,
-                            low_memory=False,
-                        )
                         for acol in ("airmass", "AIRMASS", "air_mass"):
                             if acol in dfl.columns:
                                 v = pd.to_numeric(dfl[acol], errors="coerce").dropna()
@@ -1917,6 +1877,13 @@ class _PhotometryReportBuilder:
 
         return processed_field_id(getattr(self, "draft_dir", None))
     def _load_obs_files_for_obs(self, ) -> pd.DataFrame:
+        """QA metrics from DB (manifest files[]) for this draft + setup; read once per report (G11-28),
+        each caller gets its own copy."""
+        if getattr(self, "_obs_files_cache", None) is None:
+            self._obs_files_cache = self._read_obs_files_for_obs()
+        return self._obs_files_cache.copy()
+
+    def _read_obs_files_for_obs(self, ) -> pd.DataFrame:
         """Load QA metrics from DB (manifest files[]) for this draft + setup."""
         draft_id = self._draft_id_from_dirname()
         if draft_id is None:
@@ -1924,7 +1891,10 @@ class _PhotometryReportBuilder:
         from database import VyvarDatabase  # noqa: PLC0415
         try:
             db = VyvarDatabase.for_config(self._live_cfg)
-            rows = db.fetch_draft_light_rows_for_quality(int(draft_id))
+            try:
+                rows = db.fetch_draft_light_rows_for_quality(int(draft_id))
+            finally:
+                db.conn.close()  # G13-15: was left open
         except Exception:  # noqa: BLE001
             # EXC-0259: T2 -- report/export may omit or misstate (db = VyvarDatabase.for_config(cfg) / rows = db.f... (EXCEPT-BULK 2026-07-08)
             return pd.DataFrame()
@@ -2029,11 +1999,10 @@ class _PhotometryReportBuilder:
         if getattr(self, "_measured_stems_cache", None) is not None:
             return self._measured_stems_cache
         out: set[str] = set()
-        for lp in self._lc_files():
-            try:
-                sf = pd.read_csv(lp, usecols=["source_file"])["source_file"].dropna().astype(str)
-            except (OSError, ValueError, KeyError):
+        for dfl in self._lc_tables():
+            if "source_file" not in dfl.columns:
                 continue
+            sf = dfl["source_file"].dropna().astype(str)
             out.update(self._frame_stem(x) for x in sf.unique())
         self._measured_stems_cache = out
         return out
@@ -3431,10 +3400,8 @@ class _PhotometryReportBuilder:
                 continue
             d = pd.read_csv(lc)
             d = d.assign(dmag=d["mag"].where(d["snr"] >= 5))
-            tmp = self.cache_dir / f"transient_{r['label']}_lc.csv"
-            d.to_csv(tmp, index=False)
             png = self.cache_dir / f"transient_{r['label']}.png"
-            if candidate_lc_png(tmp, png, f"{r['label']} ({kind_txt.get(str(r['kind']), r['kind'])}), RA {float(r['ra_deg']):.5f} "
+            if candidate_lc_png(d, png, f"{r['label']} ({kind_txt.get(str(r['kind']), r['kind'])}), RA {float(r['ra_deg']):.5f} "
                                           f"Dec {float(r['dec_deg']):+.5f}", time_label="JD", ylabel="G (est.)") is not None:
                 col, row = k % 2, (k % 4) // 2
                 self._draw_image_fit(c, png, self.M_LEFT + col * (half + 0.5 * self.cm), y0 - row * hh, half, hh - 0.2 * self.cm,

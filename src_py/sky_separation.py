@@ -23,21 +23,27 @@ DIST_DEG_QUANTUM = 1e-9
 DIST_DEG_INVALID = 999.0
 
 
+#: decimal places of DIST_DEG_QUANTUM (9)
+DIST_DEG_NDIGITS = int(round(-math.log10(DIST_DEG_QUANTUM)))
+
+
 def quantize_dist_deg(values: np.ndarray | float) -> np.ndarray | float:
-    """Round finite distances to 1e-9 deg (9 decimal places); keep 999.0 and NaN."""
+    """Round finite distances to DIST_DEG_QUANTUM (1e-9 deg, 9 decimal places); keep 999.0 and NaN.
+
+    Python's correctly rounded ``round(x, 9)`` per value (G02-43: ``np.round`` rounds
+    ``rint(x * 1e9) / 1e9`` and differs at half-quantum ties); the loop runs on a Python list."""
     scalar = isinstance(values, (float, int, np.floating, np.integer)) or (
         isinstance(values, np.ndarray) and values.ndim == 0
     )
     arr = np.atleast_1d(np.asarray(values, dtype=np.float64))
-    out = np.empty(arr.shape, dtype=np.float64)
-    flat = out.ravel()
-    for i, x in enumerate(arr.ravel()):
-        if not np.isfinite(x):
-            flat[i] = np.nan
-        elif float(x) >= 900.0:
-            flat[i] = DIST_DEG_INVALID
-        else:
-            flat[i] = round(float(x), 9)
+    nd = DIST_DEG_NDIGITS
+    out = np.asarray(
+        [
+            (DIST_DEG_INVALID if x >= 900.0 else round(x, nd)) if math.isfinite(x) else math.nan
+            for x in arr.ravel().tolist()
+        ],
+        dtype=np.float64,
+    ).reshape(arr.shape)
     if scalar:
         return float(out.ravel()[0])
     return out

@@ -7,6 +7,7 @@ import logging
 import math
 import numpy as np
 import pandas as pd
+from stats_core import coerce_bool_series
 from photometry_defs import flux_k_column  # noqa: F401  (re-exported: one definition)
 from gaia_catalog_id import normalize_gaia_source_id
 from aperture_policy import fwhm_from_header_vy_fwhm
@@ -21,6 +22,7 @@ from photometry_defs import (
     LOGGER,
     SIGMA_BKG_AP_COL,
     SKY_ADU_PER_PX_ANNULUS_COL,
+    SKY_N_PX_COL,
 )
 from photometry_gate_helpers import (
     _assert_inv_err_sigma_acct_01,
@@ -194,7 +196,9 @@ def finalize_hybrid_bkg_fallback_proc_dir(
     """Post-pass: replace raw Howell fallback rows with setup-calibrated ``howell_scaled``.
 
     ``r_setup`` = median over rows with empirical ``sigma_bkg_ap`` of
-    ``sigma_bkg_ap^2 / (A.sky/g + A.(RN/g)^2)``.  Raw ``howell_fallback`` remains only when
+    ``sigma_bkg_ap^2 / (A (1 + (pi/2) A/n_sky) (sky/g + (RN/g)^2))`` (``ccd_noise``, the proc column
+    ``sky_n_px`` gives n_sky; a proc CSV without it - drafts before CCD-ONE-2026-10 - gives no ratio and
+    no scaled row: re-run the photometry).  Raw ``howell_fallback`` remains only when
     no empirical frames exist in the setup (Casertano et al. 2000 transferred correction).
     """
     from infolog import log_event
@@ -225,13 +229,14 @@ def finalize_hybrid_bkg_fallback_proc_dir(
         _ann = _col_floats(df, SKY_ADU_PER_PX_ANNULUS_COL, n)
         _area = _col_floats(df, "aperture_area_px", n)
         _rap = _col_floats(df, "aperture_r_px", n)
+        _nsk = _col_floats(df, SKY_N_PX_COL, n)
         for i in _emp:
             sky = _sky_pp_from_values(_ann[i])
             area = _area[i]
             if not math.isfinite(area) or area <= 0:
                 r_ap = _rap[i]
                 area = math.pi * r_ap * r_ap if math.isfinite(r_ap) and r_ap > 0 else float("nan")
-            rv = bkg_scale_ratio_empirical_over_howell(_sig[i], sky, area, gain=gain, read_noise=read_noise)
+            rv = bkg_scale_ratio_empirical_over_howell(_sig[i], sky, area, _nsk[i], gain=gain, read_noise=read_noise)
             if math.isfinite(rv) and rv > 0:
                 ratios.append(rv)
 
@@ -273,8 +278,9 @@ def finalize_hybrid_bkg_fallback_proc_dir(
             if not math.isfinite(area) or area <= 0:
                 r_ap = float(pd.to_numeric(row.get("aperture_r_px"), errors="coerce"))
                 area = math.pi * r_ap * r_ap if math.isfinite(r_ap) and r_ap > 0 else float("nan")
+            n_sky = float(pd.to_numeric(row.get(SKY_N_PX_COL), errors="coerce"))
             sig_scaled = scaled_sigma_bkg_ap_from_howell(
-                sky, area, gain=gain, read_noise=read_noise, r_setup=r_setup
+                sky, area, n_sky, gain=gain, read_noise=read_noise, r_setup=r_setup
             )
             if math.isfinite(sig_scaled) and sig_scaled >= 0:
                 df.at[df.index[i], SIGMA_BKG_AP_COL] = sig_scaled
@@ -405,9 +411,7 @@ def stamp_vsx_known_variable_on_masterstars(
     if "vsx_known_variable" not in out.columns:
         out["vsx_known_variable"] = False
     else:
-        out["vsx_known_variable"] = (
-            pd.to_numeric(out["vsx_known_variable"], errors="coerce").fillna(0).astype(bool)
-        )
+        out["vsx_known_variable"] = coerce_bool_series(out["vsx_known_variable"])
 
     stats = {"id_join": 0, "positional_fallback": 0}
     if variable_targets_df is None or getattr(variable_targets_df, "empty", True):
@@ -855,24 +859,25 @@ def enhance_catalog_dataframe_aperture(
             _ix = np.nonzero(_fin)[0]
             sum_ap = np.full(n, np.nan, dtype=np.float64)
             sky_pp_arr = np.full(n, np.nan, dtype=np.float64)
+            sky_n_arr = np.zeros(n, dtype=np.int64)
             area_ap_per = float(math.pi * float(r_ap) ** 2)
             if _ix.size:
                 ap = CircularAperture(pos[_ix], r=r_ap)
                 phot_ap = _aphot(d, ap, method="exact")
                 sum_ap[_ix] = np.asarray(phot_ap["aperture_sum"], dtype=np.float64)
-                from sky_estimation import annulus_sky_medians  # noqa: PLC0415
+                from sky_estimation import annulus_sky_medians_n  # noqa: PLC0415
 
-                sky_pp_arr[_ix] = annulus_sky_medians(d_sky, pos[_ix], r_in, r_out)
+                sky_pp_arr[_ix], sky_n_arr[_ix] = annulus_sky_medians_n(d_sky, pos[_ix], r_in, r_out)
             flux_arr = sum_ap - sky_pp_arr * area_ap_per
             flux_arr[_touches_no_data(r_ap)] = np.nan
             # APERTURE-K-2026-10: the same photometry on the aperture grid r = k x FWHM
             # (same positions, same annulus sky), so comparison-star RMS in comparison-star selection is
             # measured on the apertures the light curves use.
             try:
-                from photometry_defs import DEFAULT_APERTURE_F_GRID  # noqa: PLC0415
+                from photometry_defs import DEFAULT_APERTURE_F_GRID, flux_k_radius_px  # noqa: PLC0415
 
                 for _k in DEFAULT_APERTURE_F_GRID:
-                    _r_k = max(0.5, float(_k) * float(fw))
+                    _r_k = flux_k_radius_px(_k, fw)
                     _sum_k = np.full(n, np.nan, dtype=np.float64)
                     if _ix.size:
                         _sum_k[_ix] = np.asarray(
@@ -890,6 +895,7 @@ def enhance_catalog_dataframe_aperture(
             out["fwhm_px_for_aperture"] = float(fw)
             out["sky_annulus_r_out_px"] = float(r_out)
             out[SKY_ADU_PER_PX_ANNULUS_COL] = sky_pp_arr.astype(np.float64)
+            out[SKY_N_PX_COL] = sky_n_arr
 
             _stamp_fwhm_frame = (
                 float(_ap01_fwhm_frame)
@@ -985,13 +991,13 @@ def enhance_catalog_dataframe_aperture(
     # SAT-LIN-2026-10: non-linear == above LINEARITY_FRAC x saturation (likely_saturated);
     # the former "top-20 % peak and FWHM > 1.25 x median" heuristic is removed.
     if "likely_saturated" in out.columns:
-        likely_nl = out["likely_saturated"].fillna(False).astype(bool).to_numpy()
+        likely_nl = coerce_bool_series(out["likely_saturated"]).to_numpy()
     else:
         likely_nl = np.zeros(n, dtype=bool)
 
 
     if "photometry_ok" in out.columns:
-        base_ok = out["photometry_ok"].fillna(True).astype(bool).to_numpy()
+        base_ok = coerce_bool_series(out["photometry_ok"], default=True).to_numpy()
         out["photometry_ok"] = base_ok & (~likely_nl)
     else:
         out["photometry_ok"] = ~likely_nl

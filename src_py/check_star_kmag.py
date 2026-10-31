@@ -10,6 +10,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from stats_core import coerce_bool, coerce_bool_series
 
 from config import AppConfig
 from gaia_catalog_id import normalize_gaia_source_id
@@ -100,7 +101,7 @@ def _exclude_ensemble_members(df: pd.DataFrame, ensemble_ids: set[str]) -> pd.Da
     for col in ("is_ensemble", "in_ensemble", "used_in_ensemble", "ensemble", "is_used"):
         if col in df.columns:
             try:
-                m = df[col].fillna(False).astype(bool)
+                m = coerce_bool_series(df[col])
                 df = df.loc[~m].copy()
             except Exception as exc:  # noqa: BLE001
                 from except_fix_counters import get_except_fix_counters
@@ -182,7 +183,7 @@ def select_check_star(
     df = normalize_comp_df_export_columns(comp_df)
     try:
         if "is_check_star" in df.columns:
-            mchk = df["is_check_star"].fillna(False).astype(bool)
+            mchk = coerce_bool_series(df["is_check_star"])
             if bool(mchk.any()):
                 row = df.loc[mchk].iloc[0]
                 cid = str(normalize_gaia_source_id(row.get("catalog_id", "")) or "").strip()
@@ -504,9 +505,12 @@ def build_comp_photon_mag_from_frames(
     star_ids: list[str],
     source_files: list[str],
 ) -> dict[str, np.ndarray]:
-    """Per-epoch photon sigma (mag) aligned to ``source_files`` order."""
-    from photometry_gate_helpers import _photometric_error_with_bkg_mode  # noqa: PLC0415
-    from photometry_shared import _sky_pp_for_photometric_error  # noqa: PLC0415
+    """Per-epoch photon sigma (mag) aligned to ``source_files`` order.
+
+    CCD-ONE-2026-10 (G06-20): the row's ``err`` is the one photon error - the CCD equation at the light-curve
+    aperture (``aperture_pertarget.apply_grid_fluxes_to_frames``); a row without it has no photon sigma (NaN).
+    The former recomputation (gain 1, read noise 10 e-, area pi x 9 px when the radius was missing) is removed.
+    """
     from sparse_trust_core import rel_flux_err_to_photon_mag  # noqa: PLC0415
 
     n = len(source_files)
@@ -522,20 +526,7 @@ def build_comp_photon_mag_from_frames(
 
     def _row_rel_err(row: pd.Series) -> float:
         e = float(pd.to_numeric(row.get("err", float("nan")), errors="coerce"))
-        if math.isfinite(e) and e > 0:
-            return e
-        flux = float(pd.to_numeric(row.get("dao_flux", row.get("flux", float("nan"))), errors="coerce"))
-        sig_ap = float(pd.to_numeric(row.get("sigma_bkg_ap", float("nan")), errors="coerce"))
-        sky = _sky_pp_for_photometric_error(row)
-        r_px = float(pd.to_numeric(row.get("aperture_r_px", float("nan")), errors="coerce"))
-        area = math.pi * r_px * r_px if math.isfinite(r_px) and r_px > 0 else math.pi * 9.0
-        err_rel, _ = _photometric_error_with_bkg_mode(
-            flux,
-            sky_pp=sky,
-            area=area,
-            sigma_bkg_ap=sig_ap,
-        )
-        return float(err_rel)
+        return e if math.isfinite(e) and e > 0 else float("nan")
 
     for cid in star_ids:
         arr = np.full(n, float("nan"), dtype=float)
@@ -550,8 +541,7 @@ def build_comp_photon_mag_from_frames(
     return out
 
 
-def check_kmag_sidecar_path(lc_dir: Path | str, target_cid: str) -> Path:
-    return Path(lc_dir) / f"check_kmag_{str(target_cid).strip()}.csv"
+from report_methods import check_kmag_sidecar_path  # noqa: E402,F401 - G11-29: defined with the other LC paths
 
 
 @dataclass(frozen=True)
@@ -610,7 +600,8 @@ def exported_check_stats(lc_dir: Path | str, target_cid: str, *, lc_df: pd.DataF
         p = check_kmag_sidecar_path(lc_dir, tid)
         sidecar = read_vyvar_csv(p, low_memory=False) if p.is_file() else None
     if lc_df is None:
-        p = lc_dir / f"lightcurve_{tid}.csv"
+        from report_methods import lc_csv_path  # noqa: PLC0415
+        p = lc_csv_path(lc_dir, tid)
         lc_df = read_vyvar_csv(p, low_memory=False) if p.is_file() else None
     if lc_df is None or lc_df.empty or "source_file" not in lc_df.columns:
         return check_star_stats(None)
@@ -687,13 +678,13 @@ def load_check_star(lc_dir: Path | str, target_cid: str) -> dict[str, Any]:
 
         out.update(
             {
-                "check_sparse": str(row.get("check_sparse", 0)).strip().lower() in ("1", "true", "yes"),
+                "check_sparse": coerce_bool(row.get("check_sparse", 0)),
                 "trust_R": _f("trust_R"),
                 "trust_R_lo": _f("trust_R_lo"),
                 "trust_R_hi": _f("trust_R_hi"),
                 "comp_stability_p": _f("comp_stability_p"),
                 "x2_pair_mag2": _f("x2_pair_mag2"),
-                "triangulation_clipped": str(row.get("triangulation_clipped", 0)).strip() in ("1", "true"),
+                "triangulation_clipped": coerce_bool(row.get("triangulation_clipped", 0)),
                 "sparse_flags": [x for x in str(row.get("sparse_flags", "") or "").strip().split(";")
                                  if x and x.lower() != "nan"],
             }

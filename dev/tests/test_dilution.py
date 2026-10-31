@@ -10,6 +10,15 @@ import pytest
 
 from dilution import compute_dilution_factor, flux_from_gmag, query_gaia_neighbors
 
+# DILUTION-ONE-2026-10: the light-curve aperture, its annulus and the measured Moffat PSF (arcsec)
+_GEOM = dict(fwhm_arcsec=3.0, beta=2.7, annulus_arcsec=(8.1, 15.6))
+
+
+def _nb(g: float, dx_arcsec: float, dec0: float = 40.0, ra0: float = 210.0) -> dict:
+    """A neighbour dx arcsec east of (ra0, dec0)."""
+    return {"g_mag": g, "ra": ra0 + dx_arcsec / 3600.0 / math.cos(math.radians(dec0)), "dec": dec0,
+            "sep_arcsec": abs(dx_arcsec)}
+
 
 def test_flux_from_gmag_ratio() -> None:
     f10 = flux_from_gmag(10.0)
@@ -20,45 +29,34 @@ def test_flux_from_gmag_ratio() -> None:
 
 def test_dilution_no_neighbors() -> None:
     with patch("dilution.query_gaia_neighbors", return_value=[]):
-        r = compute_dilution_factor(
-            210.0,
-            40.0,
-            12.0,
-            4.0,
-            "dummy.db",
-            catalog_id=123,
-        )
+        r = compute_dilution_factor(210.0, 40.0, 12.0, 4.0, "dummy.db", catalog_id=123, **_GEOM)
     assert r["dilution_factor"] == 1.0
     assert r["dilution_delta_mag"] == 0.0
     assert r["n_neighbors"] == 0
 
 
-def test_dilution_equal_neighbor() -> None:
-    """GS11-2026-10: an equal neighbour on top of the target gives D = 0.5; at 2 arcsec only
-    the part of its PSF inside the 4 arcsec aperture counts (Rice / ncx2 enclosed fraction)."""
-    from dilution import enclosed_fraction
+def test_dilution_is_the_comp_blend_model() -> None:
+    """G07-33: the target dilution is comp_blend.contamination_fractions (Moffat, annulus median) on the
+    light-curve aperture; an equal neighbour on top gives D = 0.5."""
+    import numpy as np
 
-    with patch("dilution.query_gaia_neighbors", return_value=[{"g_mag": 12.0, "sep_arcsec": 0.0}]):
-        r0 = compute_dilution_factor(210.0, 40.0, 12.0, 4.0, "dummy.db", fwhm_arcsec=3.0)
-    assert abs(r0["dilution_factor"] - 0.5) < 1e-6
-    assert abs(r0["dilution_delta_mag"] - 0.7526) < 0.001
-    with patch("dilution.query_gaia_neighbors", return_value=[{"g_mag": 12.0, "sep_arcsec": 2.0}]):
-        r = compute_dilution_factor(210.0, 40.0, 12.0, 4.0, "dummy.db", fwhm_arcsec=3.0)
-    s = 3.0 / 2.3548200450309493
-    expected = 1.0 / (1.0 + enclosed_fraction(2.0, 4.0, s) / enclosed_fraction(0.0, 4.0, s))
-    assert 0.5 < r["dilution_factor"] < 1.0
-    assert abs(r["dilution_factor"] - expected) < 1e-9
+    from comp_blend import contamination_fractions
+
+    with patch("dilution.query_gaia_neighbors", return_value=[_nb(12.0, 0.0)]):
+        r0 = compute_dilution_factor(210.0, 40.0, 12.0, 4.0, "dummy.db", **_GEOM)
+    assert abs(r0["dilution_factor"] - 0.5) < 1e-3
+    with patch("dilution.query_gaia_neighbors", return_value=[_nb(12.0, 4.5)]):
+        r = compute_dilution_factor(210.0, 40.0, 12.0, 4.0, "dummy.db", **_GEOM)
+    c = float(contamination_fractions(np.zeros((1, 2)), np.array([1.0]), np.array([[4.5, 0.0]]), np.array([1.0]),
+                                      r_ap_px=4.0, fwhm_px=3.0, beta=2.7, annulus_px=(8.1, 15.6))[0])
+    assert r["dilution_factor"] == pytest.approx(1.0 / (1.0 + c), rel=1e-6)
     assert r["n_neighbors"] == 1
 
 
-def test_enclosed_fraction_limits() -> None:
-    from dilution import enclosed_fraction
-
-    s = 1.0
-    # centred: 1 - exp(-r^2 / 2 sigma^2)
-    assert abs(enclosed_fraction(0.0, 2.0, s) - (1.0 - math.exp(-2.0))) < 1e-9
-    assert enclosed_fraction(20.0, 2.0, s) < 1e-12
-    assert enclosed_fraction(2.0, 2.0, s) < enclosed_fraction(1.0, 2.0, s) < enclosed_fraction(0.0, 2.0, s)
+def test_dilution_requires_psf_and_annulus() -> None:
+    with pytest.raises(ValueError):
+        compute_dilution_factor(210.0, 40.0, 12.0, 4.0, "dummy.db", fwhm_arcsec=3.0, beta=float("nan"),
+                                annulus_arcsec=(8.1, 15.6))
 
 
 def test_dilution_faint_neighbor_excluded() -> None:
@@ -71,6 +69,7 @@ def test_dilution_faint_neighbor_excluded() -> None:
             4.0,
             "dummy.db",
             mag_limit_delta=5.0,
+            **_GEOM,
         )
         mock_q.assert_called_once()
         _args, kwargs = mock_q.call_args
@@ -79,9 +78,10 @@ def test_dilution_faint_neighbor_excluded() -> None:
 
 
 def test_dilution_nan_gmag() -> None:
-    r = compute_dilution_factor(210.0, 40.0, float("nan"), 4.0, "dummy.db")
+    r = compute_dilution_factor(210.0, 40.0, float("nan"), 4.0, "dummy.db", **_GEOM)
     assert r["dilution_factor"] == 1.0
     assert r["dilution_delta_mag"] == 0.0
+    assert r["dilution_skipped"] is True
 
 
 def test_query_neighbors_excludes_self() -> None:
@@ -123,9 +123,9 @@ def test_dilution_delta_mag_formula() -> None:
     d = 0.5
     expected = -2.5 * math.log10(d)
     assert abs(expected - 0.752574989) < 0.001
-    neighbors = [{"g_mag": 10.0, "sep_arcsec": 0.0}]
+    neighbors = [_nb(10.0, 0.0, dec0=0.0, ra0=0.0)]
     with patch("dilution.query_gaia_neighbors", return_value=neighbors):
-        r = compute_dilution_factor(0.0, 0.0, 10.0, 4.0, "dummy.db")
+        r = compute_dilution_factor(0.0, 0.0, 10.0, 4.0, "dummy.db", **_GEOM)
     assert abs(r["dilution_delta_mag"] - expected) < 0.02
 
 
@@ -142,7 +142,7 @@ def test_dilution_real_db() -> None:
         60.0,
         db,
         catalog_id=1497525907795379456,
-        search_radius_arcsec=60.0,
+        **_GEOM,
     )
     required = {
         "dilution_factor",

@@ -278,11 +278,37 @@ def _ef_run_frames(
         if _fv and rr.get("csv"):
             frame_rows[str(rr["csv"])] = _fv
         rows_out.append(rr)
-    if not defer_disk_writes and write_sidecar_csv_next_to_fits and frame_rows:
-        from proc_frame_store import write_frame_tables  # noqa: PLC0415
-
-        write_frame_tables(frame_rows)
     return frame_rows, rows_out
+
+
+def write_per_frame_outputs(
+    *,
+    root: Path,
+    index_path: Path | str,
+    rows_out: list[dict[str, Any]],
+    frame_rows: dict[str, dict[str, Any]],
+    deferred_csv_writes: Sequence[tuple[Path, pd.DataFrame]],
+    write_sidecar: bool,
+    gain: float,
+    read_noise: float,
+) -> dict[str, Any]:
+    """G05-36: the one tail of the per-frame catalogue export, for the disk path (right after the
+    workers) and the RAM handoff (after the aligned FITS are flushed): proc CSVs the workers deferred,
+    the frame tables, the per-frame index and the hybrid background summary. Returns the hybrid stats."""
+    from proc_frame_store import write_frame_tables, write_proc_csv  # noqa: PLC0415
+
+    for pcsv, df in deferred_csv_writes:
+        write_proc_csv(df, pcsv)
+    if write_sidecar and frame_rows:
+        write_frame_tables(frame_rows)
+    write_per_frame_index(rows_out, Path(index_path))
+    return _finalize_hybrid_bkg_fallback_sidecar(
+        root,
+        write_sidecar=bool(write_sidecar),
+        gain=gain,
+        read_noise=read_noise,
+        setup_label=str(root.name),
+    )
 
 
 def _ef_finish(
@@ -292,24 +318,27 @@ def _ef_finish(
     _sat_diag_archive,
     _sat_diag_ctx,
     defer_disk_writes,
+    frame_rows,
     ps,
     root,
     rows_out,
     write_sidecar_csv_next_to_fits,
 ):
-    """Write the per-frame index / frame tables, the hybrid background summary and commit the SAT-DIAG provenance."""
+    """Write the per-frame outputs (:func:`write_per_frame_outputs`; the RAM handoff writes them after the
+    FITS flush) and commit the SAT-DIAG provenance."""
     index_path = ps / "per_frame_catalog_index.csv"
-    if not defer_disk_writes:
-        write_per_frame_index(rows_out, index_path)
     n_ok = sum(1 for r in rows_out if r.get("status") == "ok")
     _hybrid_stats: dict[str, Any] = {}
     if not defer_disk_writes:
-        _hybrid_stats = _finalize_hybrid_bkg_fallback_sidecar(
-            root,
+        _hybrid_stats = write_per_frame_outputs(
+            root=root,
+            index_path=index_path,
+            rows_out=rows_out,
+            frame_rows=frame_rows,
+            deferred_csv_writes=(),
             write_sidecar=bool(write_sidecar_csv_next_to_fits),
             gain=_gain_fe,
             read_noise=_rn_fe,
-            setup_label=str(root.name),
         )
     if _sat_diag_ctx is not None and _sat_diag_archive:
         try:
@@ -434,6 +463,8 @@ def export_per_frame_catalogs(
         work_ram=work_ram,
     )
 
+    _draft_site = _resolve_draft_site_facts(_cfg_ap, draft_id)
+
     def _catalog_worker_state() -> dict[str, Any]:
         return {
             "master_tab": master_tab,
@@ -453,6 +484,7 @@ def export_per_frame_catalogs(
             # CONFIG-ONE-2026-10: the run config itself (pickled once per worker), not copies of keys
             "cfg": _cfg_ap,
             "draft_id": int(draft_id) if draft_id is not None else None,
+            "draft_site": _draft_site,
             "gaussian_fwhm_px_override": _gauss_override,
             "fwhm_night_median_px": _fwhm_night_median_px,
             "qc_fwhm_by_name": dict(_qc_fwhm_by_name),
@@ -484,6 +516,7 @@ def export_per_frame_catalogs(
         _sat_diag_archive=_sat_diag_archive,
         _sat_diag_ctx=_sat_diag_ctx,
         defer_disk_writes=defer_disk_writes,
+        frame_rows=frame_rows,
         ps=ps,
         root=root,
         rows_out=rows_out,
@@ -501,3 +534,19 @@ def export_per_frame_catalogs(
         "photometric_gain": _gain_fe,
         "photometric_read_noise": _rn_fe,
     }
+
+
+def _resolve_draft_site_facts(cfg: AppConfig, draft_id: int | None) -> Any:
+    """G05-31: the draft site / field centre facts of the per-frame time and airmass columns, read
+    once here (one database open) instead of a VyvarDatabase open per frame in every worker. None
+    without a configured database or draft (as before: no draft lookups)."""
+    if draft_id is None or not str(cfg.database_path or "").strip():
+        return None
+    from database import VyvarDatabase  # noqa: PLC0415
+    from param_resolver import DraftSiteFacts  # noqa: PLC0415
+
+    db = VyvarDatabase.for_config(cfg)
+    try:
+        return DraftSiteFacts.from_db(db, int(draft_id))
+    finally:
+        db.conn.close()

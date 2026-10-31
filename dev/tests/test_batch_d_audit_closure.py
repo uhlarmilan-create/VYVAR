@@ -23,6 +23,7 @@ def test_i11_empirical_path_ignores_sky_pp_when_sigma_bkg_present() -> None:
         10000.0,
         sky_pp=sky_pp,
         area=50.0,
+        n_sky=400.0,
         gain=1.0,
         read_noise=10.0,
         sigma_bkg_ap=12.0,

@@ -347,7 +347,8 @@ def test_reserve_does_not_change_primary_comps() -> None:
     cfg.gs11_dilution_enabled = False
     from photometry_comp import build_global_comp_pool  # noqa: PLC0415
 
-    pool = build_global_comp_pool(ms, paths, cache, frozenset({_TARGET_ID}), None, 800, 600, 0, cfg, min_frames_frac=0.3, fwhm_px=3.7)
+    pool = build_global_comp_pool(ms, paths, cache, frozenset({_TARGET_ID}), None, 800, 600, 0, cfg, min_frames_frac=0.3, fwhm_px=3.7,
+                                  gain=1.0, read_noise=10.0, scint_params=_NO_SCINT)
     kw = dict(cfg=cfg, chip_fw=800, chip_fh=600, chip_interior_margin_px=0,
               min_dist_arcsec=30.0, n_comp_max=5, global_comp_pool_df=pool,
               variable_target_catalog_ids=frozenset({_TARGET_ID}),
@@ -395,11 +396,18 @@ def test_night_sigma_sys_from_comps_recovers_floor() -> None:
         for i in range(nc):
             F0 = 2e5 * 10 ** (-0.4 * 0.1 * i)
             n_sky = np.pi * ((5.2 * 3.0) ** 2 - (2.7 * 3.0) ** 2)
-            var = F0 / g + area * (1 + area / n_sky) * (200.0 / g + (rn / g) ** 2)
+            var = F0 / g + area * (1 + (np.pi / 2) * area / n_sky) * (200.0 / g + (rn / g) ** 2)
             ph = 1.0857 * np.sqrt(var) / F0
             m = -2.5 * np.log10(F0) + common + rng.normal(0, ph, nf) + rng.normal(0, sys_mmag / 1000, nf)
             flux[str(i)] = 10 ** (-0.4 * m); sky[str(i)] = np.full(nf, 200.0)
         r = night_sigma_sys_from_comps(flux, sky, fw, k=k, gain=g, read_noise=rn,
-                                       annulus_inner_fwhm=2.7, annulus_outer_fwhm=5.2)
+                                       n_sky_by_cid={c: np.full(nf, n_sky) for c in flux})
         assert r["n_comps"] >= 5
         assert abs(1000 * r["sigma_sys_mag"] - sys_mmag) < 1.2, r
+
+
+# COMP-CEIL-NOISEMODEL-2026-10: build_global_comp_pool requires the rig scintillation parameters; none here
+# (no telescope diameter / site altitude -> scintillation 0, as sigma_budget does for such a rig)
+from sigma_budget import RigScintillationParams  # noqa: E402
+
+_NO_SCINT = RigScintillationParams(None, "test", float("nan"), float("nan"), 60.0, 1.5, [])

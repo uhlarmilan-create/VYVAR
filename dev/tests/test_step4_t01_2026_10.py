@@ -278,6 +278,10 @@ def test_g0110_library_gain_migration_reads_the_exact_card(tmp_path: Path) -> No
         "INSERT INTO CALIBRATION_LIBRARY (KIND, FILE_PATH, XBINNING, EXPTIME, CCD_TEMP, GAIN, REGISTERED_AT, "
         "ID_EQUIPMENTS) VALUES ('dark', ?, 1, 60, -10, 3, 'x', ?)", (str(gone), cam))
     db.conn.commit()
+    # G01-38 (step 5): the schema / migration runs once per connection -> the legacy database is
+    # opened anew, as the new code meets it
+    db.conn.close()
+    db = VyvarDatabase(data_root / "vyvar.sqlite3")
     cl.ensure_schema(db)
     rows = {r["FILE_PATH"]: dict(r) for r in db.conn.execute("SELECT FILE_PATH, GAIN, GAIN_EXACT FROM CALIBRATION_LIBRARY")}
     assert rows[str(p.resolve())]["GAIN"] == 12.48 and rows[str(p.resolve())]["GAIN_EXACT"] == 1
@@ -530,7 +534,7 @@ def _dark(path: Path, level: float, exptime: float, *, instr="CAM-A", gain=1.6, 
 
 
 def test_g0146_three_exposures_sigma_p_is_the_ols_intercept_error(tmp_path):
-    from cal_diag import _pedestal_intercept_fit
+    from calib_library import pedestal_intercept_fit as _pedestal_intercept_fit
 
     # exact line + scatter: sigma_P == the textbook standard error of the intercept
     t = np.array([30.0, 60.0, 120.0, 300.0])

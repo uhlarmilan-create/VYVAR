@@ -51,14 +51,17 @@ def _measured_cids(pages: "TargetPages") -> list[str]:
     out = []
     for cid, nfr, rms in zip(sd["_cid"], pd.to_numeric(sd.get("n_frames"), errors="coerce"),
                              pd.to_numeric(sd.get("lc_rms"), errors="coerce")):
-        if cid and nfr > 0 and math.isfinite(rms) and (pages.lc_dir / f"lightcurve_{cid}.csv").is_file():
+        from report_methods import lc_csv_path  # noqa: PLC0415
+        if cid and nfr > 0 and math.isfinite(rms) and lc_csv_path(pages.lc_dir, cid).is_file():
             out.append(str(cid))
     return out
 
 
 @st.cache_resource(show_spinner="Loading the processed field into memory...", max_entries=4)
-def _group_pages(platesolve_setup_dir: str, _stamp: float) -> "TargetPages":
-    """All page data of one observation group, read once (``_stamp`` = summary mtime, part of the key)."""
+def _group_pages(platesolve_setup_dir: str, stamp: tuple) -> "TargetPages":
+    """All page data of one observation group, read once per state of the summary (``stamp``: its path,
+    mtime_ns and size; a hashed argument - the former ``_stamp`` was left out of the key, so a re-run
+    showed the old pages, G14-26)."""
     from config import AppConfig  # noqa: PLC0415
     from target_page import load_target_pages  # noqa: PLC0415
 
@@ -162,7 +165,8 @@ def _all_setups_figure(setups: dict[str, dict], cid: str) -> Any | None:
     traces, xs = [], []
     for name, p in setups.items():
         lc_dir = Path(p["photometry_dir"]) / "lightcurves"
-        f = lc_dir / f"lightcurve_{cid}.csv"
+        from report_methods import lc_csv_path  # noqa: PLC0415
+        f = lc_csv_path(lc_dir, cid)
         if not f.is_file():
             continue
         df = pd.read_csv(f, low_memory=False)
@@ -238,7 +242,8 @@ def _cutout_png(pages: "TargetPages", pg: dict[str, Any]) -> Path | None:
     out = pages.photometry_dir / "_report_cache" / f"m3_cut_{pg['cid']}.png"
     # OUTPUT-REVIEW-2026-10 step 7: reuse only when newer than what it draws (the light curve and the
     # aperture choice of the last aperture photometry run); otherwise draw it again
-    _src = [pages.lc_dir / f"lightcurve_{pg['cid']}.csv", pages.photometry_dir / "aperture_per_target.json"]
+    from report_methods import lc_csv_path  # noqa: PLC0415
+    _src = [lc_csv_path(pages.lc_dir, pg["cid"]), pages.photometry_dir / "aperture_per_target.json"]
     _src_mt = max((p.stat().st_mtime for p in _src if p.is_file()), default=0.0)
     if out.is_file() and out.stat().st_mtime >= _src_mt:
         return out
@@ -311,7 +316,9 @@ def render_aperture_photometry(
         setup = st.selectbox("Observation setup", list(setups), format_func=setup_label, key="aperture_setup_select")
     ps_dir = Path(setups[setup]["obs_group_dir"])
     summary_csv = Path(setups[setup]["photometry_dir"]) / "photometry_summary.csv"
-    pages = _group_pages(str(ps_dir), summary_csv.stat().st_mtime)
+    from ui_cache import file_stamp  # noqa: PLC0415
+
+    pages = _group_pages(str(ps_dir), file_stamp(summary_csv))
     cids = _measured_cids(pages)
     with c_info:
         done = datetime.datetime.fromtimestamp(summary_csv.stat().st_mtime).strftime("%d.%m.%Y %H:%M")
@@ -319,7 +326,8 @@ def render_aperture_photometry(
     with c_pdf:
         pdf = _latest_report_pdf(ps_dir)
         if pdf is not None:
-            st.download_button("PDF report", data=pdf.read_bytes(), file_name=pdf.name, mime="application/pdf",
+            # G14-29: the bytes are read on click (deferred data), not on every rerun
+            st.download_button("PDF report", data=pdf.read_bytes, file_name=pdf.name, mime="application/pdf",
                                key=f"vyvar_ap_pdf_{setup}")
 
     # A view switch, not st.tabs: Streamlit runs every tab body on each rerun, and the HRD

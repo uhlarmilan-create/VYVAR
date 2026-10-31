@@ -115,7 +115,9 @@ def lc_plot_data(df: pd.DataFrame, chk: pd.DataFrame | None, *, uncalibrated: bo
     exp = export_row_mask(df, mag_column=ycol).to_numpy(bool)
     good = ok & exp
     bad = ok & ~exp
-    x0 = float(np.floor(np.nanmin(x[ok])))
+    from jd_axis_format import jd_offset  # noqa: PLC0415
+
+    x0 = float(jd_offset(x[ok]) or 0)  # G11-29: no offset for times that are not full JD
     ut_offset = float("nan")
     if "jd" in df.columns:
         jd = pd.to_numeric(df["jd"], errors="coerce").to_numpy(float)
@@ -556,7 +558,9 @@ def plot_lc_epsf(df: pd.DataFrame, out_png: Path, *, figsize: tuple[float, float
     from epsf_lc_compare import psf_level_shift  # noqa: PLC0415
 
     shift = psf_level_shift(df)
-    x0 = float(np.floor(np.nanmin(df["bjd"])))
+    from jd_axis_format import jd_offset  # noqa: PLC0415
+
+    x0 = float(jd_offset(df["bjd"]) or 0)
     fig = plt.figure(figsize=figsize, dpi=150)
     gs = fig.add_gridspec(2, 1, height_ratios=[3.3, 1.0], hspace=0.06)
     ax = fig.add_subplot(gs[0])

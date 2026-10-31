@@ -231,11 +231,6 @@ def insert_gaia_rows(conn: sqlite3.Connection, df: pd.DataFrame) -> int:
 
 
 # ------------------------------------------------------------------ boxes
-def ra_intervals(ra_min: float, ra_max: float) -> list[tuple[float, float]]:
-    """RA range (may lie outside [0, 360)) -> sub-intervals inside [0, 360]."""
-    return ra_intervals_deg(float(ra_min), float(ra_max))
-
-
 def field_box(center: Any, radius_deg: float, *, margin_deg: float = 0.0) -> tuple[float, float, float, float]:
     """Sky box (ra_min, ra_max, dec_min, dec_max) of the field cone grown by ``margin_deg``."""
     from catalog_db import cone_sky_box  # noqa: PLC0415
@@ -250,8 +245,8 @@ def _box_inside(
     ora0, ora1, ode0, ode1 = outer
     if ide0 < ode0 - _EPS_DEG or ide1 > ode1 + _EPS_DEG:
         return False
-    outer_iv = ra_intervals(ora0, ora1)
-    for a, b in ra_intervals(ira0, ira1):
+    outer_iv = ra_intervals_deg(ora0, ora1)
+    for a, b in ra_intervals_deg(ira0, ira1):
         if not any(c - _EPS_DEG <= a and b <= d + _EPS_DEG for c, d in outer_iv):
             return False
     return True
@@ -374,7 +369,7 @@ def coverage_summary(db_path: str | Path) -> list[dict[str, Any]]:
 def build_topup_adql(box: tuple[float, float, float, float], *, g_from: float, g_to: float) -> str:
     """ADQL for the stars of ``box`` with g_from < G <= g_to (``gaiadr3.gaia_source``)."""
     ra_terms = " OR ".join(
-        f"(ra >= {a:.8f} AND ra <= {b:.8f})" for a, b in ra_intervals(box[0], box[1])
+        f"(ra >= {a:.8f} AND ra <= {b:.8f})" for a, b in ra_intervals_deg(box[0], box[1])
     )
     return (
         f"SELECT {GAIA_SOURCE_SELECT}\n        FROM gaiadr3.gaia_source\n"

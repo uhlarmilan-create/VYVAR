@@ -218,7 +218,8 @@ def main() -> None:
         g = float(r.G)
         if not (math.isfinite(flux) and flux > 0 and math.isfinite(sbk) and sbk >= 0):
             continue
-        e_rel = _photometric_error(flux, sbk, area, gain=gain_for_model, read_noise=rn_for_model)
+        # CCD-ONE-2026-10: n_sky = inf keeps this historical study's model (no sky-estimation term)
+        e_rel = _photometric_error(flux, sbk, area, math.inf, gain=gain_for_model, read_noise=rn_for_model)
         e_ph = rel_to_mmag(e_rel)
         # Production assembly without SEM (unknown for non-LC stars): photon + scint + sys
         e_no_sem = float("nan")

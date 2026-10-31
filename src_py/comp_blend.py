@@ -306,6 +306,54 @@ def variable_amplitudes(variable_targets_csv: Path) -> tuple[dict[str, float], s
     return out, "vsx_amplitude_mag"
 
 
+class BlendField:
+    """G07-12: the neighbour side of the blend model, loaded once per field: the Gaia cone projected with the
+    MASTERSTAR WCS, its band fluxes (variable neighbours at maximum) and the WCS. The MASTERSTAR image is
+    read only when the Moffat beta is measured. Independent of the aperture, so one load serves every k."""
+
+    def __init__(self, field_catalog_csv: Path, masterstar_fits: Path, zp_band: str) -> None:
+        from astropy.io import fits  # noqa: PLC0415
+        from astropy.wcs import WCS  # noqa: PLC0415
+
+        from gaia_catalog_id import normalize_gaia_source_id  # noqa: PLC0415
+
+        self.field_catalog_csv = Path(field_catalog_csv)
+        self.masterstar_fits = Path(masterstar_fits)
+        self.zp_band = str(zp_band)
+        cat = read_vyvar_csv(field_catalog_csv, low_memory=False)  # ids as text (G07-13)
+        self.wcs = WCS(fits.getheader(masterstar_fits, 0))
+        cx, cy = self.wcs.all_world2pix(
+            pd.to_numeric(cat["ra_deg"], errors="coerce").to_numpy(),
+            pd.to_numeric(cat["dec_deg"], errors="coerce").to_numpy(),
+            0,
+        )
+        cg = pd.to_numeric(cat["mag"], errors="coerce").to_numpy(dtype=float)
+        cbp = pd.to_numeric(cat.get("bp_rp"), errors="coerce").to_numpy(dtype=float)
+        ok = np.isfinite(cx) & np.isfinite(cy) & np.isfinite(cg)
+        cx, cy, cg, cbp = cx[ok], cy[ok], cg[ok], cbp[ok]
+        self.cg = cg
+        self.nb_ids = [str(normalize_gaia_source_id(v) or "") for v in cat["catalog_id"].to_numpy()[ok]]
+        self.nb_xy = np.c_[cx, cy]
+        # B4-2026-10: a known variable neighbour shines at its maximum (Gaia mean + VSX amplitude is an
+        # upper bound: the mean lies between maximum and minimum)
+        amp, self.amp_src = variable_amplitudes(Path(field_catalog_csv).parent / VARIABLE_TARGETS_CSV)
+        self.nb_boost = np.array([10.0 ** (0.4 * amp[i]) if i in amp else 1.0 for i in self.nb_ids], dtype=float)
+        self.nb_flux = self.band_flux(cg, cbp) * self.nb_boost
+
+    def band_flux(self, g: np.ndarray, bp: np.ndarray) -> np.ndarray:
+        """Band flux, NaN when the Gaia -> band relation is not valid for the star."""
+        from gaia_bands import band_mag_from_gaia  # noqa: PLC0415
+
+        m = np.array([band_mag_from_gaia(a, b, self.zp_band)[0] for a, b in zip(g, bp, strict=False)])
+        return 10.0 ** (-0.4 * m)
+
+    def image(self) -> np.ndarray:
+        from astropy.io import fits  # noqa: PLC0415
+
+        with fits.open(self.masterstar_fits, memmap=False) as hdul:
+            return np.asarray(hdul[0].data, dtype=np.float32)
+
+
 def blend_contamination_for_pool(
     pool: pd.DataFrame,
     *,
@@ -319,6 +367,7 @@ def blend_contamination_for_pool(
     annulus_px: tuple[float, float] | None = None,
     profile_df: pd.DataFrame | None = None,
     psf: dict[str, Any] | None = None,
+    field: BlendField | None = None,
 ) -> tuple[pd.Series, dict[str, Any]]:
     """Contamination fraction for every pool row (index-aligned) and a metadata dict.
 
@@ -327,16 +376,13 @@ def blend_contamination_for_pool(
     (BLEND-SEEING-2026-10: the two differ when the light is judged at bad seeing).
     ``psf``: a profile from an earlier call (``meta["psf"]``) - reused instead of measuring
     beta again, so a grid of apertures uses one PSF.
+    ``field``: the neighbours loaded by an earlier ``BlendField`` of the same catalogue, MASTERSTAR and
+    band (G07-12: a grid of apertures loads them once); loaded here when not given.
 
     Neighbours: the field Gaia cone (``field_catalog_cone.csv``) projected with the
     MASTERSTAR WCS onto the reference frame. Fluxes in ``zp_band`` (G when the relation
     is not valid for a star). Missing inputs -> all NaN and ``meta["status"]`` explains.
     """
-    from astropy.io import fits  # noqa: PLC0415
-    from astropy.wcs import WCS  # noqa: PLC0415
-
-    from gaia_bands import band_mag_from_gaia  # noqa: PLC0415
-
     meta: dict[str, Any] = {
         "rule_id": "COMP_BLEND_NEIGHBOUR_LIGHT",
         "threshold_flux_frac": BLEND_FLUX_FRAC_MAX,
@@ -355,36 +401,16 @@ def blend_contamination_for_pool(
     if not (math.isfinite(fwhm_px) and fwhm_px > 0 and math.isfinite(r_ap_px) and r_ap_px > 0):
         meta["status"] = "skipped: FWHM / aperture unknown"
         return nan, meta
-    cat = read_vyvar_csv(field_catalog_csv, low_memory=False)  # ids as text (G07-13)
-    with fits.open(masterstar_fits, memmap=False) as hdul:
-        hdr = hdul[0].header
-        img = np.asarray(hdul[0].data, dtype=np.float32)
-    wcs = WCS(hdr)
-    cx, cy = wcs.all_world2pix(
-        pd.to_numeric(cat["ra_deg"], errors="coerce").to_numpy(),
-        pd.to_numeric(cat["dec_deg"], errors="coerce").to_numpy(),
-        0,
-    )
-    cg = pd.to_numeric(cat["mag"], errors="coerce").to_numpy(dtype=float)
-    cbp = pd.to_numeric(cat.get("bp_rp"), errors="coerce").to_numpy(dtype=float)
-    ok = np.isfinite(cx) & np.isfinite(cy) & np.isfinite(cg)
-    cx, cy, cg, cbp = cx[ok], cy[ok], cg[ok], cbp[ok]
-
-    def _band_flux(g: np.ndarray, bp: np.ndarray) -> np.ndarray:
-        """Band flux, NaN when the Gaia -> band relation is not valid for the star."""
-        m = np.array([band_mag_from_gaia(a, b, zp_band)[0] for a, b in zip(g, bp, strict=False)])
-        return 10.0 ** (-0.4 * m)
-
+    if field is None:
+        field = BlendField(Path(field_catalog_csv), Path(masterstar_fits), zp_band)
+    elif (field.field_catalog_csv, field.masterstar_fits, field.zp_band) != (
+            Path(field_catalog_csv), Path(masterstar_fits), str(zp_band)):
+        raise ValueError("blend_contamination_for_pool: field loaded for other inputs")
     from gaia_catalog_id import normalize_gaia_source_id  # noqa: PLC0415
 
-    nb_ids = [str(normalize_gaia_source_id(v) or "") for v in cat["catalog_id"].to_numpy()[ok]]
-    nb_xy = np.c_[cx, cy]
-    # B4-2026-10: a known variable neighbour shines at its maximum (Gaia mean + VSX amplitude is an
-    # upper bound: the mean lies between maximum and minimum)
-    amp, amp_src = variable_amplitudes(Path(field_catalog_csv).parent / VARIABLE_TARGETS_CSV)
-    nb_boost = np.array([10.0 ** (0.4 * amp[i]) if i in amp else 1.0 for i in nb_ids], dtype=float)
-    nb_flux = _band_flux(cg, cbp) * nb_boost
-    meta["variable_neighbours"] = {"source": amp_src, "n_at_maximum": int(np.count_nonzero(nb_boost > 1.0))}
+    wcs, cg, nb_xy, nb_ids, nb_boost, nb_flux = (
+        field.wcs, field.cg, field.nb_xy, field.nb_ids, field.nb_boost, field.nb_flux)
+    meta["variable_neighbours"] = {"source": field.amp_src, "n_at_maximum": int(np.count_nonzero(nb_boost > 1.0))}
     meta["neighbour_catalog_mag_limit"] = float(np.nanmax(cg)) if cg.size else float("nan")
     meta["n_neighbour_catalog"] = int(cg.size)
 
@@ -406,7 +432,7 @@ def blend_contamination_for_pool(
     if psf is not None and math.isfinite(float(psf.get("beta", float("nan")))):
         prof = dict(psf)
     elif math.isfinite(sat) and sat > 0 and np.isfinite(peaks).any():
-        prof = measure_moffat_beta(img, _ppx, _ppy, peaks, sat, float(profile_fwhm_px), nb_xy, cg, _ppg)
+        prof = measure_moffat_beta(field.image(), _ppx, _ppy, peaks, sat, float(profile_fwhm_px), nb_xy, cg, _ppg)
     else:
         prof = {"beta": MOFFAT_BETA_FALLBACK, "fwhm_fit_px": float("nan"), "n_stars": 0, "source": "fallback"}
     meta["psf"] = prof
@@ -419,7 +445,7 @@ def blend_contamination_for_pool(
     _idc = "catalog_id" if "catalog_id" in pool.columns else "name"
     s_ids = [str(normalize_gaia_source_id(v) or "") for v in pool[_idc].to_numpy()]
     c = contamination_fractions(
-        np.c_[sx, sy], _band_flux(pg, pbp), nb_xy, nb_flux,
+        np.c_[sx, sy], field.band_flux(pg, pbp), nb_xy, nb_flux,
         r_ap_px=float(r_ap_px), fwhm_px=float(fwhm_px), beta=float(prof["beta"]),
         annulus_px=annulus_px,
         star_ids=s_ids, neighbour_ids=nb_ids,

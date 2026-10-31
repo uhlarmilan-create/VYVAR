@@ -17,6 +17,7 @@ from infolog import log_event
 from jd_axis_format import jd_axis_title, jd_series_relative
 from photometry_shared import _normalize_gaia_id
 from pipeline_constants import SAT_LIMIT_CONTAINER_CLIP_ADU
+from stats_core import coerce_bool, robust_p2p_scatter
 
 from photometry_defs import LOGGER, TIME_BASE_BJD_TDB, TIME_BASE_COL, TIME_BASE_JD_FALLBACK
 
@@ -74,22 +75,6 @@ def _aperture_skip_empty_comps_target(
         )
     )
     return summary_rows
-
-def _coerce_bool_cell(v: Any) -> bool:
-    """Robustly coerce a CSV cell (bool / 'True' / 1 / NaN / '') to bool; NaN/empty -> False."""
-    if isinstance(v, bool):
-        return v
-    if v is None:
-        return False
-    if isinstance(v, (int, float)):
-        try:
-            if math.isnan(float(v)):
-                return False
-        except (TypeError, ValueError):
-            return False
-        return float(v) != 0.0
-    s = str(v).strip().lower()
-    return s in ("true", "1", "yes", "y", "t")
 
 def _common_mode_detrend_comp_lc(
     comp_lc: dict[str, np.ndarray],
@@ -248,8 +233,11 @@ def check_comparison_stability(
 ) -> dict[str, dict]:
     """Step 3: stability check of the comparison stars.
 
-    Abbe point-to-point scatter on **common-mode-detrended** comp residuals:
-        rms_p2p = std(diff(mag_resid)) / sqrt(2)
+    Robust point-to-point scatter on **common-mode-detrended** comp residuals (G08-55,
+    COMP-P2P-ROBUST-2026-10; ``stats_core.robust_p2p_scatter``):
+        rms_p2p = 1.4826 MAD(diff(mag_resid)) / sqrt(2)
+    One outlier frame no longer makes a comp "suspect" (comp_smart replaces suspects): per-frame outliers
+    belong to the frame / point flags; slow trends are caught by the slope test.
 
     ``max_comp_p2p`` (config ``phase01_comparison_max_comp_rms``) gates **p2p** scatter.
     Comparison-star selection ``comp_rms`` uses the same config key but measures full LC RMS - different
@@ -294,8 +282,7 @@ def check_comparison_stability(
             }
             continue
         lc_rms = float(np.std(finite))
-        diff = np.diff(finite)
-        rms_p2p = float(np.std(diff) / math.sqrt(2)) if len(diff) > 1 else float("nan")
+        rms_p2p = robust_p2p_scatter(finite, min_points=3)
         result[cid] = {"rms_p2p": rms_p2p, "lc_rms": lc_rms, "quality": "good"}
 
     # A star with comp_rms~0 from comparison-star selection -> mark as suspect
@@ -389,6 +376,31 @@ BROEG_TOL = 1e-5
 BROEG_MAX_ITER = 200
 
 
+def _loo_sigma(y: np.ndarray, w: np.ndarray) -> np.ndarray:
+    """Leave-one-out scatter of each comparison star: sample std (ddof=1, >= 3 frames) of comp j
+    against the ``w``-weighted ensemble of the OTHER comps (only comp j when it is the only one).
+    ``y`` is (n_comp, n_frames) with NaN = missing. G08-36: the one LOO sigma - used inside the Broeg
+    iteration and, with the final weights, for the ensemble inverse variances."""
+    y = np.asarray(y, dtype=np.float64)
+    n = int(y.shape[0])
+    fin = np.isfinite(y)
+    y0 = np.where(fin, y, 0.0)
+    wf = np.asarray(w, dtype=np.float64)[:, None] * fin
+    tot_w = wf.sum(axis=0)
+    tot_wy = (wf * y0).sum(axis=0)
+    sig = np.full(n, np.nan)
+    for j in range(n):
+        if n >= 2:
+            ow = tot_w - wf[j]
+            ens = np.where(ow > 0, (tot_wy - wf[j] * y0[j]) / np.where(ow > 0, ow, 1.0), np.nan)
+            r = y[j] - ens
+        else:
+            r = y[j]
+        v = r[np.isfinite(r)]
+        sig[j] = float(np.std(v, ddof=1)) if v.size >= 3 else np.nan
+    return sig
+
+
 def broeg_weights(
     y: np.ndarray,
     *,
@@ -411,7 +423,6 @@ def broeg_weights(
     if n == 1:
         return np.ones(1), 0
     fin = np.isfinite(y)
-    y0 = np.where(fin, y, 0.0)
 
     def _sig(r: np.ndarray, m: np.ndarray) -> float:
         v = r[m]
@@ -424,16 +435,8 @@ def broeg_weights(
     w = np.where(np.isfinite(w), w, np.nanmin(w))
     it = 0
     for it in range(1, int(max_iter) + 1):
-        wf = w[:, None] * fin
-        tot_w = wf.sum(axis=0)
-        tot_wy = (wf * y0).sum(axis=0)
-        new = np.empty(n, dtype=np.float64)
-        for j in range(n):
-            ow = tot_w - wf[j]
-            ens = np.where(ow > 0, (tot_wy - wf[j] * y0[j]) / np.where(ow > 0, ow, 1.0), np.nan)
-            r = y[j] - ens
-            sj = _sig(r, np.isfinite(r))
-            new[j] = 1.0 / (sj * sj) if math.isfinite(sj) and sj > 0 else np.nan
+        sj = _loo_sigma(y, w)
+        new = np.where(np.isfinite(sj) & (sj > 0), 1.0 / (sj * sj), np.nan)
         if not np.isfinite(new).any():
             break
         new = np.where(np.isfinite(new), new, np.nanmin(new))
@@ -526,20 +529,8 @@ def ensemble_normalize(
             break
     y = m - med[:, None]
     w, n_it = broeg_weights(y)
-    # inverse-variance scale for the ensemble error: w_abs = 1/sigma^2 (before normalisation)
-    sig = np.full(len(ids), np.nan)
-    for j in range(len(ids)):
-        if len(ids) >= 2:
-            oth = np.delete(np.arange(len(ids)), j)
-            fin_o = np.isfinite(y[oth])
-            wo = w[oth][:, None] * fin_o
-            den = wo.sum(axis=0)
-            ens = np.where(den > 0, (wo * np.where(fin_o, y[oth], 0.0)).sum(axis=0) / np.where(den > 0, den, 1.0), np.nan)
-            r = y[j] - ens
-        else:
-            r = y[j]
-        r = r[np.isfinite(r)]
-        sig[j] = float(np.std(r, ddof=1)) if r.size >= 3 else np.nan
+    # inverse-variance scale for the ensemble error: w_abs = 1/sigma^2 (LOO sigma with the final weights)
+    sig = _loo_sigma(y, w)
     inv_var = np.where(np.isfinite(sig) & (sig > 0), 1.0 / (sig * sig), np.nan)
 
     cat = np.array([float(comp_catalog_mag.get(c, float("nan"))) for c in ids], dtype=np.float64)
@@ -1049,7 +1040,7 @@ def _per_frame_sat_flags_for_catalog_id(
         # sat_diag) wins; then the frame's limit column; then the catalog peak-test.
         if sat_limit_adu is None:
             if "likely_saturated" in df.columns and pd.notna(row.get("likely_saturated")):
-                flags.append(_coerce_bool_cell(row.get("likely_saturated")))
+                flags.append(coerce_bool(row.get("likely_saturated")))
                 continue
             _l85 = float(pd.to_numeric(row.get("saturate_limit_adu_85pct"), errors="coerce"))
             if math.isfinite(peak) and math.isfinite(_l85) and _l85 > 0:
@@ -1059,9 +1050,9 @@ def _per_frame_sat_flags_for_catalog_id(
             flags.append(bool(peak > lim))
             continue
         if "is_saturated" in df.columns:
-            flags.append(_coerce_bool_cell(row.get("is_saturated")))
+            flags.append(coerce_bool(row.get("is_saturated")))
             continue
-        if "likely_saturated" in df.columns and _coerce_bool_cell(row.get("likely_saturated")):
+        if "likely_saturated" in df.columns and coerce_bool(row.get("likely_saturated")):
             flags.append(True)
             continue
         # Matched row but no usable sat diagnostic -> cannot evaluate.
@@ -1282,6 +1273,96 @@ def _get_comp_bjd_series(cid: str, all_frames: pd.DataFrame) -> np.ndarray:
     return np.array([], dtype=float)
 
 
+def _site_lat_lon_alt(cfg: AppConfig, site) -> tuple[float, float, float]:
+    if site is not None and site[0] is not None and site[1] is not None:
+        return float(site[0]), float(site[1]), float(site[2]) if site[2] is not None else 0.0
+    return float(cfg.observer_lat), float(cfg.observer_lon), float(cfg.observer_alt_m)
+
+
+class TargetTimeGrid:
+    """G08-50: target airmass and BJD/HJD for many targets x the night's frame JDs, one astropy transform
+    and one light-time call for the whole grid (the per-target functions take their row). Every cell is
+    the value a call for that target alone gives (element-wise transforms; equality test). A failed
+    computation is kept and re-raised by the lookups, so the callers' fallbacks apply as before."""
+
+    def __init__(self, jd_values: Any, coords: dict[str, tuple[float, float]], cfg: AppConfig, site=None) -> None:
+        jd = np.asarray(jd_values, dtype=float).ravel()
+        self.jd = np.unique(jd[np.isfinite(jd)])
+        self.lat, self.lon, self.alt = _site_lat_lon_alt(cfg, site)
+        self.row = {c: i for i, (c, (r, d)) in enumerate(coords.items())}
+        self.ra = np.array([float(r) for r, _d in coords.values()], dtype=float)
+        self.dec = np.array([float(d) for _r, d in coords.values()], dtype=float)
+        self._am: np.ndarray | None = None
+        self._am_err: Exception | None = None
+        self._bjd: tuple[np.ndarray, np.ndarray] | None = None
+        self._bjd_err: Exception | None = None
+
+    def covers(self, cid: str, jd_arr: np.ndarray) -> bool:
+        if cid not in self.row:
+            return False
+        f = jd_arr[np.isfinite(jd_arr)]
+        if f.size == 0:
+            return True
+        i = np.searchsorted(self.jd, f)
+        return bool(np.all(i < self.jd.size) and np.all(self.jd[np.minimum(i, self.jd.size - 1)] == f))
+
+    def _cells(self, grid: np.ndarray, cid: str, jd_arr: np.ndarray) -> np.ndarray:
+        out = np.full(len(jd_arr), np.nan)
+        fin = np.isfinite(jd_arr)
+        out[fin] = grid[self.row[cid], np.searchsorted(self.jd, jd_arr[fin])]
+        return out
+
+    def airmass(self, cid: str, jd_arr: np.ndarray) -> np.ndarray:
+        """Kasten & Young airmass rounded to 1e-6 (NaN below 5 deg altitude or for a NaN JD)."""
+        if self._am is None and self._am_err is None:
+            try:
+                import astropy.units as u
+                from astropy.coordinates import AltAz, EarthLocation, SkyCoord
+                from astropy.time import Time
+
+                from time_utils import _airmass_from_altitude_deg  # noqa: PLC0415
+
+                location = EarthLocation(lat=self.lat * u.deg, lon=self.lon * u.deg, height=self.alt * u.m)
+                t = Time(self.jd, format="jd", scale="utc", location=location)
+                ok = np.isfinite(self.ra) & np.isfinite(self.dec)
+                alt_deg = np.full((self.ra.size, self.jd.size), np.nan)
+                if ok.any() and self.jd.size:
+                    alt_deg[ok] = SkyCoord(ra=self.ra[ok, None] * u.deg, dec=self.dec[ok, None] * u.deg,
+                                           frame="icrs").transform_to(AltAz(obstime=t[None, :], location=location)).alt.deg
+                am = np.array([_airmass_from_altitude_deg(a) if 5.0 <= a <= 90.0 else np.nan
+                               for a in alt_deg.ravel()], dtype=float).reshape(alt_deg.shape)
+                self._am = np.where(np.isfinite(am), np.round(am, 6), np.nan)
+            except Exception as exc:  # noqa: BLE001
+                self._am_err = exc
+        if self._am_err is not None:
+            raise self._am_err
+        return self._cells(self._am, cid, jd_arr)
+
+    def bjd_hjd(self, cid: str, jd_arr: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """BJD_TDB and HJD (time_utils.light_time_corrected_jd on the grid)."""
+        if self._bjd is None and self._bjd_err is None:
+            try:
+                from time_utils import light_time_corrected_jd  # noqa: PLC0415  (G02-19: the one formula)
+
+                self._bjd = light_time_corrected_jd(
+                    self.jd[None, :], self.ra[:, None], self.dec[:, None], (self.lat, self.lon, self.alt))
+            except Exception as exc:  # noqa: BLE001
+                self._bjd_err = exc
+        if self._bjd_err is not None:
+            raise self._bjd_err
+        return self._cells(self._bjd[0], cid, jd_arr), self._cells(self._bjd[1], cid, jd_arr)
+
+
+def _grid_for(grid: TargetTimeGrid | None, cid: str | None, jd_arr: np.ndarray, ra_deg: float, dec_deg: float,
+              cfg: AppConfig, site) -> tuple[TargetTimeGrid, str]:
+    """The night grid when it holds this target and these JDs, else a grid of this target alone."""
+    if grid is not None and cid is not None and grid.covers(str(cid), jd_arr):
+        i = grid.row[str(cid)]
+        if grid.ra[i] == float(ra_deg) and grid.dec[i] == float(dec_deg):
+            return grid, str(cid)
+    return TargetTimeGrid(jd_arr, {"_": (float(ra_deg), float(dec_deg))}, cfg, site), "_"
+
+
 def target_airmass(
     jd_array: np.ndarray,
     ra_deg: float,
@@ -1289,40 +1370,29 @@ def target_airmass(
     cfg: AppConfig,
     site: tuple[float | None, float | None, float | None] | None = None,
     fallback: np.ndarray | None = None,
+    *,
+    grid: TargetTimeGrid | None = None,
+    cid: str | None = None,
 ) -> np.ndarray:
     """EXPORT-AUDIT-2026-10 (Milan 2026-10-21): airmass of the target itself per epoch
     (Kasten & Young 1989 at the target's altitude for the frame's mid-exposure JD and the site of
     BJD/HJD). The frame value (field centre) differs by up to +-0.03 on a 5.7 deg field. Epochs
-    without a result keep ``fallback`` (the frame value)."""
+    without a result keep ``fallback`` (the frame value). ``grid`` / ``cid``: the night's
+    ``TargetTimeGrid`` (G08-50)."""
     jd_arr = np.asarray(jd_array, dtype=float)
     out = (np.asarray(fallback, dtype=float).copy() if fallback is not None and len(fallback) == len(jd_arr)
            else np.full(len(jd_arr), np.nan))
-    if site is not None and site[0] is not None and site[1] is not None:
-        lat, lon = float(site[0]), float(site[1])
-        alt = float(site[2]) if site[2] is not None else 0.0
-    else:
-        lat, lon, alt = float(cfg.observer_lat), float(cfg.observer_lon), float(cfg.observer_alt_m)
+    lat, lon, _alt = _site_lat_lon_alt(cfg, site)
     from param_resolver import is_null_island_coords  # noqa: PLC0415
 
     finite = np.isfinite(jd_arr)
     if not (math.isfinite(ra_deg) and math.isfinite(dec_deg)) or is_null_island_coords(lat, lon) or not finite.any():
         return out
     try:
-        import astropy.units as u
-        from astropy.coordinates import AltAz, EarthLocation, SkyCoord
-        from astropy.time import Time
-
-        from time_utils import _airmass_from_altitude_deg  # noqa: PLC0415
-
-        location = EarthLocation(lat=lat * u.deg, lon=lon * u.deg, height=alt * u.m)
-        t = Time(jd_arr[finite], format="jd", scale="utc", location=location)
-        alt_deg = SkyCoord(ra=ra_deg * u.deg, dec=dec_deg * u.deg, frame="icrs").transform_to(
-            AltAz(obstime=t, location=location)).alt.deg
-        am = np.array([_airmass_from_altitude_deg(a) if 5.0 <= a <= 90.0 else np.nan
-                       for a in np.atleast_1d(alt_deg)], dtype=float)
-        idx = np.flatnonzero(finite)
+        g, key = _grid_for(grid, cid, jd_arr, ra_deg, dec_deg, cfg, site)
+        am = g.airmass(key, jd_arr)
         ok = np.isfinite(am)
-        out[idx[ok]] = np.round(am[ok], 6)
+        out[ok] = am[ok]
     except Exception as exc:  # noqa: BLE001
         LOGGER.warning("AIRMASS-PERTARGET: failed (%s) - frame airmass kept", exc)
     return out
@@ -1334,8 +1404,12 @@ def _recompute_bjd_hjd_with_status(
     dec_deg: float,
     cfg: AppConfig,
     site: tuple[float | None, float | None, float | None] | None = None,
+    *,
+    grid: TargetTimeGrid | None = None,
+    cid: str | None = None,
 ) -> tuple[np.ndarray, np.ndarray, str]:
-    """Recompute per-target BJD(TDB) and HJD from frame JD values.
+    """Recompute per-target BJD(TDB) and HJD from frame JD values (``grid`` / ``cid``: the night's
+    ``TargetTimeGrid``, G08-50).
 
     Returns ``(bjd, hjd, time_base)`` where ``time_base`` is ``BJD_TDB`` on the astropy
     success path or ``JD_FALLBACK`` when raw JD is copied for both BJD and HJD.
@@ -1346,14 +1420,7 @@ def _recompute_bjd_hjd_with_status(
     bjd_out = np.full_like(jd_arr, float("nan"), dtype=float)
     hjd_out = np.full_like(jd_arr, float("nan"), dtype=float)
 
-    if site is not None and site[0] is not None and site[1] is not None:
-        lat = float(site[0])
-        lon = float(site[1])
-        alt = float(site[2]) if site[2] is not None else 0.0
-    else:
-        lat = float(cfg.observer_lat)
-        lon = float(cfg.observer_lon)
-        alt = float(cfg.observer_alt_m)
+    lat, lon, _alt = _site_lat_lon_alt(cfg, site)
 
     from param_resolver import is_null_island_coords  # noqa: PLC0415
 
@@ -1373,9 +1440,8 @@ def _recompute_bjd_hjd_with_status(
     if not np.any(finite):
         return bjd_out, hjd_out, TIME_BASE_BJD_TDB
     try:
-        from time_utils import light_time_corrected_jd  # noqa: PLC0415  (G02-19: the one formula)
-
-        bjd_out, hjd_out = light_time_corrected_jd(jd_arr, ra_deg, dec_deg, (lat, lon, alt))
+        g, key = _grid_for(grid, cid, jd_arr, ra_deg, dec_deg, cfg, site)
+        bjd_out, hjd_out = g.bjd_hjd(key, jd_arr)
         LOGGER.debug(
             "BJD-PERTARGET: %d/%d frames recomputed (batch) for ra=%.4f dec=%.4f",
             int(np.sum(np.isfinite(bjd_out))),

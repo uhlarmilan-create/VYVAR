@@ -93,8 +93,8 @@ def _build_epsf(data: np.ndarray, cand: Any, fwhm_px: float, cutout: int) -> tup
 def _star_models(d, missing, xy, peak, stellar, near, sky, bg, mx, my, *, fw, half, fsz, cutout, sat_cal_adu):
     """ePSF model image of the stars near missing pixels; (model, star_ok, n_build, n_fitted, reason).
 
-    ``star_ok`` is False (scalar) when no model can be made, or per missing pixel False where a star
-    whose fit failed reaches it."""
+    ``star_ok`` is False (scalar) when no model can be made - the model is then None (never read) -,
+    or per missing pixel False where a star whose fit failed reaches it."""
     from astropy.table import Table  # noqa: PLC0415
     from photutils.psf import PSFPhotometry, SourceGrouper  # noqa: PLC0415
     from scipy.spatial import cKDTree  # noqa: PLC0415
@@ -102,9 +102,8 @@ def _star_models(d, missing, xy, peak, stellar, near, sky, bg, mx, my, *, fw, ha
     from pipeline_constants import EPSF_MIN_BUILD_STARS, LINEARITY_FRAC  # noqa: PLC0415
     from sky_estimation import annulus_sky_medians  # noqa: PLC0415
 
-    none = np.zeros_like(d)
     if sat_cal_adu is None:
-        return none, False, 0, 0, "no linearity limit for the frame (VY_CSAT)"
+        return None, False, 0, 0, "no linearity limit for the frame (VY_CSAT)"
     lin = LINEARITY_FRAC * float(sat_cal_adu)
     h, w = d.shape
     st = cKDTree(xy)
@@ -114,7 +113,7 @@ def _star_models(d, missing, xy, peak, stellar, near, sky, bg, mx, my, *, fw, ha
     ok_b = stellar & inside & (n_close == 0) & (peak < lin) & (d_miss > half)
     cand = xy[ok_b][np.argsort(-peak[ok_b])[:BP_EPSF_BUILD_STARS_MAX]]
     if len(cand) < int(EPSF_MIN_BUILD_STARS):
-        return none, False, int(len(cand)), 0, f"{len(cand)} ePSF build stars < {int(EPSF_MIN_BUILD_STARS)}"
+        return None, False, int(len(cand)), 0, f"{len(cand)} ePSF build stars < {int(EPSF_MIN_BUILD_STARS)}"
     try:
         psf, n_build = _build_epsf(np.where(missing, np.nan, d), cand, fw, cutout)
         phot = PSFPhotometry(psf, (fsz, fsz), aperture_radius=1.5 * fw, grouper=SourceGrouper(min_separation=2.0 * fsz),
@@ -128,7 +127,7 @@ def _star_models(d, missing, xy, peak, stellar, near, sky, bg, mx, my, *, fw, ha
         r = phot(np.where(missing, bg, d), mask=missing | (d >= lin), init_params=init)
         model = np.asarray(phot.make_model_image(d.shape, include_local_bkg=False), dtype=np.float64)
     except Exception as exc:  # noqa: BLE001  - the star pixels stay missing, with the reason
-        return none, False, 0, 0, f"ePSF build / fit error: {type(exc).__name__}: {exc}"
+        return None, False, 0, 0, f"ePSF build / fit error: {type(exc).__name__}: {exc}"
     flags = np.asarray(r["flags"], int)
     flux = np.asarray(r["flux_fit"], float)
     # a source fitted with no positive flux is not a star: no light of its own, its model is removed
@@ -179,7 +178,10 @@ def repair_missing_pixels(
         res.n_left, res.reason_left = res.n_missing, "no FWHM"
         return res
     my, mx = np.nonzero(missing)
-    out = d.copy()
+    # identical-output memory cleanups (step 5): the repaired frame is kept in the input dtype (each
+    # filled value is cast once, as the final astype did); temporaries are freed before the DAO pass
+    # (the peak of the repair) and the detection image is shifted in place; no zero model images
+    out = np.array(data, copy=True)
     sky = sky_image(np.where(missing, np.nan, d), fw)
     sky_px = annulus_sky_medians(sky, np.c_[mx, my].astype(float), 4.0 * fw, 6.0 * fw)
 
@@ -190,6 +192,7 @@ def repair_missing_pixels(
     finite = d[~missing]
     bg = float(np.median(finite))
     sig = 1.4826 * float(np.median(np.abs(finite - bg)))
+    del finite
     # Detection sees each missing pixel as the median of its finite 3x3 neighbours: masked, a missing
     # pixel at a star's peak hides the star from DAOStarFinder and the pixel would get the sky. The
     # filled peak is a dip, so a source within 2 px of a missing pixel is kept whatever its DAOFIND
@@ -201,8 +204,10 @@ def repair_missing_pixels(
         nb = nb[np.isfinite(nb)]
         if nb.size:
             det[y, x] = float(np.median(nb))
+    det -= bg  # the DAO input det - bg, in place (same values)
     src = DAOStarFinder(fwhm=fw, threshold=float(detection_sigma) * sig, sharpness_range=None,
-                        roundness_range=None)(det - bg)
+                        roundness_range=None)(det)
+    del det
     if src is None or len(src) == 0:
         xy = np.zeros((0, 2))
         peak = np.zeros(0)
@@ -224,7 +229,7 @@ def repair_missing_pixels(
     if len(xy):
         dist, _ = miss_tree.query(xy)
         near = dist <= reach  # fitted (their model, or their neighbours', can reach a missing pixel)
-    model = np.zeros_like(d)
+    model = None  # read only where a fitted star reaches a missing pixel and the model exists
     star_ok: Any = True
     if near.any():
         model, star_ok, res.n_build_stars, res.n_stars_fitted, res.reason_left = _star_models(
@@ -246,7 +251,7 @@ def repair_missing_pixels(
     res.n_left = int(np.count_nonzero(~ok))
     if res.n_left and not res.reason_left:
         res.reason_left = "no local sky"
-    res.data = out.astype(np.asarray(data).dtype, copy=False)
+    res.data = out
     return res
 
 

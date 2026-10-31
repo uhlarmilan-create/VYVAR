@@ -51,7 +51,6 @@ Across a 200 mm field the field-centre value would be off by up to ~30 s at the 
 """
 from __future__ import annotations
 
-import json
 import logging
 import math
 from pathlib import Path
@@ -59,6 +58,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from stats_core import coerce_bool_series, fit_scatter_noise_model
 from frame_footprint import _frame_footprints, _inside_all  # LAYER-2026-10: moved there
 from catalog_crossmatch import _catalog_check  # LAYER-2026-10: moved there
 
@@ -73,7 +73,7 @@ BRIGHTENED_DMAG = 1.0
 BRIGHTENED_NSIGMA = 3.0
 _COLS = [
     "catalog_id", "x", "y", "ra_deg", "dec_deg", "mag", "bp_rp", "likely_saturated",
-    "photometry_ok", "vsx_known_variable", "fwhm_px_for_aperture", "sky_adu_per_px_annulus",
+    "photometry_ok", "vsx_known_variable", "fwhm_px_for_aperture", "sky_adu_per_px_annulus", "sky_n_px",
     "airmass", "bjd_tdb_mid", "jd_mid",
 ]
 
@@ -94,10 +94,6 @@ def star_times_bjd(
     if col == "jd_mid" and site is None:
         LOGGER.warning("[VARIABILITY] observer site unknown - star times are UTC JD (no barycentric correction)")
     return t, col
-
-
-def _bool(s: pd.Series) -> pd.Series:
-    return s.astype(str).str.strip().str.lower().isin(("true", "1", "1.0", "yes"))
 
 
 FIELD_CSV = "variability_field.csv"
@@ -122,7 +118,7 @@ def load_variability_candidates(photometry_dir: Path) -> pd.DataFrame:
         return pd.read_csv(legacy, dtype={"catalog_id": str}, low_memory=False)
     if "candidate" not in field.columns:
         return empty
-    cand = field[_bool(field["candidate"])].copy()
+    cand = field[coerce_bool_series(field["candidate"])].copy()
     if cand.empty:
         return empty
     cand["catalogs"] = cand.get("catalogs", pd.Series("", index=cand.index)).fillna("").astype(str)
@@ -151,31 +147,52 @@ def _eta(r: np.ndarray) -> float:
     return float(np.sum(np.diff(r) ** 2) / den) if den > 0 else float("nan")
 
 
-def _window_stats(val: np.ndarray, mag: np.ndarray, use: np.ndarray, mag_i: float,
-                  half: float = 0.5, nmin: int = 15) -> tuple[float, float]:
-    """(median, 1.4826 MAD) of ``val`` over stars within +-half mag of ``mag_i``,
-    window widened x1.5 until it holds ``nmin`` stars (NaN when < 5)."""
-    if not math.isfinite(mag_i):
-        return float("nan"), float("nan")
-    h = half
-    while True:
-        sel = use & np.isfinite(val) & (np.abs(mag - mag_i) <= h)
-        if sel.sum() >= nmin or h > 5:
-            break
-        h *= 1.5
-    if sel.sum() < 5:
-        return float("nan"), float("nan")
-    md = float(np.median(val[sel]))
-    return md, 1.4826 * float(np.median(np.abs(val[sel] - md)))
+class _MagWindows:
+    """G10-31: magnitude windows of one (val, mag, use) set over the stars sorted by magnitude. A window is
+    the stars with ``abs(mag - mag_i) <= h`` (the exact predicate); the sorted order only narrows the
+    candidates (searchsorted bounds with a slack), so membership and statistics equal a scan of all stars."""
+
+    def __init__(self, val: np.ndarray, mag: np.ndarray, use: np.ndarray) -> None:
+        self.val = np.asarray(val, dtype=float)
+        self.mag = np.asarray(mag, dtype=float)
+        pool = np.flatnonzero(np.asarray(use, dtype=bool) & np.isfinite(self.val) & np.isfinite(self.mag))
+        order = np.argsort(self.mag[pool], kind="mergesort")
+        self.idx = pool[order]
+        self.ms = self.mag[self.idx]
+
+    def _members(self, mag_i: float, h: float) -> np.ndarray:
+        slack = 1e-9 * (1.0 + abs(mag_i) + h)
+        lo = int(np.searchsorted(self.ms, mag_i - h - slack, side="left"))
+        hi = int(np.searchsorted(self.ms, mag_i + h + slack, side="right"))
+        cand = self.idx[lo:hi]
+        return np.sort(cand[np.abs(self.mag[cand] - mag_i) <= h])  # original index order
+
+    def stats(self, mag_i: float, half: float = 0.5, nmin: int = 15) -> tuple[float, float]:
+        """(median, 1.4826 MAD) of ``val`` over stars within +-half mag of ``mag_i``,
+        window widened x1.5 until it holds ``nmin`` stars (NaN when < 5)."""
+        if not math.isfinite(mag_i):
+            return float("nan"), float("nan")
+        h = half
+        while True:
+            sel = self._members(mag_i, h)
+            if sel.size >= nmin or h > 5:
+                break
+            h *= 1.5
+        if sel.size < 5:
+            return float("nan"), float("nan")
+        v = self.val[sel]
+        md = float(np.median(v))
+        return md, 1.4826 * float(np.median(np.abs(v - md)))
 
 
 def _robust_z_by_mag(val: np.ndarray, mag: np.ndarray, use: np.ndarray, half: float = 0.5, nmin: int = 15) -> np.ndarray:
     """(val - median) / (1.4826 MAD) of stars within +-half mag (widened until nmin)."""
     z = np.full(val.size, np.nan)
+    win = _MagWindows(val, mag, use)  # G10-31: one sorted index for all stars
     for i in range(val.size):
         if not np.isfinite(val[i]):
             continue
-        md, sc = _window_stats(val, mag, use, float(mag[i]), half, nmin)
+        md, sc = win.stats(float(mag[i]), half, nmin)
         if math.isfinite(sc) and sc > 0:
             z[i] = (val[i] - md) / sc
     return z
@@ -219,8 +236,8 @@ def _var_frame_table(*, cfg, files, kplan, meta, per_frame_dir, phot, ps, rows, 
     D["catalog_id"] = D["catalog_id"].map(lambda v: str(normalize_gaia_source_id(v) or ""))
     D = D[D["catalog_id"] != ""].drop_duplicates(["catalog_id", "t"])
     nT = len(files)
-    sat = _bool(D["likely_saturated"]) if "likely_saturated" in D else pd.Series(False, index=D.index)
-    pok = _bool(D["photometry_ok"]) if "photometry_ok" in D else pd.Series(True, index=D.index)
+    sat = coerce_bool_series(D["likely_saturated"]) if "likely_saturated" in D else pd.Series(False, index=D.index)
+    pok = coerce_bool_series(D["photometry_ok"]) if "photometry_ok" in D else pd.Series(True, index=D.index)
     # C1-2026-10: each star on the aperture k of its brightness group (the k its light curve uses)
     from aperture_pertarget import group_k_fluxes  # noqa: PLC0415
 
@@ -269,9 +286,21 @@ def _var_frame_table(*, cfg, files, kplan, meta, per_frame_dir, phot, ps, rows, 
     fw_row = pd.to_numeric(D["fwhm_px_for_aperture"], errors="coerce")
     r = D["k"] * fw_row
     A = np.pi * r * r
-    n_sky = np.pi * fw_row**2 * (a_out**2 - a_in**2)
-    sky = pd.to_numeric(D["sky_adu_per_px_annulus"], errors="coerce").clip(lower=0)
-    var = D["F"].clip(lower=0) / g + A * (1 + A / n_sky) * (sky / g + (rn / g) ** 2)
+    # CCD-ONE-2026-10 (G06-20): the one CCD equation (ccd_noise), with the real number of sky pixels of the
+    # proc sky median (proc column sky_n_px; the former pi FWHM^2 (a_out^2 - a_in^2) ignored the source mask,
+    # the footprint cut and the r_in >= r_ap + 0.5 rule) and the pi/2 variance of a median sky
+    if "sky_n_px" not in D.columns:
+        raise RuntimeError("variability: proc CSVs without sky_n_px (made before CCD-ONE-2026-10) - re-run the "
+                           "per-frame photometry of this night")
+    from ccd_noise import ccd_variance_adu2  # noqa: PLC0415
+
+    var = pd.Series(
+        ccd_variance_adu2(
+            D["F"].to_numpy(float), pd.to_numeric(D["sky_adu_per_px_annulus"], errors="coerce").to_numpy(float),
+            A.to_numpy(float), pd.to_numeric(D["sky_n_px"], errors="coerce").to_numpy(float), gain=g, read_noise=rn,
+        ),
+        index=D.index,
+    )
     # magnitude on the k_ref scale (aperture correction; its own error - a median over the k_ref
     # group - is small against the point error and not propagated)
     # a point below 1 sigma takes the 1-sigma flux (its upper limit, S/N 1): a magnitude for the indices
@@ -290,7 +319,7 @@ def _var_frame_table(*, cfg, files, kplan, meta, per_frame_dir, phot, ps, rows, 
     M = D.pivot(index="catalog_id", columns="t", values="m")
     S = D.pivot(index="catalog_id", columns="t", values="e")
     info = D.groupby("catalog_id")[["x", "y", "ra_deg", "dec_deg", "mag", "bp_rp", "k"]].first()
-    known = _bool(D.groupby("catalog_id")["vsx_known_variable"].first()) if "vsx_known_variable" in D else pd.Series(False, index=info.index)
+    known = coerce_bool_series(D.groupby("catalog_id")["vsx_known_variable"].first()) if "vsx_known_variable" in D else pd.Series(False, index=info.index)
     targets = _target_ids(phot)
     info["known_variable"] = known.reindex(info.index).fillna(False) | info.index.isin(targets)
     info["target"] = info.index.isin(targets)
@@ -354,8 +383,6 @@ def _var_frame_table(*, cfg, files, kplan, meta, per_frame_dir, phot, ps, rows, 
 
 def _var_frame_zero_point(*, M, S, info, meta):
     """Common frame zero point from reference stars (Honeycutt 1992) and the residual matrix."""
-    from scipy import optimize  # noqa: PLC0415
-
     info["gate_catalog"] = np.isfinite(pd.to_numeric(info["mag"], errors="coerce"))
     info["gates_ok"] = info["gate_snr"] & info["gate_edge"] & info["gate_blend"] & info["gate_catalog"]
 
@@ -386,12 +413,8 @@ def _var_frame_zero_point(*, M, S, info, meta):
 
     fitset = info[info["gates_ok"] & ~info["known_variable"] & np.isfinite(info["s"]) & (info["s"] > 0) & np.isfinite(info["e"])]
 
-    def _res(p: np.ndarray) -> np.ndarray:
-        a, fl = p
-        return np.log(fitset["s"]) - 0.5 * np.log((a * fitset["e"]) ** 2 + fl**2)
-
-    fit = optimize.least_squares(_res, [1.2, 0.005], loss="soft_l1", f_scale=0.1, bounds=([0.2, 0.0], [10.0, 0.2]))
-    a, fl = float(fit.x[0]), float(fit.x[1])
+    # NOISE-FIT-ONE-2026-10: the one robust log fit, shared with the comparison-star ceiling
+    a, fl, _ok = fit_scatter_noise_model(fitset["s"].to_numpy(dtype=float), fitset["e"].to_numpy(dtype=float))
     info["s_exp"] = np.sqrt((a * info["e"]) ** 2 + fl**2)
     meta["noise_model"] = {"a": a, "floor_mag": fl, "n_fit": int(len(fitset))}
 
@@ -399,13 +422,20 @@ def _var_frame_zero_point(*, M, S, info, meta):
     return E, R, a, fl, ref, use
 
 
+def scatter_index_center_scale(lq: np.ndarray) -> tuple[float, float]:
+    """Centre and robust width of the log scatter index ln(s / s_exp) of the reference stars:
+    (median, 1.4826 x MAD), NaN ignored. G10-48: shared by the z_s index and the plotted candidate limit."""
+    lq = np.asarray(lq, dtype=np.float64)
+    md = float(np.nanmedian(lq))
+    return md, 1.4826 * float(np.nanmedian(np.abs(lq - md)))
+
+
 def _var_indices(*, E, M, R, cfg, frame, info, meta, ref, use):
     """Variability indices (scatter z, von Neumann eta) by magnitude, transients, zero-point check."""
     from scipy import stats  # noqa: PLC0415
 
     lq = np.log(info["s"] / info["s_exp"]).to_numpy(float)
-    md = float(np.nanmedian(lq[use]))
-    sc = 1.4826 * float(np.nanmedian(np.abs(lq[use] - md)))
+    md, sc = scatter_index_center_scale(lq[use])
     info["z_s"] = (lq - md) / sc if sc > 0 else np.nan
     # small eta = smooth = variable. u = ln(1/eta) standardised against stars of similar
     # brightness (median, 1.4826 MAD). Its field distribution is skewed (white noise:
@@ -435,6 +465,7 @@ def _var_indices(*, E, M, R, cfg, frame, info, meta, ref, use):
     X = np.c_[np.ones(len(frame)), frame["fwhm"].to_numpy(float), np.nan_to_num(frame["airmass"].to_numpy(float), nan=float(np.nanmedian(frame["airmass"])) if np.isfinite(frame["airmass"]).any() else 1.0)]
     X = X.reshape(len(frame), -1)
     info["systematic"] = False
+    _li_windows = _MagWindows(li, mags, use)
     for cid in info.index[info["signal"] & info["gates_ok"]]:
         y = R.loc[cid].reindex(frame.index).to_numpy(float)
         ok = np.isfinite(y)
@@ -445,7 +476,7 @@ def _var_indices(*, E, M, R, cfg, frame, info, meta, ref, use):
         s2 = 1.4826 * float(np.nanmedian(np.abs(rr[ok] - np.nanmedian(rr[ok]))))
         zs2 = (math.log(max(s2, 1e-9) / float(info.at[cid, "s_exp"])) - md) / sc if sc > 0 else np.nan
         e2 = _eta(rr)
-        m2, sc2 = _window_stats(li, mags, use, float(info.at[cid, "mag"]))
+        m2, sc2 = _li_windows.stats(float(info.at[cid, "mag"]))
         ze2 = (float(_z_from_u(np.array([(math.log(1.0 / max(e2, 1e-9)) - m2) / sc2]))[0])
                if (math.isfinite(e2) and math.isfinite(sc2) and sc2 > 0) else np.nan)
         if not (zs2 > zthr or ze2 > zthr):
@@ -624,7 +655,8 @@ def _brightened_vs_gaia(info: pd.DataFrame, Mi: pd.Series, use: np.ndarray, ref:
     dm = mi - expect
     info["dmag_vs_gaia"] = dm
     ok = use & np.isfinite(dm)
-    sig = np.array([_window_stats(dm, G, ok, float(G[i]))[1] for i in range(len(dm))])
+    _dm_windows = _MagWindows(dm, G, ok)
+    sig = np.array([_dm_windows.stats(float(G[i]))[1] for i in range(len(dm))])
     gate = (info["gate_snr"] & info["gate_edge"]).to_numpy(bool)
     info["brightened"] = gate & np.isfinite(dm) & (dm <= -BRIGHTENED_DMAG) & (dm <= -BRIGHTENED_NSIGMA * sig)
     return float(p[0] + p[1] * SOLAR_BP_RP + p[2] * SOLAR_BP_RP**2)
@@ -660,17 +692,6 @@ def _airmass_from_lightcurves(phot: Path, stems: pd.Series) -> pd.Series:
 
 
 def _write_meta(phot: Path, meta: dict[str, Any]) -> None:
-    def _c(o: Any) -> Any:
-        if isinstance(o, dict):
-            return {k: _c(v) for k, v in o.items()}
-        if isinstance(o, (list, tuple)):
-            return [_c(v) for v in o]
-        if isinstance(o, (np.floating, float)):
-            return float(o) if math.isfinite(float(o)) else None
-        if isinstance(o, (np.integer,)):
-            return int(o)
-        if isinstance(o, np.bool_):
-            return bool(o)
-        return o
+    from utils import write_json_finite  # noqa: PLC0415
 
-    (Path(phot) / "variability_meta.json").write_text(json.dumps(_c(meta), indent=2), encoding="utf-8")
+    write_json_finite(Path(phot) / "variability_meta.json", meta)

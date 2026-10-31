@@ -35,7 +35,10 @@ import time
 
 import numpy as np
 import pandas as pd
+from stats_core import coerce_bool_series
 from photometry_defs import DEFAULT_APERTURE_F_GRID, blend_k_column, flux_k_column  # LAYER-2026-10: moved there
+# COMP-CEIL-FIELDK-2026-10: the k rule and its bootstrap count live in the lower module (shared with the field k)
+from comp_rms_loo import BRIGHT_K_BOOT, k_within_one_se, ks_within_one_se
 
 LOGGER = logging.getLogger(__name__)
 
@@ -60,7 +63,6 @@ BRIGHT_K_BIN_MAG: float = 0.5
 #: (AP-SMALL-K-2026-10; 1.0 was the smallest k of the grid before the grid went down to 0.6).
 BRIGHT_K_NO_GROUP: float = 1.0
 BRIGHT_K_MIN_STARS: int = 30
-BRIGHT_K_BOOT: int = 200
 
 MODE_PER_TARGET = "per_target"
 
@@ -94,46 +96,24 @@ def f_star_is_grid_edge(f_star: float, f_grid: Sequence[float], *, tol: float = 
     return abs(fs - vals[0]) <= tol or abs(fs - vals[-1]) <= tol
 
 
-def howell_variance_adu2(
-    flux: float,
-    sky_pp: float,
-    area: float,
-    *,
-    gain: float,
-    read_noise: float,
-) -> float:
-    """Total variance [ADU^2] - mirror of ``aperture_photometry._howell_variance_adu2``.
-
-    Cite: ``src_py/aperture_photometry.py`` lines ~378-401 (Howell 1989 eq. 2 form).
-    Terms: source Poisson ``flux/g``, sky Poisson ``sky_pp/g * area``,
-    read noise ``(RN/g)^2 * area``. Kept local to avoid circular import with
-    aperture_photometry.
-    """
-    if not math.isfinite(flux) or flux <= 0:
-        return float("nan")
-    if not math.isfinite(sky_pp) or sky_pp < 0:
-        sky_pp = 0.0
-    if not math.isfinite(area) or area <= 0:
-        return float("nan")
-    g = float(gain) if math.isfinite(gain) and gain > 0 else 1.0
-    rn = float(read_noise) if math.isfinite(read_noise) and read_noise >= 0 else 10.0
-    return flux / g + max(0.0, sky_pp) / g * area + (rn / g) ** 2 * area
-
-
 def howell_snr(
     flux: float,
     sky_pp: float,
     area: float,
+    n_sky: float,
     *,
     gain: float,
     read_noise: float,
 ) -> float:
-    """Predicted S/N = F / sqrt(var) using VYVAR Howell variance terms."""
+    """Predicted S/N = F / sqrt(var), var from the CCD equation (``ccd_noise.ccd_variance_adu2``,
+    Merline & Howell 1995, median sky; CCD-ONE-2026-10)."""
+    from ccd_noise import ccd_variance_adu2  # noqa: PLC0415
+
     f = float(flux)
     if not math.isfinite(f) or f <= 0:
         return float("nan")
-    var = howell_variance_adu2(
-        f, float(sky_pp), float(area), gain=float(gain), read_noise=float(read_noise)
+    var = ccd_variance_adu2(
+        f, float(sky_pp), float(area), float(n_sky), gain=float(gain), read_noise=float(read_noise)
     )
     if not math.isfinite(var) or var <= 0:
         return float("nan")
@@ -182,7 +162,8 @@ def measure_flux_on_f_grid(
     annulus_outer_fwhm: float,
     covered: np.ndarray | None = None,
     prepared: FrameImages | None = None,
-) -> tuple[dict[float, np.ndarray], dict[float, np.ndarray], np.ndarray]:
+    return_n_sky: bool = False,
+) -> tuple[Any, ...]:
     """Sky-subtracted exact aperture fluxes for every k in ``f_grid`` (r = k x FWHM).
 
     One annulus per star (``sky_estimation.annulus_sky_medians``: plain median of its sky pixels, no
@@ -192,6 +173,9 @@ def measure_flux_on_f_grid(
     only annulus pixels with data of the aligned frame (not the aligner's constant fill); the third
     return value marks stars whose largest aperture reaches the fill or a missing (NaN) pixel, or whose
     annulus keeps less than half of its pixels (the light curve drops them as ``edge_fail``).
+
+    ``return_n_sky`` (CCD-ONE-2026-10): a fourth return value, the number of sky pixels of each star's
+    sky median (the n_sky of the CCD equation, ``ccd_noise``; 0 without a sky).
     """
     from photutils.aperture import CircularAperture  # noqa: PLC0415
     from photutils.aperture import aperture_photometry as _aphot  # noqa: PLC0415
@@ -204,8 +188,13 @@ def measure_flux_on_f_grid(
     out_f = {k: np.full(n, np.nan) for k in ks}
     out_s = {k: np.full(n, np.nan) for k in ks}
     edge = np.zeros(n, dtype=bool)
+    n_sky = np.zeros(n, dtype=np.int64)
+
+    def _ret() -> tuple[Any, ...]:
+        return (out_f, out_s, edge, n_sky) if return_n_sky else (out_f, out_s, edge)
+
     if n == 0 or not ks:
-        return out_f, out_s, edge
+        return _ret()
     fr = prepared if prepared is not None else prepare_frame_images(image, float(fwhm_px), covered)
     _r, r_in, r_out = resolve_aperture_geometry(
         f=max(ks), fwhm_px=float(fwhm_px),
@@ -213,7 +202,7 @@ def measure_flux_on_f_grid(
     )
     ok = np.all(np.isfinite(pos), axis=1)
     if not ok.any():
-        return out_f, out_s, edge
+        return _ret()
     p = pos[ok]
     from frame_footprint import off_footprint  # noqa: PLC0415
 
@@ -221,16 +210,16 @@ def measure_flux_on_f_grid(
     # chip, and the chip bounds still count
     _off = fr.off if fr.off is not None else np.zeros(np.asarray(fr.img).shape, dtype=bool)
     edge[ok] = off_footprint(_off, p[:, 0], p[:, 1], max(ks) * float(fwhm_px), r_in, r_out)
-    from sky_estimation import annulus_sky_medians  # noqa: PLC0415
+    from sky_estimation import annulus_sky_medians_n  # noqa: PLC0415
 
-    sky = annulus_sky_medians(fr.sky, p, r_in, r_out)
+    sky, n_sky[ok] = annulus_sky_medians_n(fr.sky, p, r_in, r_out)
     aps = [CircularAperture(p, r=max(0.5, k * float(fwhm_px))) for k in ks]
     tbl = _aphot(fr.filled, aps, method="exact")
     for j, (k, ap) in enumerate(zip(ks, aps)):
         sums = np.asarray(tbl[f"aperture_sum_{j}"], dtype=float)
         out_f[k][ok] = sums - sky * float(ap.area)
         out_s[k][ok] = sky
-    return out_f, out_s, edge
+    return _ret()
 
 
 def allowed_f_from_comp_blend(
@@ -288,6 +277,8 @@ class ApertureGridNight:
     frames: dict[str, dict[str, dict[float, float]]] = field(default_factory=dict)
     # frame_stem -> {cid: {f: sky_pp ADU/px}}
     sky_pp: dict[str, dict[str, dict[float, float]]] = field(default_factory=dict)
+    # CCD-ONE-2026-10: frame_stem -> {cid: number of sky pixels of the sky median} (one annulus for all k)
+    sky_n: dict[str, dict[str, int]] = field(default_factory=dict)
     # frame_stem -> FWHM used for that frame (AUTH-01)
     fwhm_by_frame: dict[str, float] = field(default_factory=dict)
     elapsed_s: float = 0.0
@@ -307,8 +298,6 @@ def frame_stem_from_source(source_file: str) -> str:
     name = Path(str(source_file)).name
     if name.startswith("proc_") and name.endswith(".csv"):
         return name[5:-4]
-    if name.lower().endswith(".fits"):
-        return Path(name).stem
     return Path(name).stem
 
 
@@ -337,7 +326,7 @@ def _grid_worker_init(ctx: dict[str, Any]) -> None:
 def _grid_measure_frame(fp: Path) -> tuple[Any, ...] | None:
     """Measure one aligned frame on the k grid (SPEED-2026-10 S2: frames are independent).
 
-    Returns ``(stem, fwhm_frame, used_night_fallback, has_transform, per_cid, per_sky, edge_ids)``
+    Returns ``(stem, fwhm_frame, used_night_fallback, has_transform, per_cid, per_sky, edge_ids, per_nsky)``
     or None when the frame has no usable proc CSV / FITS.
     """
     from astropy.io import fits  # noqa: PLC0415
@@ -386,13 +375,14 @@ def _grid_measure_frame(fp: Path) -> tuple[Any, ...] | None:
     fluxes = {float(f): np.full(len(ids), np.nan) for f in f_grid}
     skies = {float(f): np.full(len(ids), np.nan) for f in f_grid}
     edges = np.zeros(len(ids), dtype=bool)
+    nsky = np.zeros(len(ids), dtype=np.int64)
     # AP-FOOTPRINT-2026-10: only pixels the aligned frame covers (no transform: not resampled).
     has_tr = has_alignment_transform(hdr_fp)
     covered = aligned_footprint(hdr_fp, img.shape) if has_tr else None
     prepared = prepare_frame_images(img, float(fwhm_frame), covered)
     for _s in sorted(set(np.round(_sc, 4))):
         _m = _sc == _s
-        _fl, _sk, _ed = measure_flux_on_f_grid(
+        _fl, _sk, _ed, _ns = measure_flux_on_f_grid(
             img,
             xy[_m],
             f_grid=f_grid,
@@ -400,8 +390,10 @@ def _grid_measure_frame(fp: Path) -> tuple[Any, ...] | None:
             annulus_inner_fwhm=float(c["annulus_inner_fwhm"]),
             annulus_outer_fwhm=float(c["annulus_outer_fwhm"]),
             prepared=prepared,
+            return_n_sky=True,
         )
         edges[_m] = _ed
+        nsky[_m] = _ns
         for f in f_grid:
             fluxes[float(f)][_m] = _fl[float(f)]
             skies[float(f)][_m] = _sk[float(f)]
@@ -413,7 +405,8 @@ def _grid_measure_frame(fp: Path) -> tuple[Any, ...] | None:
             per_cid[cid][float(f)] = v
             per_sky[cid][float(f)] = s_
     edge_ids = {cid for cid, e in zip(ids, edges, strict=False) if bool(e)}
-    return stem, float(fwhm_frame), bool(used_fb), bool(has_tr), per_cid, per_sky, edge_ids
+    per_nsky = {cid: int(v) for cid, v in zip(ids, nsky.tolist(), strict=True)}
+    return stem, float(fwhm_frame), bool(used_fb), bool(has_tr), per_cid, per_sky, edge_ids, per_nsky
 
 
 def measure_night_grid(
@@ -451,7 +444,9 @@ def measure_night_grid(
 
     night.bp_by_frame = load_repaired_sidecar(frames_dir)
     t0 = time.perf_counter()
-    fits_files = sorted(Path(frames_dir).glob("*.fits"))
+    from fits_suffixes import list_fits_files  # noqa: PLC0415
+
+    fits_files = list_fits_files(frames_dir)
     if max_frames is not None:
         fits_files = fits_files[: int(max_frames)]
     fits_files = [fp for fp in fits_files if fp.stem.upper() != "MASTERSTAR"]
@@ -476,7 +471,7 @@ def measure_night_grid(
     for res in results:
         if res is None:
             continue
-        stem, fwhm_frame, used_fb, has_tr, per_cid, per_sky, edge_ids = res
+        stem, fwhm_frame, used_fb, has_tr, per_cid, per_sky, edge_ids, per_nsky = res
         if used_fb:
             night.n_fwhm_fallback_night += 1
             LOGGER.info(
@@ -490,6 +485,7 @@ def measure_night_grid(
             LOGGER.warning("[AP-FOOTPRINT] frame %s: no VY_AM transform - aligned footprint not checked", stem)
         night.frames[stem] = per_cid
         night.sky_pp[stem] = per_sky
+        night.sky_n[stem] = per_nsky
         night.edge_by_frame[stem] = edge_ids
         night.n_frames_measured += 1
     night.elapsed_s = float(time.perf_counter() - t0)
@@ -556,6 +552,21 @@ def sky_series_from_grid(
     return out
 
 
+def sky_n_series_from_grid(
+    night: ApertureGridNight,
+    catalog_id: str,
+    frame_order: Sequence[str],
+) -> np.ndarray:
+    """Number of sky pixels of ``catalog_id``'s sky median per frame (CCD-ONE-2026-10); NaN when not measured."""
+    out = np.full(len(frame_order), float("nan"), dtype=float)
+    cid = str(catalog_id)
+    for i, stem in enumerate(frame_order):
+        v = night.sky_n.get(str(stem), {}).get(cid)
+        if v is not None and int(v) > 0:
+            out[i] = float(v)
+    return out
+
+
 def _night_median_positive(arr: np.ndarray) -> float:
     a = np.asarray(arr, dtype=float)
     ok = a[np.isfinite(a) & (a > 0)]
@@ -616,6 +627,7 @@ def choose_f_for_target(
         fwhm = 5.0
     # PSF-LOCAL-2026-10: the target's aperture is k x FWHM x own-PSF scale
     fwhm *= float(night.scale_by_cid.get(str(target_cid), 1.0))
+    n_sky_med = _night_median_positive(sky_n_series_from_grid(night, target_cid, frame_order))
     for f in night.f_grid:
         ff = float(f)
         t_flux = series_from_grid(night, target_cid, ff, frame_order)
@@ -626,7 +638,7 @@ def choose_f_for_target(
         sky_med[ff] = sky_pp
         r_ap = max(0.5, ff * fwhm)
         snr_by_f[ff] = howell_snr(
-            F_med, sky_pp if math.isfinite(sky_pp) else 0.0, math.pi * r_ap * r_ap,
+            F_med, sky_pp, math.pi * r_ap * r_ap, n_sky_med,
             gain=float(gain), read_noise=float(read_noise),
         )
         scat_by_f[ff] = comp_loo_scatter(
@@ -678,6 +690,9 @@ class BrightnessK:
     n_stars: list[int]
     curves: list[dict[str, float]]
     se: list[float]
+    #: AP-BRIGHT-K diagnostic (Milan 2026-10-30): per group every k within one SE of the curve minimum
+    #: (``comp_rms_loo.ks_within_one_se``); empty for groups read from a file written before it
+    k_within_se: list[list[float]] = field(default_factory=list)
 
     def k_for(self, mag: float) -> float | None:
         """k of the group whose magnitude range holds ``mag`` (outside the range: the end group)."""
@@ -689,21 +704,24 @@ class BrightnessK:
         return float(self.k[0]) if float(mag) < self.mag_lo[0] else float(self.k[-1])
 
     def to_dict(self) -> dict[str, Any]:
-        return {
-            "groups": [
-                {"mag_lo": round(lo, 3), "mag_hi": round(hi, 3), "k": k, "n_stars": n, "se": round(se, 4),
-                 "curve": {kk: round(v, 4) for kk, v in c.items()}}
-                for lo, hi, k, n, c, se in zip(self.mag_lo, self.mag_hi, self.k, self.n_stars, self.curves, self.se,
-                                              strict=False)
-            ]
-        }
+        groups = [
+            {"mag_lo": round(lo, 3), "mag_hi": round(hi, 3), "k": k, "n_stars": n, "se": round(se, 4),
+             "curve": {kk: round(v, 4) for kk, v in c.items()}}
+            for lo, hi, k, n, c, se in zip(self.mag_lo, self.mag_hi, self.k, self.n_stars, self.curves, self.se,
+                                          strict=False)
+        ]
+        if len(self.k_within_se) == len(groups):
+            for g, kw in zip(groups, self.k_within_se, strict=True):
+                g["k_within_se"] = [float(v) for v in kw]
+        return {"groups": groups}
 
 
-def _truthy(series: pd.Series) -> np.ndarray:
-    return series.astype(str).str.strip().str.lower().isin(["true", "1", "1.0", "yes"]).to_numpy()
-
-
-def field_k_by_brightness(proc_csv_paths: Sequence[Path], f_grid: Sequence[float]) -> BrightnessK | None:
+def field_k_by_brightness(
+    proc_csv_paths: Sequence[Path],
+    f_grid: Sequence[float],
+    *,
+    frames: Mapping[str, pd.DataFrame] | None = None,
+) -> BrightnessK | None:
     """AP-BRIGHT-K-2026-10: k per instrumental-magnitude group from constant field stars.
 
     Constant field stars: never a known variable (VSX / Gaia DR3 variability) or saturated on any frame.
@@ -711,7 +729,7 @@ def field_k_by_brightness(proc_csv_paths: Sequence[Path], f_grid: Sequence[float
     median of all other stars in the frame; MAD sigma, no clipping) on the proc columns ``flux_kNNN``.
     Magnitude: -2.5 log10 of the star's night median flux at the smallest k. None without enough stars.
     """
-    from comp_rms_loo import compute_loo_mag_rms_map  # noqa: PLC0415
+    from comp_rms_loo import loo_mag_rms_maps  # noqa: PLC0415
     from proc_frame_store import read_proc_csv  # noqa: PLC0415
 
     ks = sorted(float(k) for k in f_grid)
@@ -720,18 +738,22 @@ def field_k_by_brightness(proc_csv_paths: Sequence[Path], f_grid: Sequence[float
     bad: set[str] = set()
     seen: set[str] = set()
     for p in proc_csv_paths:
-        try:
-            df = read_proc_csv(p, low_memory=False, dtype={"catalog_id": str})
-        except (OSError, ValueError) as exc:
-            LOGGER.warning("[APERTURE-BRIGHT-K] skip unreadable %s: %s", Path(p).name, exc)
-            continue
+        # G07-31: the frames come from the ProcFrameStore (PROC_STORE_COLS hold the grid and the flags);
+        # a file only on disk is read
+        df = frames.get(str(p)) if frames is not None else None
+        if df is None:
+            try:
+                df = read_proc_csv(p, low_memory=False, dtype={"catalog_id": str})
+            except (OSError, ValueError) as exc:
+                LOGGER.warning("[APERTURE-BRIGHT-K] skip unreadable %s: %s", Path(p).name, exc)
+                continue
         if "catalog_id" not in df.columns or not all(c in df.columns for c in cols):
             continue
         cid = df["catalog_id"].astype(str).str.strip()
         flag = np.zeros(len(df), dtype=bool)
         for f in ("vsx_known_variable", "gaia_dr3_variable_catalog", "likely_saturated", "is_saturated"):
             if f in df.columns:
-                flag |= _truthy(df[f])
+                flag |= coerce_bool_series(df[f]).to_numpy()
         bad.update(cid[flag].tolist())
         seen.update(cid.tolist())
         cache[str(p)] = pd.DataFrame({"catalog_id": cid, **{c: pd.to_numeric(df[c], errors="coerce") for c in cols}})
@@ -739,7 +761,8 @@ def field_k_by_brightness(proc_csv_paths: Sequence[Path], f_grid: Sequence[float
     ids = {c for c in seen - bad if c}
     if len(ids) < BRIGHT_K_MIN_STARS or not paths:
         return None
-    rms = {k: compute_loo_mag_rms_map(ids, paths, cache, flux_col=flux_k_column(k), strict_flux_col=True)[0] for k in ks}
+    _by_col = loo_mag_rms_maps(ids, paths, cache, cols, strict_flux_col=True)
+    rms = {k: _by_col[c] for k, c in zip(ks, cols, strict=True)}
     common = sorted(set.intersection(*(set(m) for m in rms.values())))
     if len(common) < BRIGHT_K_MIN_STARS:
         return None
@@ -774,11 +797,8 @@ def field_k_by_brightness(proc_csv_paths: Sequence[Path], f_grid: Sequence[float
         r = r[np.all(np.isfinite(r), axis=1)]
         if len(r) < BRIGHT_K_MIN_STARS:
             continue
-        curve = np.median(r, axis=0)
-        j = int(np.argmin(curve))
-        boot = [np.median(r[rng.integers(0, len(r), len(r)), j]) for _ in range(BRIGHT_K_BOOT)]
-        se = float(np.std(boot))
-        k_g = max(k for k, v in zip(ks, curve, strict=False) if v <= curve[j] + se)
+        k_g, curve, se = k_within_one_se(ks, r, rng)
+        out.k_within_se.append([float(v) for v in ks_within_one_se(ks, curve, se)])
         out.mag_lo.append(float(M[g].min()))
         out.mag_hi.append(float(M[g].max()))
         out.k.append(float(k_g))
@@ -845,27 +865,29 @@ def apply_grid_fluxes_to_frames(
     *,
     catalog_ids: Sequence[str],
     f_star: float,
-    gain: float | None,
-    read_noise: float | None,
-    annulus_inner_fwhm: float | None,
-    annulus_outer_fwhm: float | None,
+    gain: float,
+    read_noise: float,
 ) -> pd.DataFrame:
-    """Set mag_inst / aperture_r_px (r = k* x FWHM_frame) for target, comps and check star.
+    """Set mag_inst / aperture_r_px (r = k* x FWHM_frame) / err for target, comps and check star.
 
     A star without a grid flux in a frame gets mag_inst = NaN (never a different aperture
-    in the same frame). With ``gain`` given, ``err`` (relative) is recomputed for the k*
-    aperture from the CCD equation (Merline & Howell 1995):
-        var = F/g + A (1 + A/n_sky) (sky/g + (RN/g)^2)   [ADU^2],  err = sqrt(var) / F
-    where n_sky is the annulus area. A star whose aperture or annulus is off the aligned frame's data
-    in that frame (``night.edge_by_frame``) gets mag_inst = NaN and flag ``edge_fail``.
+    in the same frame). ``err`` (relative) is the CCD equation at the k* aperture with the grid's
+    sky and the real number of sky pixels (``ccd_noise.ccd_rel_error``, Merline & Howell 1995, median
+    sky; CCD-ONE-2026-10). G08-28: a row whose grid flux or grid sky is missing gets err = NaN with
+    its mag_inst = NaN - it never keeps the per-frame proc error, which belongs to another aperture
+    (and another error model); a grid sky is missing only together with the grid flux
+    (flux = sum - sky x area), so there is no flux to give an error to. A star whose aperture or
+    annulus is off the aligned frame's data in that frame (``night.edge_by_frame``) gets
+    mag_inst = NaN, err = NaN and flag ``edge_fail``. Gain and read noise are required (ValueError).
     """
+    from ccd_noise import check_gain_read_noise, ccd_rel_error  # noqa: PLC0415
+
+    g, rn = check_gain_read_noise(gain, read_noise)
     if all_frames is None or all_frames.empty or "source_file" not in all_frames.columns:
         return all_frames
     out = all_frames.copy()
     want = {str(c) for c in catalog_ids}
     k = float(f_star)
-    g = float(gain) if gain is not None and math.isfinite(float(gain)) and float(gain) > 0 else None
-    rn = float(read_noise) if read_noise is not None and math.isfinite(float(read_noise)) else 0.0
     # SPEED-2026-10: visit only the rows of the wanted stars (column lists, same order as iterrows).
     _n = len(out)
     _cid_l = [str(v) for v in out["catalog_id"].tolist()] if "catalog_id" in out.columns else [""] * _n
@@ -894,6 +916,7 @@ def apply_grid_fluxes_to_frames(
         out.at[i, "aperture_f"] = k
         # BADPIX-REPAIR-2026-10: repaired (model-filled) pixels inside this aperture - a note, not a flag
         out.at[i, "bp_repaired_px"] = repaired_in_aperture(night.bp_by_frame.get(stem), _x_l[_p], _y_l[_p], r_ap)
+        out.at[i, "err"] = float("nan")
         if cid in night.edge_by_frame.get(stem, set()):
             out.at[i, "mag_inst"] = float("nan")
             out.at[i, "flag"] = "edge_fail"
@@ -902,18 +925,16 @@ def apply_grid_fluxes_to_frames(
         if flux is None or not math.isfinite(float(flux)) or float(flux) <= 0:
             out.at[i, "mag_inst"] = float("nan")
             continue
+        sky = (night.sky_pp.get(stem, {}).get(cid) or {}).get(k, float("nan"))
+        n_sky = night.sky_n.get(stem, {}).get(cid, 0)
+        if sky is None or not math.isfinite(float(sky)) or not n_sky:
+            out.at[i, "mag_inst"] = float("nan")
+            out.at[i, "flag"] = "no_data"
+            continue
         out.at[i, "mag_inst"] = float(-2.5 * math.log10(float(flux)))
-        if g is not None and annulus_inner_fwhm and annulus_outer_fwhm:
-            sky = (night.sky_pp.get(stem, {}).get(cid) or {}).get(k, float("nan"))
-            if sky is not None and math.isfinite(float(sky)):
-                area = math.pi * r_ap * r_ap
-                r_in = max(float(annulus_inner_fwhm) * fwhm, r_ap)
-                n_sky = math.pi * ((float(annulus_outer_fwhm) * fwhm) ** 2 - r_in**2)
-                var = float(flux) / g + area * (1.0 + area / max(n_sky, 1.0)) * (
-                    max(float(sky), 0.0) / g + (rn / g) ** 2
-                )
-                if var > 0:
-                    out.at[i, "err"] = float(math.sqrt(var) / float(flux))
+        out.at[i, "err"] = float(
+            ccd_rel_error(float(flux), float(sky), math.pi * r_ap * r_ap, float(n_sky), gain=g, read_noise=rn)
+        )
     return out
 
 
@@ -958,6 +979,8 @@ def load_field_k(photometry_dir: Path | str) -> tuple[BrightnessK | None, str]:
         bk.n_stars.append(int(g.get("n_stars") or 0))
         bk.curves.append(dict(g.get("curve") or {}))
         bk.se.append(float(g.get("se") or float("nan")))
+        if "k_within_se" in g:
+            bk.k_within_se.append([float(v) for v in g["k_within_se"]])
     return bk, "brightness_k"
 
 
@@ -1087,6 +1110,7 @@ __all__ = [
     "BRIGHT_K_BIN_MAG",
     "BRIGHT_K_BOOT",
     "BRIGHT_K_MIN_STARS",
+    "k_within_one_se",
     "BrightnessK",
     "load_field_k",
     "field_k_plan",
@@ -1105,12 +1129,12 @@ __all__ = [
     "f_star_is_grid_edge",
     "frame_stem_from_source",
     "howell_snr",
-    "howell_variance_adu2",
     "measure_flux_on_f_grid",
     "measure_night_grid",
     "pick_f_star_snr",
     "series_from_grid",
     "sky_series_from_grid",
+    "sky_n_series_from_grid",
     "write_per_target_choices",
 ]
 

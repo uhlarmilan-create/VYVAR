@@ -6,21 +6,23 @@ from typing import AbstractSet, Any
 import json
 import logging
 import math
-import os
 from astropy.io import fits as astrofits
 import numpy as np
 import pandas as pd
-from comp_pool_rms import attach_comp_rms_to_pool_rows, comp_frame_stats
+from stats_core import coerce_bool_series
+from comp_pool_rms import _lookup_rms_map, attach_comp_rms_to_pool_rows, comp_frame_stats
 from comp_rms_loo import (
+    COMP_PHOTON_MAG_COL,
     COMP_RMS_FRAMES_BASIS,
     COMP_RMS_LOO_PHOTON_K_DEFAULT,
-    LN10_OVER_2P5,
+    COMP_SCINT_MAG_COL,
+    COMP_SIGMA_REF_COL,
     compute_loo_mag_rms_map,
 )
 from config import AppConfig
 from pipeline_constants import COMP_SELECT_RMS_FLOOR
-from catalog_db import connect_ro, query_local_gaia_by_source_ids
-from gaia_catalog_id import normalize_gaia_source_id, normalize_gaia_source_id_series, read_vyvar_csv
+from catalog_db import query_local_gaia_by_source_ids
+from gaia_catalog_id import normalize_gaia_source_id, normalize_gaia_source_id_series
 from infolog import log_event
 from photometry_shared import _normalize_gaia_id
 from photometry_defs import LOGGER
@@ -40,13 +42,82 @@ def _sid_int(v: Any) -> int | None:
             return None
     return None
 
+def gaia_bp_rp(ids: Any, gaia_db_path: str | Path | None) -> dict[str, float | None]:
+    """Gaia DR3 BP-RP by source_id from the local Gaia DB: normalised source_id -> bp_rp (None when the
+    star has no colour), one batched query (``catalog_db.query_local_gaia_by_source_ids``).
+    G07-07: the one Gaia colour lookup of target / comparison-star selection. Ids that are not Gaia
+    source_ids are skipped; no DB file -> {}; a failed query logs a WARNING and returns {}."""
+    gdb = str(gaia_db_path or "").strip()
+    if not gdb:
+        return {}
+    try:
+        gp = Path(gdb).expanduser().resolve()
+        if not gp.is_file():
+            return {}
+    except OSError:
+        return {}
+    ids_norm: list[str] = []
+    seen: set[str] = set()
+    for raw in ids:
+        g = normalize_gaia_source_id(raw)
+        if not g or not g.isdigit() or g in seen:
+            continue
+        seen.add(g)
+        ids_norm.append(g)
+    if not ids_norm:
+        return {}
+    try:
+        base = query_local_gaia_by_source_ids(gp, ids_norm)
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.warning("[GAIA-BPRP] Batch Gaia bp_rp lookup failed (%d ids): %s", len(ids_norm), exc)
+        return {}
+    return {k: v.get("bp_rp") for k, v in base.items()}
+
+
+def _finite_or_nan(v: Any) -> float:
+    try:
+        f = float(v) if v is not None else float("nan")
+    except (TypeError, ValueError):
+        return float("nan")
+    return f if math.isfinite(f) else float("nan")
+
+
+def _db_bp_rp(gids: list[str], gaia_db_path: Any,
+              gaia_prefetch: dict[str, float | None] | None = None) -> dict[str, float]:
+    """Gaia DB colour (finite or NaN) of normalised Gaia ids: ``gaia_prefetch`` (an earlier ``gaia_bp_rp``
+    result of the same DB) for the ids it holds, one batched ``gaia_bp_rp`` query for the rest."""
+    pf = gaia_prefetch or {}
+    rest = [g for g in gids if g not in pf]
+    got = gaia_bp_rp(rest, gaia_db_path) if rest else {}
+    return {g: _finite_or_nan(pf[g] if g in pf else got.get(g)) for g in gids}
+
+
+def _apply_gaia_bp_rp(df: pd.DataFrame, sid_of_row: Any, gaia_db_path: Any,
+                      gaia_prefetch: dict[str, float | None] | None = None) -> pd.DataFrame:
+    """Set ``bp_rp`` from the local Gaia DB (G07-07, Milan 2026-10-30: "DB wins"): a finite DB value
+    replaces any other value (CSV column); rows whose id the DB lacks (or has without a colour) keep theirs."""
+    sids: dict[int, str] = {}
+    for _pos, row in enumerate(df.to_dict("records")):
+        sid_i = _sid_int(sid_of_row(row))
+        if sid_i is not None:
+            sids[_pos] = normalize_gaia_source_id(sid_i)
+    if not sids:
+        return df
+    vals = _db_bp_rp(list(dict.fromkeys(sids.values())), gaia_db_path, gaia_prefetch)
+    for _pos, gid in sids.items():
+        v = vals[gid]
+        if math.isfinite(v):
+            df.at[df.index[_pos], "bp_rp"] = v
+    return df
+
+
 def _enrich_comp_bp_rp(
     candidates: pd.DataFrame,
     gaia_db_path: str | None,
     *,
-    gaia_prefetch: dict[str, dict[str, Any]] | None = None,
+    gaia_prefetch: dict[str, float | None] | None = None,
 ) -> pd.DataFrame:
-    """Fill ``bp_rp`` for comp stars where it is missing (Gaia DR3 by ``source_id``)."""
+    """``bp_rp`` of comp stars from Gaia DR3 by ``source_id`` (the DB value wins, ``_apply_gaia_bp_rp``)."""
     if candidates is None or getattr(candidates, "empty", True):
         return pd.DataFrame()
 
@@ -59,82 +130,9 @@ def _enrich_comp_bp_rp(
         df["ra_deg"] = pd.to_numeric(df.get("ra_deg"), errors="coerce")
     if "dec_deg" in df.columns:
         df["dec_deg"] = pd.to_numeric(df.get("dec_deg"), errors="coerce")
-
-    con = None
-    gaia_cols: set[str] = set()
-    gaia_path = str(gaia_db_path or "").strip()
-    if gaia_path and os.path.exists(gaia_path):
-        try:
-            import sqlite3  # noqa: PLC0415
-
-            con = connect_ro(gaia_path)
-            con.row_factory = sqlite3.Row
-            gaia_cols = {
-                str(r[1]).strip().lower() for r in con.execute("PRAGMA table_info('gaia_dr3')").fetchall()
-            }
-        except Exception:  # noqa: BLE001
-            con = None
-            gaia_cols = set()
-
-    sel_bp = "bp_rp" in gaia_cols
-    gaia_bp_cache: dict[int, float] = {}
-
-    def _gaia_bp_rp(sid_i: int) -> float:
-        if sid_i in gaia_bp_cache:
-            return gaia_bp_cache[sid_i]
-        bp_r = float("nan")
-        gid_pf = normalize_gaia_source_id(sid_i)
-        if gaia_prefetch and gid_pf and gid_pf in gaia_prefetch:
-            try:
-                vbp = gaia_prefetch[gid_pf].get("bp_rp")
-                if vbp is not None and math.isfinite(float(vbp)):
-                    bp_r = float(vbp)
-            except (TypeError, ValueError):
-                pass
-            gaia_bp_cache[int(sid_i)] = bp_r
-            return bp_r
-        if con is not None and sel_bp:
-            try:
-                rw = con.execute(
-                    "SELECT bp_rp FROM gaia_dr3 WHERE source_id=? LIMIT 1;",
-                    (int(sid_i),),
-                ).fetchone()
-                if rw is not None and rw["bp_rp"] is not None:
-                    bp_r = float(rw["bp_rp"])
-            except Exception as exc:  # noqa: BLE001
-                logging.error('[EXC-0122] Gaia DB bp_rp row fetch fails - comp star keeps NaN bp_rp and wrong colour tier: %s', exc)
-                pass
-        gaia_bp_cache[int(sid_i)] = bp_r if math.isfinite(bp_r) else float("nan")
-        return gaia_bp_cache[int(sid_i)]
-
-    try:
-        # SPEED-2026-10: visit only the rows whose bp_rp is missing (the column is numeric here);
-        # each row is re-read before use, as iterrows did.
-        _missing = np.flatnonzero(~np.isfinite(df["bp_rp"].to_numpy(dtype=float)))
-        for _pos in _missing.tolist():
-            idx = df.index[_pos]
-            row = df.iloc[_pos]
-            try:
-                bp_now = float(pd.to_numeric(row.get("bp_rp"), errors="coerce"))
-            except Exception:  # noqa: BLE001
-                bp_now = float("nan")
-            if math.isfinite(bp_now):
-                continue
-            sid_i = _sid_int(row.get("source_id") or row.get("catalog_id") or row.get("name"))
-            if sid_i is None:
-                continue
-            gaia_bp = _gaia_bp_rp(sid_i)
-            if math.isfinite(gaia_bp):
-                df.at[idx, "bp_rp"] = float(gaia_bp)
-    finally:
-        try:
-            if con is not None:
-                con.close()
-        except Exception:  # noqa: BLE001
-            # EXC-0123: T2 -- sqlite con.close() failure during comp bp_rp enrichment ignored (EXCEPT-BULK-2 2026-07-08)
-            pass
-
-    return df
+    return _apply_gaia_bp_rp(
+        df, lambda row: row.get("source_id") or row.get("catalog_id") or row.get("name"), gaia_db_path, gaia_prefetch
+    )
 
 def _ensure_active_target_names(df: pd.DataFrame) -> pd.DataFrame:
     """``vsx_name`` holds the VSX name only (empty for manual / exoplanet / candidate targets - Milan
@@ -156,10 +154,6 @@ def _ensure_active_target_names(df: pd.DataFrame) -> pd.DataFrame:
 # (draft 537: 2154 of 4265 MASTERSTAR ids; derived pool 545 -> 273).
 _normalize_id_value = normalize_gaia_source_id
 _normalize_id_series = normalize_gaia_source_id_series
-
-def _bool_col(series: pd.Series) -> pd.Series:
-    """Normalize a column to bool regardless of True/False/'true'/'false'/1/0."""
-    return series.astype(str).str.strip().str.lower().isin(("true", "1", "yes", "y"))
 
 def _target_selection_effective_frame_hw_px(
     vt: pd.DataFrame,
@@ -192,7 +186,7 @@ def _enrich_active_targets_bp_rp(
     *,
     gaia_db_path: str | Path | None,
 ) -> pd.DataFrame:
-    """Fill ``bp_rp`` for active targets from Gaia DR3 by ``catalog_id``."""
+    """``bp_rp`` of active targets from Gaia DR3 by ``catalog_id`` (the DB value wins, ``_apply_gaia_bp_rp``)."""
     if targets_df is None or getattr(targets_df, "empty", True):
         return targets_df
 
@@ -205,66 +199,7 @@ def _enrich_active_targets_bp_rp(
     if "dec_deg" in df.columns:
         df["dec_deg"] = pd.to_numeric(df["dec_deg"], errors="coerce")
 
-    gaia_path = str(gaia_db_path or "").strip()
-    con = None
-    gaia_cols: set[str] = set()
-    if gaia_path and os.path.exists(gaia_path):
-        try:
-            import sqlite3  # noqa: PLC0415
-
-            con = connect_ro(gaia_path)
-            con.row_factory = sqlite3.Row
-            gaia_cols = {
-                str(r[1]).strip().lower() for r in con.execute("PRAGMA table_info('gaia_dr3')").fetchall()
-            }
-        except Exception:  # noqa: BLE001
-            # EXC-0193: T2 -- sqlite con.close() after active-target bp_rp enrichment ignored (EXCEPT-BULK-2 2026-07-08)
-            con = None
-            gaia_cols = set()
-    sel_bp = "bp_rp" in gaia_cols
-    gaia_cache: dict[int, float] = {}
-
-    def _gaia_bp(sid_i: int) -> float:
-        if sid_i in gaia_cache:
-            return gaia_cache[sid_i]
-        bp_r = float("nan")
-        if con is not None and sel_bp:
-            try:
-                rw = con.execute(
-                    "SELECT bp_rp FROM gaia_dr3 WHERE source_id=? LIMIT 1;",
-                    (int(sid_i),),
-                ).fetchone()
-                if rw is not None and rw["bp_rp"] is not None:
-                    bp_r = float(rw["bp_rp"])
-            except Exception as exc:  # noqa: BLE001
-                logging.error('[EXC-0192] Gaia DB bp_rp fetch for active targets fails - target row keeps NaN bp_rp: %s', exc)
-                pass
-        gaia_cache[int(sid_i)] = bp_r if math.isfinite(bp_r) else float("nan")
-        return gaia_cache[int(sid_i)]
-
-    try:
-        for idx, row in df.iterrows():
-            try:
-                bp_now = float(pd.to_numeric(row.get("bp_rp"), errors="coerce"))
-            except Exception:  # noqa: BLE001
-                bp_now = float("nan")
-            if math.isfinite(bp_now):
-                continue
-            sid_i = _sid_int(row.get("catalog_id"))
-            if sid_i is None:
-                continue
-            gaia_bp = _gaia_bp(sid_i)
-            if math.isfinite(gaia_bp):
-                df.at[idx, "bp_rp"] = float(gaia_bp)
-    finally:
-        try:
-            if con is not None:
-                con.close()
-        except Exception:  # noqa: BLE001
-            # EXC-0195: T4 -- DB manifest files[] NAXIS query fails - returns caller-supplied default frame width/height (EXCEPT-BULK-2 2026-07-08)
-            pass
-
-    return df
+    return _apply_gaia_bp_rp(df, lambda row: row.get("catalog_id"), gaia_db_path)
 
 def _resolve_frame_hw_px_from_masterstar(
     ms_fits: Path,
@@ -298,52 +233,36 @@ def _resolve_frame_hw_px_from_masterstar(
     raise RuntimeError(f"frame size unknown: no NAXIS in {ms_fits} and no light FITS of draft {draft_id}")
 
 
-def _read_field_density_inputs(
-    ms_fits: Path,
-    masterstars_csv: Path,
+def field_density_inputs(
+    ms_header: Any,
+    ms_catalog_ids: pd.Series | None,
     frame_w_px: int,
     frame_h_px: int,
 ) -> tuple[int, int, int, str, int | None]:
-    """Return ``(n_stars, chip_w, chip_h, source, n_stars_dao_raw)`` for the field density.
+    """Return ``(n_stars, chip_w, chip_h, source, n_stars_dao_raw)`` for the field density (diagnostic).
 
-    ``n_stars``: number of rows in ``masterstars_csv`` with a non-empty ``catalog_id`` (Gaia-matched).
-    ``n_stars_dao_raw``: ``VY_NDAO`` from the MASTERSTAR FITS (reference / JSON only, not classification).
+    G07-19 (Milan 2026-10-30, option b): from data the selection already holds - the MASTERSTAR header
+    (``VY_NDAO``) and the ``catalog_id`` column of masterstars_full_match.csv as read (text).
+    ``n_stars``: rows with a non-empty ``catalog_id`` (Gaia-matched).
+    ``n_stars_dao_raw``: ``VY_NDAO`` (reference / JSON only, not classification).
     ``source``: ``masterstars_gaia_matched`` | ``VY_NDAO_fallback`` | ``defaults``.
     """
     cw, ch = int(frame_w_px), int(frame_h_px)
     n_stars = 0
     src = "defaults"
     vy_ndao_raw: int | None = None
-    if ms_fits.is_file():
+    v = ms_header.get("VY_NDAO") if ms_header is not None else None
+    if v is not None and str(v).strip() != "":
         try:
-            with astrofits.open(ms_fits, memmap=False) as hdul:
-                hdr = hdul[0].header
-                v = hdr.get("VY_NDAO")
-                if v is not None and str(v).strip() != "":
-                    try:
-                        vy_ndao_raw = int(float(v))
-                    except (TypeError, ValueError):
-                        vy_ndao_raw = None
-        except Exception as exc:  # noqa: BLE001
-            logging.error('[EXC-0196] VY_NDAO header read from MASTERSTAR fails - field density uses masterstars count fallback: %s', exc)
-            pass
-    msc_path = Path(masterstars_csv)
-    if msc_path.is_file():
-        try:
-            _msc_df = read_vyvar_csv(
-                msc_path,
-                usecols=["catalog_id"],
-                low_memory=False,
-                dtype={"catalog_id": str},
-            )
-            _cid = _msc_df["catalog_id"].astype(str).str.strip()
-            _n_gaia = int((~_cid.isin(["", "nan", "None"])).sum())
-            if _n_gaia > 0:
-                n_stars = _n_gaia
-                src = "masterstars_gaia_matched"
-        except Exception as exc:  # noqa: BLE001
-            logging.error('[EXC-0197] masterstars_full_match.csv star-count read fails - field density n_stars may use VY_NDA...: %s', exc)
-            pass
+            vy_ndao_raw = int(float(v))
+        except (TypeError, ValueError):
+            vy_ndao_raw = None
+    if ms_catalog_ids is not None:
+        _cid = ms_catalog_ids.astype(str).str.strip()
+        _n_gaia = int((~_cid.isin(["", "nan", "None"])).sum())
+        if _n_gaia > 0:
+            n_stars = _n_gaia
+            src = "masterstars_gaia_matched"
     if n_stars <= 0 and vy_ndao_raw is not None and vy_ndao_raw > 0:
         n_stars = int(vy_ndao_raw)
         src = "VY_NDAO_fallback"
@@ -829,49 +748,14 @@ def select_active_targets(
     result = _ensure_active_target_names(result)
     return result.reset_index(drop=True)
 
-def _batch_enrich_targets_bp_rp_from_gaia_db(
-    target_cids: list[str],
-    gaia_db_path: str,
-) -> dict[str, dict[str, Any]]:
-    """Prefetch Gaia ``bp_rp`` for comparison-star selection targets (batched SQL)."""
-    gdb = str(gaia_db_path or "").strip()
-    if not target_cids or not gdb:
-        return {}
-    try:
-        gp = Path(gdb).expanduser().resolve()
-        if not gp.is_file():
-            return {}
-    except OSError:
-        return {}
-
-    ids_norm: list[str] = []
-    seen: set[str] = set()
-    for raw in target_cids:
-        g = normalize_gaia_source_id(raw)
-        if not g or not g.isdigit() or g in seen:
-            continue
-        seen.add(g)
-        ids_norm.append(g)
-    if not ids_norm:
-        return {}
-
-    try:
-        base = query_local_gaia_by_source_ids(gp, ids_norm)
-    except Exception as exc:  # noqa: BLE001
-        LOGGER.warning("[COMP-SELECT] Batch Gaia bp_rp lookup failed: %s", exc)
-        return {}
-    # G07-20: only bp_rp is used by comp selection (the teff query had no reader)
-    out: dict[str, dict[str, Any]] = {k: {"bp_rp": v.get("bp_rp")} for k, v in base.items()}
-
-    return out
-
 def _enrich_target_bp_rp_from_gaia_db(
     target: pd.Series,
     *,
     gaia_db_path: str,
-    gaia_prefetch: dict[str, dict[str, Any]] | None = None,
+    gaia_prefetch: dict[str, float | None] | None = None,
 ) -> pd.Series:
-    """Fill ``bp_rp`` for one active target (comparison-star selection) from Gaia by ``source_id``."""
+    """``bp_rp`` of one active target (comparison-star selection) from Gaia by ``source_id``: the DB value wins
+    (``_db_bp_rp``, G07-07), else the value the row holds."""
     out = target.copy()
     vsx = str(out.get("vsx_name", "") or "").strip() or str(out.get("name", "") or "").strip() or "?"
 
@@ -885,50 +769,7 @@ def _enrich_target_bp_rp_from_gaia_db(
     bpr_ms = _fscalar("bp_rp")
 
     gid = normalize_gaia_source_id(out.get("catalog_id"))
-    gdb = str(gaia_db_path or "").strip()
-    try:
-        gp = Path(gdb).expanduser().resolve()
-        gdb_ok = bool(gdb) and gp.is_file()
-    except OSError:
-        gdb_ok = False
-
-    bpr_nf = float("nan")
-    _prefetched = bool(gaia_prefetch and gid and gid in gaia_prefetch)
-    if _prefetched:
-        pf = gaia_prefetch[gid]  # type: ignore[index]
-        try:
-            vbp = pf.get("bp_rp")
-            if vbp is not None and math.isfinite(float(vbp)):
-                bpr_nf = float(vbp)
-        except (TypeError, ValueError):
-            pass
-    elif gid and gdb_ok and gid.isdigit():
-        try:
-            import sqlite3  # noqa: PLC0415
-
-            con = connect_ro(gp)
-            con.row_factory = sqlite3.Row
-            try:
-                cols = {str(r[1]).strip().lower() for r in con.execute("PRAGMA table_info('gaia_dr3')").fetchall()}
-                parts = [c for c in ("bp_rp",) if c in cols]
-                if parts:
-                    rw = con.execute(
-                        f"SELECT {', '.join(parts)} FROM gaia_dr3 WHERE source_id=? LIMIT 1;",
-                        (int(gid),),
-                    ).fetchone()
-                    if rw is not None:
-                        if "bp_rp" in parts:
-                            try:
-                                vbp = rw["bp_rp"]
-                                if vbp is not None:
-                                    bpr_nf = float(vbp)
-                            except (TypeError, ValueError, KeyError, IndexError):
-                                pass
-            finally:
-                con.close()
-        except Exception as exc:  # noqa: BLE001
-            logging.error('[EXC-0202] Outer Gaia SQL for target bp_rp logs failure - target keeps CSV bp_rp or NaN: %s', exc)
-            log_event(f"TARGET Gaia SQL: {vsx} - {exc!s}")
+    bpr_nf = _db_bp_rp([gid], gaia_db_path, gaia_prefetch)[gid] if gid else float("nan")
 
     if math.isfinite(bpr_nf):
         out["bp_rp"] = float(bpr_nf)
@@ -1153,21 +994,25 @@ def _select_comps_by_rms_then_color(
     if out.empty:
         return out
 
-    # Authoritative per-target RMS gate (INV-COMP-RMS-01): LOO mag MAD vs
-    # k * photon (snr_ap_pixscaled) and an absolute 0.1 mag cap.
+    # Authoritative per-target RMS gate (INV-COMP-RMS-01): LOO mag MAD vs k * sigma_ref and an
+    # absolute 0.1 mag cap. COMP-CEIL-FIELDK-2026-10 (Milan 2026-10-30): the reference is that of the
+    # comp_rms aperture and frames, not the MASTERSTAR S/N (one frame, 1.9 FWHM). COMP-CEIL-NOISEMODEL-2026-10
+    # (Milan 2026-10-30): sigma_ref = sqrt((a e_photon)^2 + e_scint^2 + floor^2), a / floor fitted on the
+    # night's constant pool stars (pool column COMP_SIGMA_REF_COL, comp_rms_loo.comp_ceiling_reference) - the
+    # photon error alone rejected good bright comps (Brno 534 g: 41 constant stars, all bright).
     _k_loo = COMP_RMS_LOO_PHOTON_K_DEFAULT
     _abs_ceil = _ceil if math.isfinite(_ceil) and _ceil > 0 else 0.1
-    if "snr_ap_pixscaled" not in out.columns:
+    if COMP_SIGMA_REF_COL not in out.columns:
         raise ValueError(
-            "INV-COMP-RMS-01: snr_ap_pixscaled missing on comparison candidates"
+            f"INV-COMP-RMS-01: {COMP_SIGMA_REF_COL} missing on comparison candidates "
+            "(the comparison pool carries it, build_global_comp_pool)"
         )
-    _snr = pd.to_numeric(out["snr_ap_pixscaled"], errors="coerce")
+    _ref = pd.to_numeric(out[COMP_SIGMA_REF_COL], errors="coerce")
     _rms_c = pd.to_numeric(out["comp_rms"], errors="coerce")
-    _ph = LN10_OVER_2P5 / _snr
-    _star_ceil = np.minimum(float(_abs_ceil), float(_k_loo) * _ph)
+    _star_ceil = np.minimum(float(_abs_ceil), float(_k_loo) * _ref)
     _n0 = int(len(out))
     _pre_ceil = out.copy()
-    out = out[_rms_c.notna() & _snr.gt(0) & _rms_c.le(_star_ceil)].copy()
+    out = out[_rms_c.notna() & _ref.gt(0) & _rms_c.le(_star_ceil)].copy()
     logging.info(
         "[COMP] loo ceiling k=%.3f abs=%.4f: %d -> %d under-ceiling candidates",
         float(_k_loo),
@@ -1336,15 +1181,18 @@ def _select_comps_by_rms_then_color(
     )
     return selected.drop(columns=["_rms_sort", "_dist_sort"], errors="ignore")
 
-def night_frame_fwhms_px(per_frame_csv_paths: Any) -> list[float]:
+def night_frame_fwhms_px(per_frame_csv_paths: Any, store: Any = None) -> list[float]:
     """Per-frame FWHM (px) of THIS observation group: median of ``fwhm_px_for_aperture`` of each per-frame
-    CSV (the per-frame QC FWHM stamped on the frame, FWHM-AUTH-01)."""
+    CSV (the per-frame QC FWHM stamped on the frame, FWHM-AUTH-01). ``store``: the in-memory proc tables
+    (ProcFrameStore / path-keyed cache, G07-16); a file it lacks, or without the column, is read."""
     vals = []
     for p in list(per_frame_csv_paths or []):
         try:
             from proc_frame_store import read_proc_csv  # noqa: PLC0415
 
-            d = read_proc_csv(p, usecols=["fwhm_px_for_aperture"])
+            d = store.get(str(p)) if store is not None else None
+            if d is None or "fwhm_px_for_aperture" not in d.columns:
+                d = read_proc_csv(p, usecols=["fwhm_px_for_aperture"])
             v = float(pd.to_numeric(d["fwhm_px_for_aperture"], errors="coerce").median())
             if math.isfinite(v) and v > 0:
                 vals.append(v)
@@ -1354,12 +1202,13 @@ def night_frame_fwhms_px(per_frame_csv_paths: Any) -> list[float]:
 
 
 def night_median_fwhm_px(
-    per_frame_csv_paths: Any, fallback: float
+    per_frame_csv_paths: Any, fallback: float, *, store: Any = None, frame_fwhms: list[float] | None = None
 ) -> tuple[float, str]:
-    """Night median frame FWHM (px) of THIS observation group (``night_frame_fwhms_px``).
+    """Night median frame FWHM (px) of THIS observation group (``night_frame_fwhms_px``; ``frame_fwhms``:
+    its result when the caller already has it, G07-16).
     The draft-level qc_metrics.csv is not used here - it mixes the filters of the draft
     (524: g 5.31, r 4.91, mixed 5.14 px). Fallback: ``fallback`` (MASTERSTAR). Returns (fwhm, source)."""
-    vals = night_frame_fwhms_px(per_frame_csv_paths)
+    vals = frame_fwhms if frame_fwhms is not None else night_frame_fwhms_px(per_frame_csv_paths, store)
     if vals:
         return float(np.median(vals)), f"night median of {len(vals)} frames (fwhm_px_for_aperture)"
     logging.warning(
@@ -1467,9 +1316,9 @@ def _pool_geometry_gates(
     # FORCED-PHOT / COMP-ADMIT-03 review: is_noisy is not a gate; is_usable may
     # still encode zone=linear for diagnostics but noisy stars enter via scatter.
     cand_mask = (
-        ~_bool_col(pool.get("is_saturated", pd.Series(False, index=pool.index)))
-        & ~_bool_col(pool.get("vsx_known_variable", pd.Series(False, index=pool.index)))
-        & ~_bool_col(pool.get("likely_saturated", pd.Series(False, index=pool.index)))
+        ~coerce_bool_series(pool.get("is_saturated", pd.Series(False, index=pool.index)))
+        & ~coerce_bool_series(pool.get("vsx_known_variable", pd.Series(False, index=pool.index)))
+        & ~coerce_bool_series(pool.get("likely_saturated", pd.Series(False, index=pool.index)))
     )
     pool = pool.loc[cand_mask].copy()
     pool = apply_comp_quality_gates(pool, comp_peak_sat_frac=float(cfg.comp_peak_sat_frac), label="GLOBAL COMP POOL")
@@ -1502,6 +1351,9 @@ def _pool_geometry_gates(
 def _pool_admission_gates(
     *,
     _fstats,
+    gain,
+    read_noise,
+    scint_params,
     admission_rules_band,
     admission_rules_blend,
     admission_rules_sat,
@@ -1527,11 +1379,15 @@ def _pool_admission_gates(
     # falls back to ``flux_col`` for per-frame catalogs written before the grid columns.
     from comp_rms_loo import choose_field_aperture_k  # noqa: PLC0415
 
-    _k_field, _loo_k, _k_scores = choose_field_aperture_k(
+    from comp_rms_loo import photon_mag_err_map  # noqa: PLC0415
+    from photometry_defs import flux_k_column  # noqa: PLC0415
+
+    _k_field, _loo_k, _k_scores, _k_info = choose_field_aperture_k(
         cand_ids, per_frame_csv_paths, csv_cache, min_frames_frac=min_frames_frac
     )
     if _k_field is not None:
         loo_map = _loo_k
+        _ph_col = flux_k_column(_k_field)
         admission_rules.append(
             {
                 "rule_id": "COMP_RMS_APERTURE_K",
@@ -1540,9 +1396,17 @@ def _pool_admission_gates(
                 "threshold_value": float(_k_field),
                 "unit": "k (r = k x FWHM)",
                 "scores": {f"{k:.2f}": float(v) for k, v in _k_scores.items()},
+                # COMP-CEIL-FIELDK-2026-10: the k rule (AP-BRIGHT-K) and its bootstrap SE
+                "rule": _k_info["rule"],
+                "ratio_curve": _k_info["ratio_curve"],
+                "se": _k_info["se"],
+                "n_stars": _k_info["n_stars"],
+                # AP-BRIGHT-K diagnostic (Milan 2026-10-30): every k within one SE of the minimum
+                "k_within_se": _k_info["k_within_se"],
             }
         )
     else:
+        _ph_col = flux_col
         loo_map, _basis = compute_loo_mag_rms_map(
             cand_ids=cand_ids,
             per_frame_csv_paths=per_frame_csv_paths,
@@ -1556,6 +1420,78 @@ def _pool_admission_gates(
         id_col=id_col,
         frames_basis=COMP_RMS_FRAMES_BASIS,
     )
+    # COMP-CEIL-FIELDK-2026-10: photon reference of the comp_rms ceiling, same aperture and frames as comp_rms
+    _ph_map = photon_mag_err_map(
+        cand_ids, per_frame_csv_paths, csv_cache, _ph_col, k=_k_field, gain=gain, read_noise=read_noise
+    )
+    pool[COMP_PHOTON_MAG_COL] = (
+        _lookup_rms_map(_ph_map, pool[id_col].astype(str).str.strip()).astype(float)
+        if _ph_map else np.nan
+    )
+    _n_no_ph = int((pool["comp_rms"].notna() & pool[COMP_PHOTON_MAG_COL].isna()).sum())
+    if _n_no_ph:
+        logging.warning(
+            "[GLOBAL COMP POOL] %d stars with comp_rms have no CCD-equation photon error at %s "
+            "(no sky / aperture in their frames) - they cannot pass the comp_rms ceiling", _n_no_ph, _ph_col,
+        )
+    admission_rules.append(
+        {
+            "rule_id": "COMP_PHOTON_REF",
+            "n_in": int(len(pool)),
+            "n_out": int(len(pool)),
+            "threshold_value": _ph_col,
+            "unit": "flux column of the ceiling photon error (median over frames, CCD equation)",
+            "n_without_photon_err": _n_no_ph,
+            "gain": float(gain),
+            "read_noise": float(read_noise),
+        }
+    )
+    # COMP-CEIL-NOISEMODEL-2026-10 (Milan 2026-10-30): scintillation of each star on its comp_rms frames and the
+    # ceiling reference sigma_ref with a / floor fitted on the constant pool stars at the field k
+    from comp_rms_loo import comp_ceiling_reference, scint_mag_err_map  # noqa: PLC0415
+
+    _sc_map, _sc_info = scint_mag_err_map(cand_ids, per_frame_csv_paths, csv_cache, _ph_col, rig=scint_params)
+    if _sc_info["n_frames_no_airmass"]:
+        logging.warning(
+            "[GLOBAL COMP POOL] %d of %d frames without an airmass: scintillation 0 there (as in the "
+            "light-curve errors)", _sc_info["n_frames_no_airmass"], _sc_info["n_frames"],
+        )
+    pool[COMP_SCINT_MAG_COL] = (
+        _lookup_rms_map(_sc_map, pool[id_col].astype(str).str.strip()).astype(float)
+        if _sc_map else np.nan
+    )
+    _const = np.ones(len(pool), dtype=bool)
+    for _f in ("vsx_known_variable", "gaia_dr3_variable_catalog", "is_saturated", "likely_saturated"):
+        if _f in pool.columns:
+            _const &= ~coerce_bool_series(pool[_f]).to_numpy()
+    _sref, _ref_info = comp_ceiling_reference(
+        pd.to_numeric(pool["comp_rms"], errors="coerce").to_numpy(dtype=np.float64),
+        pd.to_numeric(pool[COMP_PHOTON_MAG_COL], errors="coerce").to_numpy(dtype=np.float64),
+        pd.to_numeric(pool[COMP_SCINT_MAG_COL], errors="coerce").to_numpy(dtype=np.float64),
+        _const,
+    )
+    pool[COMP_SIGMA_REF_COL] = _sref
+    admission_rules.append(
+        {
+            "rule_id": "COMP_CEIL_NOISE_MODEL",
+            "n_in": int(len(pool)),
+            "n_out": int(len(pool)),
+            "threshold_value": float(COMP_RMS_LOO_PHOTON_K_DEFAULT),
+            "unit": f"comp_rms <= min(abs cap, multiplier x {COMP_SIGMA_REF_COL}) (per-target selection)",
+            "rule": "COMP-CEIL-NOISEMODEL-2026-10",
+            **_ref_info,
+            # rig values as the light-curve errors use them; None = not known (scintillation 0)
+            "scintillation": {
+                **_sc_info,
+                **{_n: (float(_v) if math.isfinite(float(_v)) else None) for _n, _v in (
+                    ("telescope_diameter_m", scint_params.telescope_diameter_m),
+                    ("altitude_m", scint_params.altitude_m),
+                    ("exposure_s", scint_params.exposure_s),
+                    ("c_y", scint_params.c_y),
+                )},
+            },
+        }
+    )
     _keys_fs = pool[id_col].astype(str).str.strip()
     pool["comp_n_frames"] = _keys_fs.map(lambda c: int((_fstats.get(c) or {}).get("n_frames", 0)))
 
@@ -1565,7 +1501,7 @@ def _pool_admission_gates(
     # curve, thresholds and dilution were diagnostics nobody read, computed with gain 1 / read
     # noise 0 / plate scale 1.3"/px from the raw config, and cost about 40 s per setup.
     _before_var = int(len(pool))
-    _var = _bool_col(pool.get("gaia_dr3_variable_catalog", pd.Series(False, index=pool.index)))
+    _var = coerce_bool_series(pool.get("gaia_dr3_variable_catalog", pd.Series(False, index=pool.index)))
     pool = pool.loc[~_var].copy()
     admission_rules.append(
         {
@@ -1609,8 +1545,17 @@ def build_global_comp_pool(
     masterstar_fits: Path | str | None = None,
     field_catalog_csv: Path | str | None = None,
     sat_may_exclude: bool = True,
+    gain: float,
+    read_noise: float,
+    scint_params: Any,
 ) -> pd.DataFrame:
-    """Build the global comp pool - static filters + RMS across frames (once per field)."""
+    """Build the global comp pool - static filters + RMS across frames (once per field).
+
+    ``gain`` [e-/ADU] / ``read_noise`` [e-]: the run's photometric gain authority
+    (``rig_photometry.photometric_gain_read_noise``), for the CCD-equation photon error of the
+    comp_rms ceiling (COMP-CEIL-FIELDK-2026-10); required, no default. ``scint_params``: the run's
+    ``sigma_budget.RigScintillationParams`` (``aperture_photometry.rig_scint_params_for_run``), for the
+    scintillation term of the ceiling reference (COMP-CEIL-NOISEMODEL-2026-10); required, no default."""
     pool = masterstars_df.copy()
     if "catalog_id" in pool.columns:
         pool["catalog_id"] = _normalize_id_series(pool["catalog_id"])
@@ -1623,7 +1568,7 @@ def build_global_comp_pool(
         "likely_saturated",
     ):
         if col in pool.columns:
-            pool[col] = _bool_col(pool[col])
+            pool[col] = coerce_bool_series(pool[col])
 
     margin = int(chip_interior_margin_px)
     if "x" not in pool.columns or "y" not in pool.columns:
@@ -1712,8 +1657,9 @@ def build_global_comp_pool(
         # measured once on the MASTERSTAR at its own (night median) FWHM.
         from comp_blend import BLEND_FWHM_QUANTILE, blend_fwhm_px  # noqa: PLC0415
 
-        _fw_med, _fw_src = night_median_fwhm_px(per_frame_csv_paths, float(fwhm_px))
-        _fw, _fw_src_b = blend_fwhm_px(night_frame_fwhms_px(per_frame_csv_paths), _fw_med)
+        _fw_frames = night_frame_fwhms_px(per_frame_csv_paths, csv_cache)  # G07-16: from the store, once
+        _fw_med, _fw_src = night_median_fwhm_px(per_frame_csv_paths, float(fwhm_px), frame_fwhms=_fw_frames)
+        _fw, _fw_src_b = blend_fwhm_px(_fw_frames, _fw_med)
         _ks = sorted(float(k) for k in DEFAULT_APERTURE_F_GRID)
         _ann = (
             float(getattr(cfg, "annulus_inner_fwhm", 2.7)) * _fw,
@@ -1724,6 +1670,14 @@ def build_global_comp_pool(
             _sat_b = float(pd.to_numeric(masterstars_df["saturate_limit_adu"], errors="coerce").median())
         _bmeta: dict = {}
         _psf = None
+        # G07-12: catalogue, WCS and neighbour fluxes loaded once for the whole k grid
+        from comp_blend import BlendField  # noqa: PLC0415
+
+        _bfield = (
+            BlendField(Path(field_catalog_csv), Path(masterstar_fits), _fb.blend_band)
+            if field_catalog_csv and masterstar_fits and Path(field_catalog_csv).is_file()
+            and Path(masterstar_fits).is_file() else None
+        )
         for _k in _ks:
             _cont, _bmeta = blend_contamination_for_pool(
                 pool,
@@ -1737,6 +1691,7 @@ def build_global_comp_pool(
                 annulus_px=_ann,
                 profile_df=masterstars_df,
                 psf=_psf,
+                field=_bfield,
             )
             if _bmeta.get("status") != "ok":
                 break
@@ -1772,6 +1727,9 @@ def build_global_comp_pool(
 
     pool, = _pool_admission_gates(
         _fstats=_fstats,
+        gain=gain,
+        read_noise=read_noise,
+        scint_params=scint_params,
         admission_rules_band=admission_rules_band,
         admission_rules_blend=admission_rules_blend,
         admission_rules_sat=admission_rules_sat,
@@ -1962,7 +1920,7 @@ def select_comparison_stars_per_target(
         ms["catalog_id"] = _normalize_id_series(ms["catalog_id"])
     for col in ("is_saturated", "vsx_known_variable", "likely_saturated"):
         if col in ms.columns:
-            ms[col] = _bool_col(ms[col])
+            ms[col] = coerce_bool_series(ms[col])
 
     ctx = _resolve_target_color_for_comp_selection(target, cfg=_cfg_p1)
     ra_t = float(ctx["ra_t"])
@@ -2120,7 +2078,10 @@ def select_comparison_stars_per_target(
         gaia_db_path=gaia_db_path,
         gaia_prefetch=gaia_prefetch,
         n_comp_min=n_comp_min,
-        n_comp_max=n_comp_max,
+        # G07-09: one ranking for the admitted set and the reserve (COMP-SMART-2026-10); the admitted set
+        # is its head (the n_comp_max selection), the reserve the next n_reserve candidates
+        n_comp_max=int(n_comp_max) + max(0, int(n_reserve)),
+        n_primary=int(n_comp_max) if int(n_reserve) > 0 else None,
         chip_fw=chip_fw,
         chip_fh=chip_fh,
         chip_interior_margin_px=int(chip_interior_margin_px),
@@ -2130,6 +2091,9 @@ def select_comparison_stars_per_target(
         field_x=ms_arr_x,
         field_y=ms_arr_y,
     )
+    tier_wide = tier_out
+    if tier_out.get("primary") is not None:
+        tier_out = tier_out["primary"]
     final_comps = tier_out["final_comps"]
     if final_comps is None or getattr(final_comps, "empty", True):
         return pd.DataFrame()
@@ -2162,61 +2126,47 @@ def select_comparison_stars_per_target(
     _n_good = _count_gate_passing_comps(result, rms_map, max_comp_rms, id_col_cand)
     if _n_good < 1:
         return pd.DataFrame()
-    if int(n_reserve) > 0:
-        try:
-            result = _append_reserve_rows(
-                result,
-                tier_out,
-                candidates=candidates,
-                active=active,
-                id_col_cand=id_col_cand,
-                target=target,
-                target_cid=target_cid,
-                target_bprp_eff=target_bprp_eff,
-                mag_t=mag_t,
-                _individual_tier=_individual_tier,
-                _target_name=_target_name,
-                gaia_db_path=gaia_db_path,
-                gaia_prefetch=gaia_prefetch,
-                n_comp_min=n_comp_min,
-                n_comp_max=int(n_comp_max) + int(n_reserve),
-                chip_fw=chip_fw,
-                chip_fh=chip_fh,
-                chip_interior_margin_px=int(chip_interior_margin_px),
-                cfg=_cfg_p1,
-                max_comp_rms=float(max_comp_rms),
-                fwhm_px=float(fwhm_px) if fwhm_px is not None else None,
-                field_x=ms_arr_x,
-                field_y=ms_arr_y,
-                score_map=score_map,
-                comp_n_frames_map=comp_n_frames_map,
-                        per_target_rms_map=rms_map,
-            )
-        except Exception as _res_exc:  # noqa: BLE001
-            logging.warning("[COMP-SMART] %s: reserve selection failed (%s) - no reserve", target_cid, _res_exc)
+    if tier_wide is not tier_out:
+        result = _append_reserve_rows(
+            result,
+            tier_out,
+            tier_wide,
+            id_col_cand=id_col_cand,
+            active=active,
+            score_map=score_map,
+            comp_n_frames_map=comp_n_frames_map,
+            target_cid=target_cid,
+            target=target,
+            target_bprp_eff=target_bprp_eff,
+            per_target_rms_map=rms_map,
+        )
     return result
 
 
-def _append_reserve_rows(result: pd.DataFrame, tier_primary: dict[str, Any], **kw: Any) -> pd.DataFrame:
-    """COMP-SMART-2026-10: reserve = the candidates a selection with a larger n_comp_max admits
-    beyond the primary set, in that selection's rank order. The primary rows are untouched."""
-    from comp_selection_per_target import (  # noqa: PLC0415
-        _assemble_comp_selection_result_rows,
-        _assign_comp_tiers_to_pool,
-    )
+def _append_reserve_rows(
+    result: pd.DataFrame,
+    tier_primary: dict[str, Any],
+    wide: dict[str, Any],
+    *,
+    id_col_cand: str,
+    active: dict[str, float],
+    score_map: dict[str, float],
+    comp_n_frames_map: dict[str, int],
+    target_cid: str,
+    target: pd.Series,
+    target_bprp_eff: float,
+    per_target_rms_map: dict[str, float],
+) -> pd.DataFrame:
+    """COMP-SMART-2026-10: reserve = the candidates the wide ranking (n_comp_max + n_reserve) admits
+    beyond the primary set, in rank order. The primary rows are untouched."""
+    from comp_selection_per_target import _assemble_comp_selection_result_rows  # noqa: PLC0415
 
-    score_map = kw.pop("score_map")
-    comp_n_frames_map = kw.pop("comp_n_frames_map")
-    rms_map = kw.pop("per_target_rms_map")
-    candidates = kw.pop("candidates")
-    active = kw.pop("active")
-    wide = _assign_comp_tiers_to_pool(candidates, active, **kw)
     prim_ids = {str(c).strip() for c in tier_primary.get("selected_ids") or []}
     res_ids = [str(c).strip() for c in (wide.get("selected_ids") or []) if str(c).strip() not in prim_ids]
     fc = wide.get("final_comps")
     if not res_ids or fc is None or getattr(fc, "empty", True):
         return result
-    id_col = kw["id_col_cand"]
+    id_col = id_col_cand
     res = _assemble_comp_selection_result_rows(
         res_ids,
         fc,
@@ -2224,9 +2174,9 @@ def _append_reserve_rows(result: pd.DataFrame, tier_primary: dict[str, Any], **k
         active=active,
         score_map=score_map,
         comp_n_frames_map=comp_n_frames_map,
-        target_cid=kw["target_cid"],
-        target=kw["target"],
-        target_bprp_eff=kw["target_bprp_eff"],
+        target_cid=target_cid,
+        target=target,
+        target_bprp_eff=target_bprp_eff,
         sel_note=str(wide.get("sel_note", "")),
         best_tier=str(wide.get("best_tier", "")),
         tier4_warning=bool(wide.get("tier4_warning", False)),
@@ -2238,7 +2188,7 @@ def _append_reserve_rows(result: pd.DataFrame, tier_primary: dict[str, Any], **k
         comp_tier_final_map=wide.get("comp_tier_final_map") or {},
         comp_delta_bprp_map=wide.get("comp_delta_bprp_map") or {},
         comp_color_tier_src_map=wide.get("comp_color_tier_src_map") or {},
-        per_target_rms_map=rms_map,
+        per_target_rms_map=per_target_rms_map,
     )
     if res is None or res.empty:
         return result

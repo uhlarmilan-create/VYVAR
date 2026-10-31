@@ -18,13 +18,13 @@ confidence, and the human-readable evidence that fired.
 
 from __future__ import annotations
 
-import glob
 import math
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from fits_suffixes import list_fits_files
 from optics import header_focal_length_mm, header_native_pixel_um_mean, parse_sensor_size
 
 # Auto-fill must be CONSERVATIVE: a wrong equipment auto-fill silently corrupts gain/
@@ -261,13 +261,7 @@ def find_sample_light_header(source_root: str | Path, *, max_scan: int = 400) ->
     root = Path(source_root)
     if not root.is_dir():
         return None, None
-    exts = ("*.fit", "*.fits", "*.fts", "*.FIT", "*.FITS")
-    files: list[str] = []
-    for ext in exts:
-        files.extend(glob.glob(str(root / "**" / ext), recursive=True))
-        if len(files) >= max_scan:
-            break
-    files = sorted(set(files))[:max_scan]
+    files = sorted(str(p) for p in list_fits_files(root, recursive=True))[:max_scan]
     fallback: tuple[Any, str] | None = None
     for fp in files:
         try:

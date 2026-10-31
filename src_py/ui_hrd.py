@@ -75,8 +75,9 @@ def _stamp(*paths: Path) -> tuple:
 
 
 @st.cache_resource(show_spinner=False, max_entries=4)
-def _hrd_data(photometry_s: str, gaia_db_s: str, pmin: float, psnr: float, _stamp_key: tuple, _cfg: Any) -> dict[str, Any]:
-    """HRD table, notable stars, VSX names and measured targets of one setup (loaded once)."""
+def _hrd_data(photometry_s: str, gaia_db_s: str, pmin: float, psnr: float, stamp_key: tuple, _cfg: Any) -> dict[str, Any]:
+    """HRD table, notable stars, VSX names and measured targets of one setup (loaded once per file state:
+    ``stamp_key`` is hashed, G14-27) and the hover texts of every star (built once, not per rerun)."""
     from hrd_analysis import build_hrd_dataframe, get_top_interesting_stars  # noqa: PLC0415
 
     phot = Path(photometry_s)
@@ -106,7 +107,8 @@ def _hrd_data(photometry_s: str, gaia_db_s: str, pmin: float, psnr: float, _stam
         top = top.copy()
         top["catalog_id"] = top["catalog_id"].astype(str)
         top = top.merge(df[["catalog_id", "vsx_name", "vsx_type", "measured"]], on="catalog_id", how="left")
-    return {"df": df, "top": top.reset_index(drop=True) if not top.empty else top}
+    return {"df": df, "top": top.reset_index(drop=True) if not top.empty else top,
+            "hover": _texts(df, _hover), "side_hover": _texts(df, _side_hover)}
 
 
 def _hover(r: pd.Series) -> str:
@@ -124,12 +126,30 @@ def _hover(r: pd.Series) -> str:
     return out
 
 
+def _texts(df: pd.DataFrame, fn: Any) -> pd.Series:
+    """Hover text of every star (G14-27: built once in the cached loader, not on every rerun)."""
+    return pd.Series([fn(r) for _, r in df.iterrows()], index=df.index, dtype=object)
+
+
+def _hover_of(data: dict[str, Any], rows: pd.DataFrame) -> list[str]:
+    hov = data.get("hover")
+    if hov is None:  # a data dict not built by _hrd_data
+        hov = _texts(data["df"], _hover)
+    return hov.loc[rows.index].tolist()
+
+
+def _side_hover(r: pd.Series) -> str:
+    return (f"Gaia DR3 {r['catalog_id']}<br>G {r['phot_g_mean_mag']:.2f} \u00b7 BP\u2212RP {r['bp_rp']:.2f}<br>"
+            + (f"\u03d6 {r['parallax']:.2f} mas (S/N {_fmt(r.get('parallax_over_error'), 1)})"
+               if math.isfinite(_num(r.get("parallax"))) else "no parallax"))
+
+
 def hrd_figure(data: dict[str, Any], variant: str, opts: set[str], sel: str | None) -> go.Figure:
     df, top = data["df"], data["top"]
     rel = df[df["reliable"] & np.isfinite(df["bp_rp"]) & np.isfinite(df["abs_mag_g"])]
     tx = (lambda b: teff_from_bp_rp(b)) if variant == "teff" else (lambda b: np.asarray(b, float))
     fig = go.Figure()
-    hov = [_hover(r) for _, r in rel.iterrows()]
+    hov = _hover_of(data, rel)
     if variant == "dist":
         dist = np.where(rel["parallax"] > 0, np.log10(1000.0 / rel["parallax"].clip(lower=1e-6)), np.nan)
         size = np.clip(15.0 - rel["phot_g_mean_mag"].fillna(15.0), 3, 11)
@@ -141,12 +161,12 @@ def hrd_figure(data: dict[str, Any], variant: str, opts: set[str], sel: str | No
                                hovertemplate="%{text}<extra></extra>"))
     if "vsx" in opts:
         v = rel[rel["vsx_name"].notna()]
-        fig.add_trace(go.Scatter(x=tx(v["bp_rp"]), y=v["abs_mag_g"], mode="markers", text=[_hover(r) for _, r in v.iterrows()],
+        fig.add_trace(go.Scatter(x=tx(v["bp_rp"]), y=v["abs_mag_g"], mode="markers", text=_hover_of(data, v),
                                  marker=dict(size=10, symbol="diamond-open", color="#4c8dff", line=dict(width=1.6)),
                                  hovertemplate="%{text}<extra>VSX variable</extra>"))
     if "meas" in opts:
         m = rel[rel["measured"]]
-        fig.add_trace(go.Scatter(x=tx(m["bp_rp"]), y=m["abs_mag_g"], mode="markers", text=[_hover(r) for _, r in m.iterrows()],
+        fig.add_trace(go.Scatter(x=tx(m["bp_rp"]), y=m["abs_mag_g"], mode="markers", text=_hover_of(data, m),
                                  marker=dict(size=13, symbol="circle-open", color="#9aa0ab", line=dict(width=1)),
                                  hovertemplate="%{text}<extra>measured target</extra>"))
     ann = []
@@ -187,11 +207,9 @@ def hrd_figure(data: dict[str, Any], variant: str, opts: set[str], sel: str | No
     return fig
 
 
-def side_figure(df: pd.DataFrame) -> go.Figure:
+def side_figure(df: pd.DataFrame, side_hover: pd.Series | None = None) -> go.Figure:
     un = df[~df["reliable"] & np.isfinite(df["bp_rp"]) & np.isfinite(df["phot_g_mean_mag"])]
-    txt = [f"Gaia DR3 {r['catalog_id']}<br>G {r['phot_g_mean_mag']:.2f} \u00b7 BP\u2212RP {r['bp_rp']:.2f}<br>"
-           + (f"\u03d6 {r['parallax']:.2f} mas (S/N {_fmt(r.get('parallax_over_error'), 1)})" if math.isfinite(_num(r.get("parallax"))) else "no parallax")
-           for _, r in un.iterrows()]
+    txt = (side_hover if side_hover is not None else _texts(df, _side_hover)).loc[un.index].tolist()
     fig = go.Figure(go.Scatter(x=un["bp_rp"], y=un["phot_g_mean_mag"], mode="markers", text=txt, hovertemplate="%{text}<extra></extra>",
                                marker=dict(size=6, color=[bp_rp_css(b) for b in un["bp_rp"]], opacity=0.85)))
     fig.update_layout(height=612, margin=dict(l=48, r=10, t=40, b=52), showlegend=False,
@@ -205,7 +223,7 @@ def image_figure(jpg: Path, data: dict[str, Any], marks: set[str], sel: str | No
     src = "data:image/jpeg;base64," + base64.b64encode(Path(jpg).read_bytes()).decode("ascii")
     pts = df[np.isfinite(df["x"]) & np.isfinite(df["y"])]
     fig = go.Figure(go.Scattergl(x=pts["x"], y=pts["y"], mode="markers", marker=dict(size=10, color="rgba(0,0,0,0)"),
-                                 text=[_hover(r) for _, r in pts.iterrows()], hovertemplate="%{text}<extra></extra>"))
+                                 text=_hover_of(data, pts), hovertemplate="%{text}<extra></extra>"))
     if "vsx" in marks:
         v = pts[pts["vsx_name"].notna()]
         fig.add_trace(go.Scatter(x=v["x"], y=v["y"], mode="markers", hoverinfo="skip",
@@ -325,7 +343,7 @@ def render_hrd_tab(photometry_dir: Path, cfg: "AppConfig | None") -> None:
     if "side" in opts:
         with cols[1]:
             st.caption("No reliable parallax: colour vs apparent G (not comparable with M_G)")
-            st.plotly_chart(side_figure(df), width="stretch", config=_PLOT_CFG, key=f"hrd_side_{og}")
+            st.plotly_chart(side_figure(df, data["side_hover"]), width="stretch", config=_PLOT_CFG, key=f"hrd_side_{og}")
     st.caption("Positions use Gaia DR3 catalogue values (BP\u2212RP; M_G from the parallax). Field stars use the BP\u2212RP palette of the "
                "colour field image. Hover any star; click a notable star (or a table row) to highlight it everywhere.")
 
