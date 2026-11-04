@@ -4969,6 +4969,7 @@ distance_gspphot, ag_gspphot; TAP timeout 60 s (hrd_enrich_tap_timeout_s). Inver
 with dark markers; table with wrapped cells fitted to the page (Category, Gaia DR3,
 SIMBAD (type), SpT, G, M_G, BP-RP, Teff, logg, d [pc] (1/parallax or GSP-Phot), src); caption
 below both images.
+SUPERSEDED by NET-GAIA-TAP-DEADLINE-2026-11 (the 60 s Gaia TAP timeout only; SIMBAD keeps it).
 
 **CHECK-FACTS-2026-10.** M3 page: check star name + full Gaia id, G and BP-RP, measured KMAG
 vs catalogue KMAG (difference), scatter vs expected (median KMAG error, ratio; > 2 in orange);
@@ -7462,6 +7463,7 @@ a section "Gaia DB incomplete -> how to check and repair": the run's infolog WAR
 lines, the Windows commands from the VYVAR folder (`gaia_maintain.py --report`, `build_gaia_catalog.py --check`,
 `--repair --strip KEY`, `--repair`), resumable (one strip per transaction), rough duration, and that it needs
 internet access to the ESA Gaia archive. Item 8 of the same round: no log tab in the GUI (no change).
+SUPERSEDED by NET-GAIA-DOCS-2026-11 (command form only: `python catalogs\...` instead of `.venv\Scripts\python.exe`).
 
 ## COMP-FLOOR-2026-10 (G07-02) - one comp-count floor; targets without a colour (Milan 2026-10-31)
 
@@ -7557,6 +7559,7 @@ AAVSO PEP Guide 3.5.4" (no column of k2_delta_mag zeros any more); clear / lumin
 Broeg-weight share of comps without BP-RP is `k2_colour_missing_wfrac` in the summary, WARNING when > 0.
 Johnson U / Sloan u keep the documented u'-g' slope exception. Supersedes the V/R/I "k2 = 0" convention of
 K2 v1 (2026-07-07) and the median fallback of K2-ONE-2026-10.
+SUPERSEDED in part by K2-RELIABLE-2026-11 (u / U none; no correction with a colourless comp or target).
 
 ## LC-PRECISION-P2P-2026-10 - headline precision = robust point-to-point scatter (G08-17, Milan approved 2026-10-31)
 Literature: Sokolovsky et al. 2017 (MNRAS 464, 274) Sect. 2.15 (von Neumann ratio, delta^2 = 2 sigma^2 for white
@@ -7571,6 +7574,8 @@ repeatability, red noise included) as before; PDF run summary: "Median precision
 summary table. lc_rms (full) and lc_rms_ooe stay in the summary (the latter only as a labelled EB diagnostic).
 Caveats: p2p misses red noise (hence the check-star row) and inflates for variables with fewer than ~20 points
 per period. No LC, err or export change. Supersedes "lc_rms (OOE) for variables" (headline).
+SUPERSEDED by LC-PRECISION-ERR-2026-11 (headline = per-point error incl. the night floor; p2p stays as the
+labelled short-term scatter).
 
 ## ENSEMBLE-ERR-CC06-2026-10 - ensemble error = comps' per-frame noise model + night excess (G08-08, Milan approved 2026-10-31)
 Literature: Collier Cameron et al. 2006 (MNRAS 373, 799, Sect. 4.1 eq. 4: weights 1/(sigma_ij^2 + s_j^2), per-frame
@@ -7756,6 +7761,7 @@ in the export manifest `varastro_below_limit_not_written`). The target aperture 
 column today (an F <= 0 epoch has no finite magnitude and is not exported), so the export output of current runs is
 unchanged. Tests: test_step7_psf_2026_10.py::test_g1030_varcand_lightcurve_marks_points_below_the_limit,
 test_g1030_aavso_writes_a_below_limit_point_as_fainter_than.
+SUPERSEDED in part by LC-BELOW-LIMIT-2026-11 (the target aperture light curves now have the column).
 
 ## VAR-2026-10 - field variability search (Milan 2026-10; recorded 2026-10-31 from code at step 7, code review 2 G10-46)
 
@@ -7891,6 +7897,7 @@ Literature: Fruchter & Hook 2002 (PASP 114, 144) sec. 7.2 (correlated noise of i
 5.6 (bilinear smooths, one kernel per stack), Evans & Irwin 2003 (flux conserved by normalised kernels), reproject
 docs (interp not flux conserving). Long-term note (not now): photometry on unresampled frames is the literature
 reference (AIJ, IRAF phot). test_speed_step7.py: the `_roundtrip_needed` test is removed with the helper.
+SUPERSEDED in part by V10-CAL-WCS-AFFINE (the method label is now `wcs_affine`; the resampling is unchanged).
 
 ## STEP7-CAL-PTC-2026-10 - photon-transfer tooling and the per-night sky-pair gain diagnostic (Milan 2026-10-31, C2)
 
@@ -7910,3 +7917,222 @@ sky shot-noise span over the tiles does not exceed the read-noise variance (Brno
 authority. User procedure (EN + CZ): docs/INSTALL.md section 5. Expected: 527 WARNING every night (ratio ~1.2,
 stored 3.17 e-/ADU vs ~3.8) until Milan's flat PTC is saved; 534 skipped. Literature: Janesick photon transfer
 (IRAF findgain), EMVA 1288 R4.0, Astier et al. 2019 (A&A 629, A36).
+
+## NET-GAIA-TAP-DEADLINE-2026-11 - every Gaia archive call has a deadline; stuck jobs are aborted (Milan 2026-11-04, v10 item 19)
+
+Milan approved 2026-11-04. Incident: `build_gaia_catalog.py --repair` hung for hours with no output in
+`Gaia.launch_job_async(adql).get_results()` (astroquery 0.4.11 polls the job phase with no deadline, and its HTTP
+connections have no socket timeout). One shared runner, `src_py/gaia_tap_job.py`, now carries every Gaia archive
+call: builder and `--repair` (`_tap_fetch`), online per-field top-up (`gaia_coverage._fetch_tap`), HRD enrichment
+(`hrd_enrich._fetch_gaia_tap`), GSPC (`gspc_zp.fetch_gspc`, sync TAP via `run_sync_query`). Async job: submit with
+`background=True`, poll the UWS phase every 5 s, progress line (phase, elapsed, deadline) every 60 s (CLI print,
+library run log), download once COMPLETED. Past the deadline the job is aborted on the server (UWS POST
+`PHASE=ABORT` through astroquery's connection handler; astroquery's `Job.abort` only accepts a locally PENDING job)
+and `TapTimeout` is raised; ERROR / ABORTED / 3 unreadable polls raise `TapJobFailed`; Ctrl+C aborts the job, then
+propagates. Every blocking HTTP step runs under `net_call.call_with_timeout` (now joined in 0.5 s slices so Ctrl+C
+is never held). Deadlines (module constants, no config keys) from Milan's measurement of anonymous ESA TAP (tiny
+job ~100 s end to end; COUNT of the densest bulge strip, 3.74 M rows, 98 s; 5 executing jobs / 50 queued per user
+since 2026-10-14): COUNT / small job 600 s submit->COMPLETED (6x), row job 1200 s (the server also writes the
+result), row download 1800 s (bounded by the anonymous 3 M-row cap, ~250 MB at >= 140 kB/s; not scaled per job:
+the `fetch(adql)` interface does not know the expected rows and the cap bounds every job), one HTTP request 180 s
+(3x the 60 s sync COUNT), abort 30 s. Builder: retries with backoff stay (MAX_RETRIES 8) but a timed-out job is
+tried at most twice (MAX_TIMEOUT_ATTEMPTS); a strip whose job times out is reported `timeout`, rolled back and left
+to do; the run continues with the next strip and the summary lists the failed strips with "rerun the same command";
+3 strips in a row timing out stop the run (the archive is not processing jobs; finished strips kept). `--repair`
+verifies the normal strips first and the strips stored exactly at the anonymous row cap last; its result dict adds
+`failed_strips` and `not_tried` (test_step6_db updated for the two keys). Top-up: status `timeout` (new) + WARNING
+in the run log + `gaia_topup` meta, service held unavailable for the run. HRD: the Gaia job uses the 600 s deadline
+(the former 60 s thread timeout was shorter than an anonymous job takes and left the job running); a timeout is not
+retried; WARNING + `enrich_skip_reason` in `hrd_enrich.json`. GSPC: whole sync call bounded by 600 s, each read by
+180 s (was a 20 s socket timeout, shorter than an anonymous sync query can take). Tests: dev/tests/test_v10_net_2026_11.py.
+Supersedes the 600 s thread timeout of the top-up (FRAME-DEPTH-2026-10 implementation) and the 60 s Gaia TAP
+timeout of HRD-PAGE-2026-10.
+
+## NET-GAIA-DOCS-2026-11 - Gaia builder docs: system python, archive behaviour (Milan 2026-11-04, v10 item 20)
+
+Milan approved 2026-11-04 (his PC has no `.venv`). Every Gaia builder / maintenance command in docs/INSTALL.md,
+docs/README_FULL.md, docs/README_CZ.md, docs/VYVAR_PIPELINE_CZ.md and catalogs/README.md is now
+`python catalogs\<tool>.py ...` (system python; Linux / macOS note: `/`); the stale `GAIA_DR3/` script paths are
+gone; venv activation in INSTALL "First run" is marked optional. INSTALL.md gains "Gaia archive: anonymous access,
+timeouts, interrupting" (no login needed, ~1-2 min per anonymous request, progress lines, the deadlines of
+NET-GAIA-TAP-DEADLINE-2026-11, resume, Ctrl+C safe); README_FULL / README_CZ / catalogs/README point to it.
+`gaia_maintain.py --report` and the run-log strip WARNING print the repair command with the native path separator.
+Supersedes the `.venv\Scripts\python.exe` commands of S6-FIX-GAIA-REPAIR-DOC-2026-10 (test_step6_fix_2026_10
+updated: it asserted the `.venv` form).
+
+## V10-CAL-GAIN-EXACT - the calibration library gain is never truncated; one library implementation (Milan 2026-11-04, item 21)
+
+Milan approved. The header GAIN card of a master (a driver gain SETTING such as 0 or 12, or for some capture
+programs the e-/ADU factor - whichever the camera writes, `camera_profile.HEADER_GAIN_KINDS`) is a matching key
+stored exactly as REAL (`calib_library.gain_key` / `header_gain`, G01-10): GAIN=12 matches darks of GAIN=12 (12 ==
+12.0), 0.79 stays 0.79, 12.5 is not truncated onto 12, a non-numeric card raises. Audit of the FITS -> camera
+profile -> CALIBRATION_LIBRARY / EQUIPMENT_CURVE / master matching path: the only remaining truncation was a second,
+production-unused copy of the library in `database.py` (`register_calibration_library_entry` stored `int(gain)`,
+`find_best_calibration_library_path` matched `int(gain)`; 0.79 -> 0). Both are removed (with their private helpers
+`calibration_scopes_match` / `get_calibration_library_row_by_path`); `calib_library` is the one implementation.
+Schema: CALIBRATION_LIBRARY.GAIN REAL, EQUIPMENT_CURVE.GAIN_SETTING / E_PER_ADU REAL, EQUIPMENTS.GAIN_ADU /
+DEFAULT_GAIN_SETTING REAL - no migration needed. Rows the pre-G01-10 code stored as int(round(GAIN)) were re-read
+from their masters by the G01-10 migration; a row whose master was missing then (GAIN_EXACT = 0) is now retried on
+every database open (recovered when the file is back), read with the master's exact card when it is readable in
+the session, and otherwise flagged `LibraryMaster.gain_exact = False` with one WARNING per path ("re-register the
+master"); it is never matched (every matcher requires the file). Tests that called the removed methods
+(test_calibration_library_match.py, test_run_vyvar_fk_milan_state.py) are ported to `calib_library`; the
+"wrong telescope dark" case became "wrong camera dark" (a DARK is linked to the camera only, CAL-2026-10).
+
+## V10-CAL-WCS-AFFINE - the WCS registration is labelled `wcs_affine` (Milan 2026-11-04, item 14)
+
+Milan approved. Since G02-25 the WCS path fits an affine frame->reference matrix through both WCS (7 x 7 grid,
+ALIGN-MATRIX-2026-10) and resamples it with `warp_to_reference` (cubic) like every method; nothing is reprojected,
+so the label `wcs_reproject` was wrong. It is now `wcs_affine` (`vyvar_alignment_frame.ALIGN_METHOD_WCS_AFFINE`)
+everywhere it is produced: alignment_report.csv `alignment_method`, per-frame result `aligned_method`, VYALGM and
+VY_AMSRC cards, the "not verified on stars" WARNING and the OSC registration handoff (OSC channels:
+`osc_handoff_wcs_affine`). Old outputs: no code branches on the value (alignment_report.csv readers use only the
+failure / flip columns); the one reader that interprets a stored label, the OSC handoff, maps `wcs_reproject` ->
+`wcs_affine` through `LEGACY_ALIGN_METHOD_ALIASES` / `canonical_align_method`. Existing drafts keep
+`wcs_reproject` in their files until rerun (read as the same method). Supersedes the "label stays" sentence of
+STEP7-CAL-RESAMPLE-2026-10. Tests updated that encoded the old label: test_align_verify_2026_10.py,
+test_step7_cal_2026_10.py, test_step4_frm_2026_10.py.
+
+## V10-CAL-PTC-COV - PTC covariance check keeps the 3 sigma guard; exact SE of the level mean (Milan 2026-11-04, item 18)
+
+Milan kept the 3 sigma guard of `gain_ptc._covariance_check` (STEP7-CAL-PTC-2026-10). Justification now in the
+docstring: |rho| > 1 % is the effect size (IPC / brighter-fatter covariances bias the PTC gain high by about
+2 (rho_x + rho_y); Astier et al. 2019, A&A 629, A36; lit_cal C2); > 3 SE is significance - the lag-1 sample
+autocorrelation of the difference image has SE 1 / sqrt(n pairs) under no correlation (Bartlett 1946; Fisher's
+large-n 1 / sqrt(n) for a correlation coefficient; checked by simulation incl. x4 quantisation: sd 0.0102 vs 0.0100,
+0.27 % beyond 3 SE), i.e. 0.27 % false triggers per statistic (~0.54 % for max(|rho_x|, |rho_y|)); it matters
+only below ~9e4 pixels in total. Averaging rho over levels is right for IPC (level independent); for
+brighter-fatter it is the ladder-average correlation (first order). Formula fix: SE of the unweighted level mean
+is sqrt(sum 1/n_l) / L (was 1 / sqrt(sum n_l): identical when every level has the same pixel count, as with one
+ROI and raw frames; too small when one level has few finite pixels). No change for normal ladders.
+
+## EPSF-CUTOUT-ONE-2026-11 - badpix repair uses the one ePSF cutout rule (v10 item 12, 2026-11-04, Milan approved)
+
+`badpix_repair.repair_missing_pixels` built its model size from its own copy of the rule
+(`_to_odd_cutout(round(12 x FWHM))`); it now calls `psf_photometry.epsf_cutout_px(fwhm)`, the one rule of
+EPSF-CUTOUT-FRAME-2026-10 (MASTERSTAR build-star selection and every frame model). FWHM: the repair gets the frame's
+own QC FWHM (`pipeline_calibrate`, qc `fwhm_px`, measured on the calibrated frame) - the same per-frame measurement the
+frame ePSF stage reads back as `fwhm_px_for_aperture` (qc_metrics authority, `aperture_policy.resolve_frame_fwhm_px`),
+so both use the frame FWHM, not the MASTERSTAR one. Same formula, so outputs of 527 / 534 are bit-identical. The frozen
+reference copy in test_step5_perf1_2026_10.py (`_bp_repair_ref`) calls the helper too. Test:
+test_v10_psf_2026_11.py::test_item12_badpix_repair_cutout_is_the_epsf_helper, test_item12_one_cutout_rule_in_the_code.
+
+## PSF-SKY-GROUP-2026-11 - a source without a local sky of its own is fitted with its group's sky (v10 item 13, 2026-11-04, Milan approved)
+
+Problem (edge case of PSF-SKY-ALLSTAR-2026-10): a source whose 4-6 FWHM annulus and fallback box have no sky pixels
+(the halo of a saturated star) was fitted with sky 0 (photutils flag 2048), so its flux absorbed the sky pedestal of
+its fit box. That oversized model was subtracted for the neighbours' pass-2 sky and fitted jointly with them.
+Synthetic (Moffat beta 2.7, FWHM 3.34, faint star 3e3 at 10 px from a 3e5 star without sky): the faint star's pass-2
+sky 0.7 ADU low and its flux 55 mmag too faint. Leaving the skyless model out of the sky image only (option "not
+subtracted") was measured and rejected: the sky then keeps the bright star's true wing (+0.3 ADU) and the joint fit
+keeps the oversized model (69 mmag).
+Literature: IRAF daophot.allstar: "ALLSTAR computes the sky value for each group by averaging the individual sky
+values" (fitsky: recomputed after "subtracting off the current best fit"); only "successfully fit" stars are kept and
+subtracted ("An image with all the fitted stars subtracted out"); an undefined sky is rejection code 2.
+Change (`epsf_frame.fit_frame_psf`): a source without its own sky takes the plain median of the finite skies of its
+fit group (the same `SourceGrouper` radius, PSF-GROUP-REACH-2026-10) in pass 1 and pass 2, so its model carries no
+pedestal (faint star: < 1 mmag of the with-sky result). Its own row stays unusable (flag 2048 set, psf_converged
+False, C4 unchanged); `psf_sky` holds the group sky it was fitted with, `psf_sky_pass1` NaN. A source whose group has
+no sky either keeps sky 0 and its pass-1 model is not subtracted for the others' pass-2 sky (ALLSTAR subtracts fitted
+stars only). Deviation: median of the group skies instead of the IRAF mean (VYVAR plain-median sky; equal for <= 2).
+Meta: frames manifest `frames[i].fit.sky_from_group` / `sky_models_not_subtracted` (fit stars + neighbours, WARNING when
+> 0), night `sky_from_group_night` / `sky_models_not_subtracted_night`. Expected on 527 / 534: no change unless a fit
+star or neighbour has a NaN annulus sky (the counts say how many; 0 -> bit-identical). Amends the "keeps NaN" sentence
+of PSF-SKY-ALLSTAR-2026-10. Tests: test_v10_psf_2026_11.py::test_item13_* (old code: 55 mmag).
+
+## LC-BELOW-LIMIT-2026-11 - target light curves mark 1-sigma limits and export them as fainter-than (v10 item 11, 2026-11-04, Milan approved)
+
+The rule of COVERAGE-FAINT-2026-10 / COVERAGE-FAINT-LIMIT-2026-10 (Isobe, Feigelson & Nelson 1986; AAVSO Extended
+Format "<") applied where the target magnitudes are formed: `aperture_pertarget.apply_grid_fluxes_to_frames(...,
+limit_ids=[target])` - a target grid flux below its 1-sigma CCD error (`ccd_variance_adu2`; zero and negative fluxes
+included, which were NaN before) takes the 1-sigma flux: mag_inst = -2.5 log10(sigma_F), relative err 1,
+`below_limit` True. Comparison and check stars are unchanged (NaN for F <= 0). One implementation:
+`ccd_noise.limit_magnitudes` (moved from variability_field, which imports it).
+Flag: such an epoch gets the base flag `below_limit` (before low_snr: a fainter-than value, not a low-S/N
+measurement; `lc_outlier._PRESERVE_FLAGS`; its value is hidden from the error-model and spike tests of the other
+points). `lightcurve_<id>.csv` gets the column `below_limit` (from the flag). Not "normal", so it is outside
+lc_precision_p2p and lc_rms_ooe; `lc_rms` and `lc_median_mag` skip it too.
+Export (step-7 rule): `photometry_lightcurve.export_row_mask` leaves limit rows out by default (they are no
+measured epoch: PDF / UI points, trust coverage, check-star epochs, export coverage gate); only the writers pass
+`include_limits=True`: AAVSO MAG "<m", MAGERR na, NOTES LIMIT=1sigma; VarAstro skips them (counted). Before this, a
+point at S/N <= 1 was low_snr and not exported at all. Other consumers: epsf_lc_compare (ap_ok False),
+psf_internal_lc (no PSF-aperture level from it), star page plot / UI multi-setup overlay / TESS overlay (not drawn
+as a measurement), star_page_m3.lc_facts `n_below_limit`. An LC without the column reads as before (no limits).
+Open: points with 1 <= S/N < snr_min stay low_snr and are not exported (FRAME-REJECT-2026-10).
+Expected on 527 / 534: zero limit rows (golden s7m: largest target relative error 0.29, no F <= 0 epoch); the
+LC CSVs gain the all-False column, exports unchanged. Tests: test_v10_psf_2026_11.py::test_item11_*.
+
+## CHECK-ROBUST-2026-11 - check-star scatter = 1.4826 x MAD (v10 item 7, 2026-11-04, Milan approved)
+Literature: Sokolovsky et al. 2017 (MNRAS 464, 274) Sect. 2.3 (robust scatter indices, MAD x 1.4826 = sigma for
+Gaussian data); AAVSO CCD/CMOS guide and Guide to Photometric Uncertainty (the check-star scatter is the reported
+night repeatability). `check_star_kmag.check_star_stats` (the one computation behind the VarAstro header, the PDF /
+UI "Check scatter (robust)" fact, the plot strip and the trust) now returns `stats_core.robust_sigma` of the
+exported K epochs instead of np.std(ddof=1). No clipping (MAD is a robust scale, not a rejection). The check ratio of
+`trust_flag_core.check_star_chi2` (already 1.4826 MAD of (K - median)/sigma_K) uses the same function;
+`stats_core.robust_p2p_scatter` = robust_sigma(diff) / sqrt(2) (numerically unchanged). Thresholds: the primary
+trust test is that robust ratio against 1 (unchanged); the fallback 0.02 / 0.05 mag limits (sidecars without
+errors) were written for a Gaussian scatter, where 1.4826 MAD = std, so they keep their meaning - only a single bad
+frame no longer pushes a check star over them. Supersedes the "std, ddof=1" line of G11-11.
+
+## LC-PRECISION-ERR-2026-11 - headline precision = per-point error incl. night floor; p2p secondary (v10 item 2, 2026-11-04, Milan approved)
+Refines LC-PRECISION-P2P-2026-10. A/B on real nights: p2p / err = 1.08-1.12 on faint targets but 0.33-0.54 on
+bright ones, because the per-point error rightly carries the slow night systematic floor (sigma_sys_night,
+SIGMA-SYS-TOTAL / SIGMA-SYS-POOL) that a successive-difference estimator cannot see (Sokolovsky et al. 2017,
+Sect. 2.15 / 5.1: 1/eta responds only to variability slower than the sampling; Pont et al. 2006 red noise). The
+headline is therefore the error that goes to AAVSO: MERR = median `err` (in mag) of the exported points
+(`TargetPages.lc_stats_by_cid["merr_med"]`, existing quantity, export_row_mask). Target page (PDF and UI):
+"Precision (error per point)" = MERR "(median, exported points, incl. night floor)", then "Short-term scatter
+(p2p)" = lc_precision_p2p "frame-to-frame (p2p / MERR x error)" (`target_page.precision_facts`). PDF run summary:
+"Median precision (error per point)" (median MERR of the measured targets) then "Median short-term scatter (p2p)"
+(`photometry_report.run_precision_rows`); summary table columns MERR before p2p (`SUMMARY_TABLE_TAIL`, headers
+MERR / p2p); glossary MERR / p2p reworded. The colour of both summary numbers keeps the 0.05 / 0.10 mag levels of
+`_metric_color`. Night-run log line calls p2p "short-term scatter". No LC, err, summary-column or export change.
+
+## K2-RELIABLE-2026-11 - k'' only where cited and where dC is known (v10 item 8, 2026-11-04, Milan approved)
+Milan: "farebna korekcia sa musi pocitat len kde ma zmysel, a je spolahliva". (a) Sloan u / Johnson U -> source
+none, reason "no citable colour slope (Smith 2002 k'' per u'-g'; no Jordi 2010 u-g relation; no Johnson U k'')":
+the uncited SLOPE_UG_PER_BPRP = 1.091 and the borrowing of the Sloan u' k'' for Johnson U are removed. (b) Audit,
+every applied band needs a cited k'' and a cited BP-RP slope: g = Smith et al. 2002 (AJ 123, 2121) Table 5 k''_g'
+per g'-r' x Jordi et al. 2010 (A&A 523, A48) d(g-r)/d(BP-RP); r = Smith k''_r' per r'-i' x Jordi Table 5 r-i row;
+B = AAVSO PEP Guide 3.0 Sect. 3.5.4 k''_B = -0.03 per B-V (range -0.02 ... -0.04, Henden & Kaitchuck 1982, Hall &
+Genet) x Jordi Table 3 B-V row (coefficients re-read 2026-11-04). i, z: none (no slope); V, Rc, Ic, Rj, Ij: none
+(negligible, PEP 3.5.4); unfiltered / tri-colour / ambiguous / other bands (J, H, K ... - previously a KeyError
+path): none with a reason. Smith's u', i', z' k'' values are no longer in the code. (c) Reliability:
+`k2_extinction.k2_colour_reference` gates the correction of each target - the k'' X X x dC term is applied only
+when the target BP-RP is known and every Broeg-weighted comp has a BP-RP; otherwise not applied, WARNING in the
+log and the reason in photometry_summary.csv `k2_reason` (k2_source none, k2_value / k2_colour_ref NaN,
+k2_colour_missing_wfrac kept). Threshold f > 0, no constant: the comparison colour is (1 - f) C_measured +
+f C_unknown, so with any colourless weight dC carries f (C_unknown - C_measured), which the data do not bound;
+and the comparison colour ladder (`photometry_comp._sel_colour_ladder`) gives every colourless candidate
+|dBP-RP| = inf when the target has a colour, so f > 0 only arises from a mismatch of colour sources - shown, not
+covered. Before: a colourless target got no correction while the summary still showed the cited reason and k2
+value; colourless comps were renormalised away with a WARNING. Effect on the goldens: none (527 unfiltered = none;
+534 g / r: every corrected target has k2_colour_missing_wfrac = 0 and a known colour). Supersedes the u'-g'
+exception and the colourless-comp renormalisation of K2-BAND-2026-10.
+
+## K2-G-SLOPE-2026-11 - Sloan g k'' slope from the cited Jordi 2010 Table 5 row (v10 item 8 audit, 2026-11-04)
+The g conversion d(g-r)/d(BP-RP) = 1.054 used the cubic a=0.3523, b=1.1876, c=-0.5370, d=0.4003 attributed to
+Jordi et al. 2010 "Table 6"; the paper (A&A 523, A48; re-read in the A&A and arXiv text 2026-11-04) has no such row -
+Table 6 (unreddened) holds V-I / g-i fits only; the GBP-GRP(g-r) row is in Table 5: 0.3482, 1.3463, -0.0310, 0.0067
+(sigma 0.35), the same table as the r-i row already used. Slope at the FGK anchor g-r = 0.48: 0.757, so
+k''_g = -0.016 x 0.757 = -0.0121 per BP-RP (was -0.0169, factor 0.718). All three slopes (g, r, B) are now computed
+from the printed coefficients by one function (`k2_extinction.jordi_native_per_bprp`); B 0.713 -> 0.7123 (rounding).
+Effect: 534 g k2_delta_mag and the k''-corrected delta_mag / mag_calib of every corrected target scale by 0.718
+(change = 0.0048 x X x dC mag; dC up to ~2 -> up to ~20 mmag at X 2.3 on the reddest targets); 534 r, 527
+unchanged. Milan confirmed 2026-11-04 (slope 0.757 kept; colour handling must be correct: apply_color_term
+default auto = colour term on for standard photometric filters, off = disabled; k'' follows k2_mode
+literature (cited bands with known colours only) / off).
+
+## V10-OPEN-ANSWERS-2026-11 - Milan's answers to the v10 follow-up questions (2026-11-04)
+
+- Gaia TAP: `--repair` / build stop after 3 consecutive strip timeouts (finished strips kept, rerun resumes) - kept.
+- Gaia TAP deadlines inside a night run (HRD 10 min, top-up COUNT 10 min / rows up to ~60 min, then WARNING and the
+  service is not called again in that run) - kept.
+- Target points with 1 <= S/N < snr_min stay `low_snr` and are not exported; only S/N < 1 points are exported as
+  AAVSO fainter-than (LC-BELOW-LIMIT-2026-11) - kept.
+- QHY294M Pro gain measured from Milan's flats (D:/FLAT56, 2026-04-22, single level 34.7 kADU file, 3 consecutive
+  pairs, dark-pair variance subtracted): g_file 1.020 +- 0.0013 (sem), native 4.08 +- 0.04 e-/ADU; read noise 6.6 e-
+  (60 s dark pair); neighbour rho 0.16 % (below COV_RHO_MAX, not summed). Saved by Milan on his PC as the measured
+  EQUIPMENT_CURVE point (11mp, setting 0, bin 1; bin 2 sum -> 4.08 e-/ADU, RN 13.2 e-). Agrees with the sky-pair
+  diagnostic (527 0.97 +- 0.03 file, FI Boo 1.00 +- 0.05) and the vendor full well (65 ke- / 2^14 = 3.97). The
+  equipment default 3.17 stays for provenance.

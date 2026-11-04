@@ -54,8 +54,12 @@ FLAG_NO_DATA = "no_data"
 
 # Upstream-preserved flags (not overwritten by this module).
 _PRESERVE_FLAGS = frozenset(
-    {"saturated", "nondetection", "edge_fail", "no_data", "low_snr"}
+    {"saturated", "nondetection", "edge_fail", "no_data", "low_snr", "below_limit"}
 )
+# LC-BELOW-LIMIT-2026-11: a target point below its 1-sigma limit (fainter-than value, COVERAGE-FAINT-LIMIT-2026-10).
+# Preserved, kept out of the outlier statistics of the other points, not "normal" (precision metrics), and exported
+# to AAVSO as "<mag" only (photometry_lightcurve.export_row_mask(include_limits=True)); not in EXPORT_EXCLUDE_FLAGS.
+FLAG_BELOW_LIMIT = "below_limit"
 
 # Export / UI: hide when toggle off; drop from AAVSO/VarAstro/minima.
 # FRAME-REJECT-2026-10: only physical reasons drop an epoch from export (saturation,
@@ -624,6 +628,13 @@ def assign_lc_flags(
         if not math.isfinite(m[i]):
             flags[i] = FLAG_NO_DATA
             reasons[i] = "no_data"
+    # a fainter-than value is no measurement: the error model and the spike test of the others do not see it
+    _lim = np.array([f == FLAG_BELOW_LIMIT for f in flags], dtype=bool)
+    if _lim.any():
+        m = np.where(_lim, np.nan, m)
+        e = np.where(_lim, np.nan, e)
+        if err_photon is not None and len(err_photon) == n:
+            err_photon = np.where(_lim, np.nan, np.asarray(err_photon, dtype=float))
 
     if frame_qc_reasons and source_files is not None and len(source_files) == n:
         for i, sf in enumerate(source_files):

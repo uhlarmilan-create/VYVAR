@@ -164,7 +164,7 @@ def repair_missing_pixels(
     from scipy.spatial import cKDTree  # noqa: PLC0415
 
     from epsf_frame import fit_box_px  # noqa: PLC0415
-    from psf_photometry import _EPSF_CUTOUT_FWHM, _to_odd_cutout  # noqa: PLC0415
+    from psf_photometry import epsf_cutout_px  # noqa: PLC0415
     from sky_estimation import annulus_sky_medians, sky_image  # noqa: PLC0415
 
     d = np.asarray(data, dtype=np.float64)
@@ -185,7 +185,8 @@ def repair_missing_pixels(
     sky = sky_image(np.where(missing, np.nan, d), fw)
     sky_px = annulus_sky_medians(sky, np.c_[mx, my].astype(float), 4.0 * fw, 6.0 * fw)
 
-    cutout = _to_odd_cutout(int(round(fw * _EPSF_CUTOUT_FWHM)))
+    # the one ePSF cutout rule (EPSF-CUTOUT-FRAME-2026-10) at the frame's own QC FWHM, as the frame ePSF stage
+    cutout = epsf_cutout_px(fw)
     fsz = fit_box_px(fw)
     half = cutout / 2.0
     reach = half + fsz / 2.0 + 1.0

@@ -126,3 +126,14 @@ def ccd_rel_error(
     with np.errstate(invalid="ignore", divide="ignore"):
         e = np.where(np.isfinite(F) & (F > 0), np.sqrt(np.asarray(var, dtype=np.float64)) / F, np.nan)
     return _out(e, scalar)
+
+
+def limit_magnitudes(flux: Any, var: Any) -> tuple[Any, Any, Any]:
+    """COVERAGE-FAINT-2026-10 / COVERAGE-FAINT-LIMIT-2026-10: (magnitude, magnitude error, below_limit) of measured
+    points from the flux and its variance (``ccd_variance_adu2``). A flux below its 1-sigma error takes the 1-sigma
+    flux - the point's upper limit, S/N 1 - and ``below_limit`` True (a fainter-than value, never a measured
+    magnitude). Element-wise on arrays or pandas Series (same type out); one rule for the field variability search
+    and the target light curves (LC-BELOW-LIMIT-2026-11)."""
+    sig = np.sqrt(np.clip(var, 0, None))
+    use = np.maximum(flux, sig)
+    return -2.5 * np.log10(use), 1.0857 * sig / use, flux < sig

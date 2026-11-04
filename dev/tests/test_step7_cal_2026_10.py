@@ -593,7 +593,7 @@ def test_g02_25_wcs_path_uses_the_one_warp_cubic_median_fill(tmp_path, monkeypat
 
     A, ref, frame, p_wcs, p_star = _align_field(tmp_path)
     r_w = V._alignment_compute_one_frame(p_wcs, 1, A._ctx_wcs(ref, tmp_path), [])
-    assert r_w["kind"] == "aligned" and r_w["aligned_method"] == "wcs_reproject"
+    assert r_w["kind"] == "aligned" and r_w["aligned_method"] == "wcs_affine"
     m = np.asarray(r_w["registration_handoff"]["matrix"], dtype=np.float64).reshape(3, 3)
     expect = V.warp_to_reference(frame, ref.shape, AffineTransform(matrix=m).inverse).astype(np.float32)
     np.testing.assert_array_equal(r_w["aligned_data"], expect)  # exactly the one warp

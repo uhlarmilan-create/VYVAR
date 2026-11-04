@@ -62,6 +62,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from stats_core import coerce_bool_series, fit_scatter_noise_model
+from ccd_noise import limit_magnitudes  # LC-BELOW-LIMIT-2026-11: the one rule lives there
 from frame_footprint import _frame_footprints, _inside_all  # LAYER-2026-10: moved there
 from catalog_crossmatch import _catalog_check  # LAYER-2026-10: moved there
 
@@ -218,14 +219,6 @@ def _skewnorm_quantile_fit(u: np.ndarray) -> tuple[float, float, float]:
             best = sol
     assert best is not None
     return float(best.x[0]), float(best.x[1]), float(math.exp(best.x[2]))
-
-
-def limit_magnitudes(flux: pd.Series, var: pd.Series) -> tuple[pd.Series, pd.Series, pd.Series]:
-    """COVERAGE-FAINT-2026-10: (magnitude, error, below_limit) of measured points; a flux below its 1-sigma
-    error takes the 1-sigma flux (the point's upper limit, S/N 1) instead of being dropped."""
-    sig = np.sqrt(var.clip(lower=0))
-    use = np.maximum(flux, sig)
-    return -2.5 * np.log10(use), 1.0857 * sig / use, flux < sig
 
 
 def _var_frame_table(*, cfg, files, kplan, meta, per_frame_dir, phot, ps, rows, t_mid):

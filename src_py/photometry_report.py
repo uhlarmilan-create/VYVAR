@@ -27,6 +27,29 @@ if TYPE_CHECKING:
 
 # Gaia ID must be str - float64 loses digits
 
+#: LC-PRECISION-ERR-2026-11 (v10 item 2): run-summary rows and summary-table columns of the two precision numbers.
+#: Headline = median per-point error incl. the night floor (MERR, what the exports carry); p2p = short-term
+#: (frame-to-frame) scatter, secondary.
+RUN_PRECISION_LABEL = "Median precision (error per point)"
+RUN_SHORT_SCATTER_LABEL = "Median short-term scatter (p2p)"
+SUMMARY_TABLE_TAIL: tuple[str, ...] = ("vsx_name", "vsx_type", "merr_med", "lc_precision_p2p", "lc_rms",
+                                       "n_good_comp", "n_points", "lc_quality_flag")
+SUMMARY_TABLE_HEADER: dict[str, str] = {"merr_med": "MERR", "lc_precision_p2p": "p2p"}
+
+
+def run_precision_rows(med_err: float, med_p2p: float) -> list[tuple[str, str]]:
+    """Run-summary rows: headline median MERR, then the median p2p scatter."""
+    return [(RUN_PRECISION_LABEL, f"{med_err:.4f}" if np.isfinite(med_err) else "-"),
+            (RUN_SHORT_SCATTER_LABEL, f"{med_p2p:.4f}" if np.isfinite(med_p2p) else "-")]
+
+
+def median_target_error(lc_stats: dict[str, dict[str, Any]], cids: Any) -> float:
+    """Median over the given targets of their MERR (``TargetPages.lc_stats_by_cid``); NaN when none is finite."""
+    v = np.array([float(lc_stats.get(str(c).strip(), {}).get("merr_med", float("nan"))) for c in cids], dtype=float)
+    v = v[np.isfinite(v)]
+    return float(np.median(v)) if v.size else float("nan")
+
+
 # G11-36: method texts of the PDF formatted from the constants of the code they describe (they drifted
 # when a constant changed). Pure functions, no reportlab.
 def variability_method_text(meta: dict[str, Any], *, snr_min: float) -> str:
@@ -652,7 +675,7 @@ class _PhotometryReportBuilder:
         self.n_lc = int(len(self.measured_summary_df))
         self.lc_count_display = self._format_lc_count_display()
         self.med_rms = float(np.nanmedian(pd.to_numeric(self.summary_df.get("lc_rms"), errors="coerce"))) if self.n_lc else float("nan")
-        # LC-PRECISION-P2P-2026-10 (G08-17): the headline precision of the light curves
+        # LC-PRECISION-ERR-2026-11: the median short-term (p2p) scatter is the secondary number
         self.med_p2p = float(np.nanmedian(pd.to_numeric(self.summary_df.get("lc_precision_p2p"), errors="coerce"))) \
             if self.n_lc and "lc_precision_p2p" in self.summary_df.columns else float("nan")
         self.rms_lt_005 = int((pd.to_numeric(self.summary_df.get("lc_rms"), errors="coerce") < 0.05).sum()) if self.n_lc else 0
@@ -695,6 +718,11 @@ class _PhotometryReportBuilder:
 
         self.comp_pool_cover_rows = self._build_comp_pool_cover_rows()
         self._lc_stats_by_cid = self._pages.lc_stats_by_cid
+        # LC-PRECISION-ERR-2026-11: headline = median per-point error (MERR) of the measured targets
+        _mid = "catalog_id" if "catalog_id" in self.measured_summary_df.columns else "_cid"
+        self.med_err = (median_target_error(self._lc_stats_by_cid,
+                                            self.measured_summary_df[_mid].map(_norm_cid_decimal))
+                        if self.n_lc and _mid in self.measured_summary_df.columns else float("nan"))
         self._night_qc = self._build_night_qc_summary()
 
         # ---------------------------------------------------------------------
@@ -1660,7 +1688,7 @@ class _PhotometryReportBuilder:
             # REPORT-AUDIT-2026-10: targets of the run without a light curve get no target page
             # G11-35: the same rule as the page loop (coverage-RED targets included)
             ("Targets without a page", f"{self._n_targets_without_page():d}"),
-            ("Median precision (p2p)", f"{self.med_p2p:.4f}" if np.isfinite(self.med_p2p) else "-"),
+            *run_precision_rows(self.med_err, self.med_p2p),
             ("Median lc_rms", f"{self.med_rms:.4f}" if np.isfinite(self.med_rms) else "-"),
             ("RMS < 0.05 mag", f"{self.rms_lt_005:d}"),
             ("Avg good comp", f"{self.avg_good_comp:.2f}" if np.isfinite(self.avg_good_comp) else "-"),
@@ -1674,7 +1702,7 @@ class _PhotometryReportBuilder:
         c.setFont(self.FONT_REG, 12)
         for k, v in rows:
             c.drawString(self.M_LEFT, y, f"{k}:")
-            if k in ("Median precision (p2p)", "Median lc_rms", "Best lc_rms", "Worst lc_rms"):
+            if k in (RUN_PRECISION_LABEL, RUN_SHORT_SCATTER_LABEL, "Median lc_rms", "Best lc_rms", "Worst lc_rms"):
                 c.setFillColor(self._metric_color(float(pd.to_numeric(v, errors="coerce"))))
             c.drawString(self.M_LEFT + 7.5 * self.cm, y, str(v))
             c.setFillColor(self.colors.black)
@@ -2596,8 +2624,7 @@ class _PhotometryReportBuilder:
 
         id_key = "catalog_id" if "catalog_id" in self.summary_df.columns else ("_cid" if "_cid" in self.summary_df.columns else None)
         mag_key = next((k for k in ("lc_median_mag", "mag") if k in self.summary_df.columns), None)
-        tail_want = ("vsx_name", "vsx_type", "lc_precision_p2p", "lc_rms", "n_good_comp", "n_points", "merr_med",
-                     "lc_quality_flag")
+        tail_want = SUMMARY_TABLE_TAIL
         if not id_key:
             self._page_footer(c)
             c.showPage()
@@ -2631,7 +2658,7 @@ class _PhotometryReportBuilder:
             if "merr_med" in work.columns:
                 work.at[work.index[i], "merr_med"] = st.get("merr_med", float("nan"))
 
-        hdr = [("catalog_id" if cn_h == "_cid" else str(cn_h)) for cn_h in cols]
+        hdr = [("catalog_id" if cn_h == "_cid" else SUMMARY_TABLE_HEADER.get(str(cn_h), str(cn_h))) for cn_h in cols]
         id_style = self._get_para_style("sum_id", fontSize=6.5)
         name_style = self._get_para_style("sum_name", fontSize=7)
         cell_style = self._get_para_style("sum_cell", fontSize=7)
@@ -3509,11 +3536,14 @@ class _PhotometryReportBuilder:
             ("GSPC", "Gaia DR3 synthetic photometry (XP spectra) - zero point for g/r/i from synthetic standards"),
             ("ePSF", "Effective PSF (Anderson & King 2000) - internal PSF light curve, not exported"),
             ("k''", "Second-order (colour) extinction coefficient, mag per airmass per BP-RP"),
-            ("MERR", f"Median per-point magnitude error ({MAG_ERR_SCALE:.4f} x relative flux error)"),
+            ("MERR", f"Precision: median per-point magnitude error of the exported points incl. the night "
+                     f"systematic floor - the error the AAVSO / VarAstro files carry ({MAG_ERR_SCALE:.4f} x relative "
+                     "flux error)"),
             ("mmag", "Millimagnitude (0.001 mag)"),
             ("n_eff", "Effective number of comparison stars of a weighted ensemble"),
             ("OOE", "Out-of-eclipse: rms over the epochs outside eclipses"),
-            ("p2p", "Point-to-point scatter, 1.4826 x MAD(diff) / sqrt(2)"),
+            ("p2p", "Short-term (frame-to-frame) scatter, 1.4826 x MAD(diff) / sqrt(2); blind to slow night "
+                    "drifts, so below MERR on bright stars"),
             ("sigma_ZP", "Uncertainty of the zero point"),
             ("TRUST", "GREEN / YELLOW / RED user information from data-quality warnings (check star, ZP scatter, ...)"),
             ("w", "Broeg (2005) weight of a comparison star in its ensemble (weights sum to 1, as in the AAVSO NOTES)"),

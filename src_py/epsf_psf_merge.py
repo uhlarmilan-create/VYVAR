@@ -337,6 +337,9 @@ def run_epsf_psf_merge_job(
         "group_radius_rule": "frame cutout / 2 + frame fit box / 2 + 1 px (epsf_frame.model_reach_px)",
         "group_size_warn_above": int(GROUP_SIZE_WARN),
         "group_size_max_night": max((m["fit"]["group_size_max"] or 0 for m in models if m.get("fit")), default=None),
+        # PSF-SKY-GROUP-2026-11: sources without a local sky of their own (group sky / not subtracted), night sums
+        "sky_from_group_night": sum(m["fit"].get("sky_from_group") or 0 for m in models if m.get("fit")),
+        "sky_models_not_subtracted_night": sum(m["fit"].get("sky_models_not_subtracted") or 0 for m in models if m.get("fit")),
         "oversampling": int(EPSF_OVERSAMPLING),
         "build_stars_file": EPSF_BUILD_STARS_NAME,
         "n_build_stars": int(len(build_stars)),

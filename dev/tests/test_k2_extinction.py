@@ -116,9 +116,10 @@ def test_sloan_r_literature_johnson_r_none() -> None:
     assert computed_k2_bprp_for_token("R") is None
 
 
-def test_k2_literature_signs_negative_u_b_g_r() -> None:
-    """Smith/Henden negative k''_native bands stay negative after Jordi conversion."""
-    for token in ("u", "B", "g", "r"):
+def test_k2_literature_signs_negative_b_g_r() -> None:
+    """Smith/Henden negative k''_native bands stay negative after Jordi conversion (u / U: no cited slope since
+    K2-RELIABLE-2026-11 - see test_v10_err_2026_11)."""
+    for token in ("B", "g", "r"):
         val = computed_k2_bprp_for_token(token)
         assert val is not None
         assert float(val) < 0.0, token

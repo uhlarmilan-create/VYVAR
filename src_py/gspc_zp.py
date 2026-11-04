@@ -78,25 +78,28 @@ def _cache_header(path: Path) -> list[str]:
         return []
 
 
-def fetch_gspc(source_ids: Iterable[int | str], cache_dir: Path, *, timeout_s: float = 20.0,
+def fetch_gspc(source_ids: Iterable[int | str], cache_dir: Path, *, deadline_s: float | None = None,
                offline: bool = False) -> dict[str, dict[str, Any]]:
     """GSPC rows keyed by source_id. Reads ``cache_dir/gspc_cache.csv``; queries only the ids
     missing from it (online, Gaia archive TAP sync, POST) and appends them. A cache written
-    with other columns (older query) is ignored and rebuilt, never appended to."""
+    with other columns (older query) is ignored and rebuilt, never appended to.
+
+    NET-GAIA-TAP-DEADLINE-2026-11: the query runs through ``gaia_tap_job.run_sync_query`` (whole
+    call bounded by ``deadline_s``, default its COUNT deadline; each blocking read by its HTTP
+    timeout; TapTimeout past it). The former 20 s socket timeout was shorter than an anonymous sync
+    query can take (a small sync COUNT took 60 s, 2026-11-04)."""
     ids = [str(s).strip() for s in source_ids if str(s).strip().isdigit()]
     cache = Path(cache_dir) / CACHE_NAME
     stale = cache.is_file() and _cache_header(cache) != expected_columns()
     rows = {} if stale else read_cache(cache)
     missing = [s for s in ids if s not in rows]
     if missing and not offline:
-        import urllib.parse  # noqa: PLC0415
-        import urllib.request  # noqa: PLC0415
+        from gaia_tap_job import TAP_COUNT_EXEC_DEADLINE_S, run_sync_query  # noqa: PLC0415
 
-        body = urllib.parse.urlencode(
-            {"REQUEST": "doQuery", "LANG": "ADQL", "FORMAT": "csv", "QUERY": gspc_query(missing)}
-        ).encode()
-        with urllib.request.urlopen(urllib.request.Request(TAP_SYNC_URL, data=body), timeout=timeout_s) as r:
-            text = r.read().decode("utf-8")
+        text = run_sync_query(
+            TAP_SYNC_URL, {"REQUEST": "doQuery", "LANG": "ADQL", "FORMAT": "csv", "QUERY": gspc_query(missing)},
+            what="Gaia TAP sync (GSPC)",
+            deadline_s=TAP_COUNT_EXEC_DEADLINE_S if deadline_s is None else float(deadline_s))
         new = list(csv.DictReader(text.splitlines()))
         if new and "source_id" not in new[0]:
             raise ValueError(f"unexpected Gaia archive response: {text[:200]!r}")

@@ -187,8 +187,9 @@ def log_export_batch_summary(
 def _row_below_limit(row: Any) -> bool:
     """G10-30: True when the light-curve row carries ``below_limit`` = True (flux below its 1-sigma error; the
     magnitude is the 1-sigma limit, COVERAGE-FAINT-2026-10). Light curves without the column have no such rows."""
-    v = row.get("below_limit", False)
-    return str(v).strip().lower() in ("true", "1", "1.0")
+    from photometry_lightcurve import is_below_limit_value  # noqa: PLC0415
+
+    return is_below_limit_value(row.get("below_limit", False))
 
 
 def _aavso_software_header_line(software_version: str) -> str:
@@ -701,8 +702,9 @@ def export_lightcurve_reports(
                               f"LC file lacks column(s) {', '.join(_missing)}")
         _manifest_refuse(_rec, f"LC lacks {', '.join(_missing)}")
         return {}
+    # LC-BELOW-LIMIT-2026-11: the writers get the fainter-than rows too (AAVSO "<mag", VarAstro skips them)
     lc_normal = _select_export_lc_rows(lc_df.copy() if lc_df is not None else pd.DataFrame(),
-                                       differential=differential, mag_column=_mag_override)
+                                       differential=differential, mag_column=_mag_override, include_limits=True)
     _n_lc_all = int(len(lc_df)) if lc_df is not None else 0
     if len(lc_normal) < _n_lc_all:
         logging.info("[EXPORT] %s: %d of %d epochs not exported (flag in EXPORT_EXCLUDE_FLAGS, or no finite "
@@ -714,10 +716,14 @@ def export_lightcurve_reports(
     # TRUST-COVERAGE-2026-10: too few usable epochs -> not exported (same rule as trust RED)
     from trust_flag_core import coverage_insufficient  # noqa: PLC0415
 
-    if coverage_insufficient(len(lc_normal), _n_lc_all):
+    # measured epochs only (a fainter-than row is no usable epoch; the trust RED rule counts the same)
+    from photometry_lightcurve import lc_below_limit_mask  # noqa: PLC0415
+
+    _n_meas = int(len(lc_normal) - int(lc_below_limit_mask(lc_normal).sum()))
+    if coverage_insufficient(_n_meas, _n_lc_all):
         record_export_skip(export_stats, _target_id, _export_method,
-                           f"insufficient data: {len(lc_normal)} of {_n_lc_all} epochs usable")
-        _manifest_refuse(_rec, f"insufficient data: {len(lc_normal)} of {_n_lc_all} epochs usable")
+                           f"insufficient data: {_n_meas} of {_n_lc_all} epochs usable")
+        _manifest_refuse(_rec, f"insufficient data: {_n_meas} of {_n_lc_all} epochs usable")
         return {}
     _rec["n_rows"] = int(len(lc_normal))
 
@@ -1007,7 +1013,7 @@ def export_lightcurve_reports(
             d.append(f"# Check star Gaia DR3 {check_cid}: catalogue {_fmt_opt_num_na(k_ref, '.3f')}, measured median "
                      f"{_fmt_opt_num_na(_kmed, '.3f')}"
                      + (f" (difference {_kmed - k_ref:+.3f})" if math.isfinite(_kmed) and math.isfinite(k_ref) else "")
-                     + f", scatter {_fmt_opt_num_na(_kst.scatter, '.4f')} mag, median error "
+                     + f", robust scatter {_fmt_opt_num_na(_kst.scatter, '.4f')} mag (1.4826 MAD), median error "
                      f"{_fmt_opt_num_na(_kst.err_med, '.4f')} mag, {_kst.n} exported epochs\n")
         return d
 

@@ -17,10 +17,9 @@ import streamlit as st
 
 import calib_library as cl
 import calib_masters as cm
-import calib_plan as cp
 from database import VyvarDatabase
 from fits_suffixes import list_fits_files
-from importer import _collect_fits_by_type, _looks_like_master
+from importer import _looks_like_master
 
 _KIND_LABEL = {cl.KIND_DARK: "DARK", cl.KIND_DARKFLAT: "DARKFLAT", cl.KIND_FLAT: "FLAT"}
 _OFFSET_LABEL = {
@@ -263,7 +262,7 @@ def _render_measure_gain(db: VyvarDatabase) -> None:
     import datetime as _dt  # noqa: PLC0415
 
     from camera_profile import profile_from_connection  # noqa: PLC0415
-    from gain_ptc import measure_from_files, native_gain  # noqa: PLC0415
+    from gain_ptc import measure_from_files, native_gain, ptc_frames_from_folder  # noqa: PLC0415
 
     st.markdown("**Measure gain and read noise from raw flats (photon transfer)**")
     st.caption(
@@ -293,9 +292,7 @@ def _render_measure_gain(db: VyvarDatabase) -> None:
         if not p.is_dir():
             st.error(f"Folder not found: {p}")
             return
-        by = _collect_fits_by_type(p, db=db)
-        flats = [f for f in by.get("flat", []) if not _looks_like_master(f) and not cp.is_dark_typed(f)]
-        darks = [f for f in by.get("dark", []) if not _looks_like_master(f)]
+        flats, darks = ptc_frames_from_folder(p, db=db)
         prof = profile_from_connection(db.conn, int(cam))
         with st.spinner(f"Measuring {len(flats)} flats and {len(darks)} darks..."):
             res = measure_from_files(flats, darks, saturation_adu=float(sat_adu))

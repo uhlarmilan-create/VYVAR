@@ -355,6 +355,7 @@ def _tgt_apply_night_k(
             f_star=float(_pt_choice.f_star),
             gain=state._gain_phot,
             read_noise=state._rn_phot,
+            limit_ids=[str(target_cid)],  # LC-BELOW-LIMIT-2026-11: the target's 1-sigma limit points
         )
         logging.info(
             "[APERTURE-DYNAMIC] target %s f*=%.3f r_ap(night_scale)=%.3f px (n_comp=%d)",
@@ -559,7 +560,7 @@ def _tgt_k2(
         cid=target_cid,
     )
 
-    from k2_extinction import K2Source, apply_k2_per_frame, colourless_weight_fraction, ensemble_bp_rp  # noqa: PLC0415
+    from k2_extinction import K2Source, apply_k2_per_frame, k2_colour_reference  # noqa: PLC0415
 
     k2_value_lc = float("nan")
     k2_colour_ref = float("nan")
@@ -571,18 +572,18 @@ def _tgt_k2(
     _k2_src = str(getattr(state, "k2_source", K2Source.NONE.value))
     k2_reason = str(getattr(state, "k2_reason", "") or "")
     k2_colourless_wfrac = float("nan")
+    _k2_skip = ""
     if _k2_src == K2Source.LITERATURE_DEFAULT.value and math.isfinite(_k2_val):
+        # K2-ONE-2026-10: the comparison colour is the Broeg-weighted mean colour of the ensemble comps;
+        # K2-RELIABLE-2026-11: only when the target and every weighted comp have a BP-RP - otherwise not
+        # applied, WARNING and the reason in the summary (k2_reason), never an assumed colour
+        _bp_med_k2, k2_colourless_wfrac, _k2_skip = k2_colour_reference(float(target_bp_rp), comp_bp_rp,
+                                                                         comp_weight_map)
+        if _k2_skip:
+            logging.warning("[K2] target %s: %s", target_cid, _k2_skip)
+            k2_reason = _k2_skip
+    if _k2_src == K2Source.LITERATURE_DEFAULT.value and math.isfinite(_k2_val) and not _k2_skip:
         _airmass_k2 = _target_airmass_arr
-        # K2-ONE-2026-10 (Milan 2026-10-26, D4): the colour of the comparison is the colour of
-        # the ensemble the light curve uses - the Broeg-weighted mean colour of its comps.
-        _bp_med_k2 = ensemble_bp_rp(comp_bp_rp, comp_weight_map)
-        # K2-BAND-2026-10 (G09-05 b): comps without a colour do not enter that mean - their weight share
-        # is recorded (summary k2_colour_missing_wfrac) and warned about, never dropped silently
-        k2_colourless_wfrac = colourless_weight_fraction(comp_bp_rp, comp_weight_map)
-        if math.isfinite(k2_colourless_wfrac) and k2_colourless_wfrac > 0:
-            logging.warning("[K2] target %s: %.1f %% of the ensemble weight is on comps without BP-RP - "
-                            "k'' colour reference from the coloured comps only", target_cid,
-                            100.0 * k2_colourless_wfrac)
         _k2_src_enum = K2Source.LITERATURE_DEFAULT
         # k'' x airmass x (target - ensemble colour) is a differential effect: one convention,
         # applied to delta_mag and to mag_calib alike (Henden: dm0 = dm - k'' X dC).
@@ -985,10 +986,15 @@ def _tgt_lc_flags(
     # FRAME-REJECT-2026-10: target SNR on the frame below cfg.snr_min -> 'low_snr' (not exported).
     _snr_min_f = float(getattr(_cfg, "snr_min", 10.0) or 10.0)
     _err_rel_arr = np.asarray(_err_rel_for_snr, dtype=np.float64).reshape(-1)
+    # LC-BELOW-LIMIT-2026-11: a point below its 1-sigma limit is a fainter-than value (not low_snr, not a measurement)
+    _below = (target_frames["below_limit"].fillna(False).astype(bool).to_numpy()
+              if "below_limit" in target_frames.columns else np.zeros(len(mag_calib), dtype=bool))
     for i in range(len(mag_calib)):
         _er = float(_err_rel_arr[i]) if i < _err_rel_arr.size else float("nan")
         if bool(sat_flags[i]):
             base_flags.append("saturated")
+        elif i < _below.size and bool(_below[i]) and math.isfinite(_meas[i]):
+            base_flags.append("below_limit")
         elif math.isfinite(_er) and _er > 0 and (1.0 / _er) < _snr_min_f and math.isfinite(_meas[i]):
             base_flags.append("low_snr")
         elif i < len(_raw_tf) and str(_raw_tf.iloc[i]) in ("nondetection", "edge_fail"):
@@ -1426,9 +1432,14 @@ def _tgt_summary_row(
     target_vsx_type,
 ):
     """Summary row of the target (photometry_summary.csv)."""
-    finite_calib = mag_calib[np.isfinite(mag_calib)]
+    # LC-BELOW-LIMIT-2026-11: fainter-than points are no measurements - not in lc_rms / lc_median_mag (the
+    # flag-based metrics count "normal" epochs only)
+    _meas_pt = np.array([str(f) != "below_limit" for f in out_flags], dtype=bool)
+    if _meas_pt.size != len(mag_calib):
+        raise ValueError(f"LC flags length {_meas_pt.size} != light-curve length {len(mag_calib)}")
+    finite_calib = mag_calib[np.isfinite(mag_calib) & _meas_pt]
     _meas_lc = np.asarray(mag_calib if _calibrated else delta_mag, dtype=np.float64)
-    finite_meas = _meas_lc[np.isfinite(_meas_lc)]
+    finite_meas = _meas_lc[np.isfinite(_meas_lc) & _meas_pt]
     n_good_comp = sum(
         1 for q in comp_quality.values() if q.get("quality") in ("good", "suspect")
     )
@@ -1476,7 +1487,7 @@ def _tgt_summary_row(
         "n_wcs_untrusted": n_wcs_untrusted,
         "lc_rms": _lc_rms_full,
         "lc_rms_ooe": _lc_rms_ooe,
-        # LC-PRECISION-P2P-2026-10 (G08-17): the headline precision (robust point-to-point)
+        # LC-PRECISION-ERR-2026-11: short-term (frame-to-frame) scatter, secondary to the per-point error
         "lc_precision_p2p": _lc_prec,
         "lc_median_mag": float(np.median(finite_calib)) if len(finite_calib) > 0 else float("nan"),
         "aperture_px": _measured_ap if math.isfinite(_measured_ap) else float(apertures_px.get(target_cid, float("nan"))),
@@ -1516,7 +1527,7 @@ def _tgt_summary_row(
     r_ap = float(summary_rows[-1]["aperture_px"])
     logging.info(
         f"[APERTURE] {target_name}: "
-        f"precision_p2p={lc_prec:.4f}, lc_rms={lc_rms:.4f}, "
+        f"short-term scatter p2p={lc_prec:.4f}, lc_rms={lc_rms:.4f}, "
         f"n_comp={n_good_comp} (stability_good={n_stability_good}), "
         f"aperture={r_ap:.2f}px (measured)"
     )

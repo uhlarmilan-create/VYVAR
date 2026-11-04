@@ -230,7 +230,9 @@ def check_star_chi2(photometry_dir: Path, target_id: str, files: TargetTrustFile
         return float("nan"), float("nan")
     kk, ee = k[ok], e[ok]
     z = (kk - float(np.median(kk))) / ee
-    ratio = float(1.4826 * np.median(np.abs(z - np.median(z))))
+    from stats_core import robust_sigma  # noqa: PLC0415
+
+    ratio = robust_sigma(z)
     w = 1.0 / (ee**2)
     mu = float(np.sum(w * kk) / np.sum(w))
     chi2 = float(np.sum(w * (kk - mu) ** 2))
@@ -473,6 +475,9 @@ def classify_warnings(
         elif check_chi2_nu > CHECK_RATIO_SOFT:
             soft.append(f"check-star scatter {check_scatter:.3f} mag = {check_chi2_nu:.1f} x its errors")
     elif math.isfinite(check_scatter):
+        # CHECK-ROBUST-2026-11: check_scatter is 1.4826 MAD (check_star_kmag.check_star_stats); for Gaussian
+        # epochs it equals the standard deviation the 0.02 / 0.05 mag limits were written for, so the limits
+        # keep their meaning and only an outlier frame no longer pushes a star over them
         if check_scatter >= _CHECK_HARD_LO:
             hard.append(f"check-star scatter {check_scatter:.3f} mag (high)")
         elif check_scatter >= _CHECK_SOFT_LO:

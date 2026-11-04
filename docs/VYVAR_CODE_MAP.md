@@ -64,7 +64,7 @@ Zivy dokument - pri pridani/zmazani modulu aktualizovat tabulku a kontrolu uplno
 | `vyvar_platesolver.py` | core | Plate-solve helpers kept after PLATESOLVE-2026-10: FITS pointing hints, Gaia proper motion, Gaia cone catalogue, sibling-filter MASTERSTAR WCS recovery. | `masterstar_build`; `pipeline_astrometry`; `dao_gaia_common` | yes |
 | `astrosolve.py` | core | MASTERSTAR plate solver (PLATESOLVE-2026-10): 4-star pattern codes, hinted / blind hypotheses, Bayesian log-odds verification, TAN+SIP refinement (order by BIC), `confirm_fits` for handed-over WCS. | `masterstar_build`; `astro_index` | yes |
 | `astro_index.py` | core | Blind plate-solve index from the local Gaia DB (multi-scale 4-star patterns, memmaps in `vyvar_astro_index/`); `python GAIA_DR3/build_astro_index.py`. | `astrosolve` | entry |
-| `vyvar_alignment_frame.py` | core | Per-frame alignment worker (DAO + WCS reproject / astroalign) pre ProcessPoolExecutor. | `pipeline` | yes |
+| `vyvar_alignment_frame.py` | core | Per-frame alignment worker (DAO + WCS affine / astroalign / star fits) pre ProcessPoolExecutor. | `pipeline` | yes |
 | `platesolve_ui_paths.py` | core | Resolve ``draft/.../platesolve`` artifacts for Streamlit (per-setup vs legacy root). | ui_photometry_quality.py; ui_masterstar_qa.py; ui_dao_stars.py; ui_aperture_photometry.py; masterstar_context.py; ... | yes |
 
 ## PSF

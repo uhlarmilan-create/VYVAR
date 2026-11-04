@@ -55,7 +55,11 @@ def run_tess_for_star(photometry_dir: Path, catalog_id: str, cfg: Any, progress:
             col = published_mag_column(d)
             if col is None or not np.isfinite(pd.to_numeric(d[col], errors="coerce")).any():
                 col = "delta_mag"
-            vy = (pd.to_numeric(d["bjd"], errors="coerce").to_numpy(float), pd.to_numeric(d[col], errors="coerce").to_numpy(float))
+            from photometry_lightcurve import lc_below_limit_mask  # noqa: PLC0415
+
+            # LC-BELOW-LIMIT-2026-11: fainter-than values are not part of the overlaid shape
+            vy = (pd.to_numeric(d["bjd"], errors="coerce").to_numpy(float),
+                  pd.to_numeric(d[col], errors="coerce").where(~lc_below_limit_mask(d)).to_numpy(float))
     res = run_tess(cid, ra, dec, tess_dir_for(phot, cid), cfg=cfg, vyvar_lc=vy, progress=progress, target_mag=gmag)
     LOGGER.info("[TESS] %s: verdict %s %s", cid, res.verdict, "; ".join(res.reasons))
     return res

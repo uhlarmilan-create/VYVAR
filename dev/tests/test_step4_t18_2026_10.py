@@ -191,7 +191,8 @@ def test_file_date_tag_is_the_earliest_epoch_in_utc(tmp_path: Path) -> None:
 
 
 def test_check_star_numbers_are_one_computation(tmp_path: Path) -> None:
-    """G11-11: VarAstro header scatter == PDF / UI fact == plot text == trust value (exported epochs, ddof=1)."""
+    """G11-11: VarAstro header scatter == PDF / UI fact == plot text == trust value (exported epochs; robust
+    1.4826 MAD since CHECK-ROBUST-2026-11)."""
     from target_page import TargetPages
     from trust_flag_core import check_star_scatter
     import star_page_m3 as m3
@@ -209,14 +210,16 @@ def test_check_star_numbers_are_one_computation(tmp_path: Path) -> None:
     paths = _export_one(tmp_path, lc)
     head = paths["varastro"].read_text(encoding="ascii")
     m = re.search(r"scatter ([\d.]+) mag", head)
-    expect = float(np.std(np.delete(km, 3), ddof=1))
+    from stats_core import robust_sigma
+
+    expect = robust_sigma(np.delete(km, 3))
     assert m and float(m.group(1)) == pytest.approx(expect, abs=6e-5)
     assert check_star_scatter(tmp_path / "photometry", "123")[0] == pytest.approx(expect, abs=1e-12)
     pages = TargetPages(tmp_path, summary_df=pd.DataFrame(), at_df=pd.DataFrame(), comp_df=pd.DataFrame(), cfg=None)
     pages.uncalibrated = lambda cid: False
     assert pages.check_star("123")["scatter"] == f"{expect:.4f} mag"
     d = m3.lc_plot_data(lc, sc, uncalibrated=False)
-    assert d["check_text"] == f"check star scatter {expect:.3f} mag" and len(d["kr"]) == 19
+    assert d["check_text"] == f"check star robust scatter {expect:.3f} mag" and len(d["kr"]) == 19
 
 
 def test_comp_weight_column_is_the_notes_weight() -> None:

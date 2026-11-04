@@ -79,6 +79,25 @@ def coerce_bool_series(series: Any, default: bool = False) -> Any:
     return s.map(lambda v: coerce_bool(v, default)).astype(bool)
 
 
+#: Consistency factor of the MAD for a Gaussian: sigma = 1.4826 x MAD (Rousseeuw & Croux 1993; Sokolovsky et al.
+#: 2017, MNRAS 464, 274, Sect. 2.3 eq. 6).
+MAD_TO_SIGMA = 1.4826
+
+
+def robust_sigma(values: Any, *, min_points: int = 2) -> float:
+    """Robust scale of a sample: 1.4826 x MAD (median absolute deviation from the median), no clipping.
+
+    Equals the standard deviation for Gaussian data; one wild value moves it by at most one rank (breakdown
+    50 %), where it inflates a standard deviation without bound. Non-finite values are dropped; NaN with fewer
+    than ``min_points`` (at least 2) finite values.
+    """
+    v = np.asarray(values, dtype=np.float64).ravel()
+    v = v[np.isfinite(v)]
+    if v.size < max(2, int(min_points)):
+        return float("nan")
+    return float(MAD_TO_SIGMA * np.median(np.abs(v - np.median(v))))
+
+
 def robust_p2p_scatter(values: Any, *, min_points: int) -> float:
     """Robust point-to-point scatter of one series in time order: 1.4826 MAD(diff) / sqrt(2), no clipping.
 
@@ -91,8 +110,7 @@ def robust_p2p_scatter(values: Any, *, min_points: int) -> float:
     m = m[np.isfinite(m)]
     if m.size < int(min_points) or m.size < 2:
         return float("nan")
-    d = np.diff(m)
-    return float(1.4826 * np.median(np.abs(d - np.median(d))) / math.sqrt(2.0))
+    return robust_sigma(np.diff(m)) / math.sqrt(2.0)
 
 
 #: NOISE-FIT-ONE-2026-10: start point and bounds of ``fit_scatter_noise_model`` (photon scale a, floor [mag]);

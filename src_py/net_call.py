@@ -34,7 +34,14 @@ def call_with_timeout(fn: Callable[[], Any], timeout_s: float, what: str) -> Any
 
     th = threading.Thread(target=_target, name=f"vyvar-{what}", daemon=True)
     th.start()
-    th.join(max(1.0, float(timeout_s)))
+    # Short joins: Ctrl+C reaches the caller between them (one long join is not interruptible on
+    # every platform), so an interrupted CLI never waits for the whole timeout.
+    end = time.monotonic() + max(1.0, float(timeout_s))
+    while th.is_alive():
+        left = end - time.monotonic()
+        if left <= 0:
+            break
+        th.join(min(left, 0.5))
     if th.is_alive():
         raise TimeoutError(f"{what} timed out after {timeout_s}s")
     if "error" in box:

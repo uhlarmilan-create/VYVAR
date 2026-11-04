@@ -189,12 +189,13 @@ def _comp_lc_frame_ensemble_residual(comp_lc: dict[str, np.ndarray]) -> dict[str
     return out
 
 def compute_lc_precision_p2p(mag: np.ndarray, flags: Sequence[str]) -> float:
-    """LC-PRECISION-P2P-2026-10 (G08-17): the headline precision of a light curve - the robust von Neumann
+    """LC-PRECISION-P2P-2026-10 (G08-17): the short-term (frame-to-frame) scatter of a light curve - the robust von Neumann
     sigma, 1.4826 MAD(diff(m)) / sqrt(2) over consecutive normal epochs (time order; Sokolovsky et al. 2017,
     MNRAS 464, 274, Sect. 2.3 and 2.15: for white noise delta^2 = 2 sigma^2; the difference removes signal slower
     than the cadence, so it serves constant stars, pulsators and eclipsing binaries alike). Misses red noise
     (see the check-star scatter) and inflates for variables with fewer than ~20 points per period. ``flags``
-    of the LC length: only "normal" epochs count. NaN below 3 such epochs."""
+    of the LC length: only "normal" epochs count. NaN below 3 such epochs. LC-PRECISION-ERR-2026-11: a secondary
+    number; the headline precision is the per-point error incl. the night floor (MERR)."""
     m = np.asarray(mag, dtype=np.float64)
     fl = [str(f).strip().lower() for f in flags]
     if len(fl) != m.size:
@@ -215,8 +216,8 @@ def compute_lc_rms_ooe(
     """Brightest-tertile scatter - a labelled eclipsing-binary diagnostic only (summary ``lc_rms_ooe``).
 
     Not a precision: for white noise it is 0.53 x sigma (truncated distribution), for a pulsator ~1.7 x sigma.
-    The headline precision is :func:`compute_lc_precision_p2p` (LC-PRECISION-P2P-2026-10, supersedes the
-    "lc_rms (OOE) for variables" decision).
+    The headline precision is the per-point error MERR (LC-PRECISION-ERR-2026-11); the short-term scatter is
+    :func:`compute_lc_precision_p2p` (LC-PRECISION-P2P-2026-10 superseded "lc_rms (OOE) for variables").
     """
     m = np.asarray(mag_calib, dtype=np.float64)
     if m.size < 3:
@@ -839,6 +840,8 @@ def save_lightcurve_csv(
         cols["k2_delta_mag"] = _col(float(k2_coeff) * np.asarray(airmass, dtype=np.float64), 6)
     cols["aperture_r_px"] = _col(aperture_r_px, 3)
     cols["flag"] = [_flag_cell(f) for f in flags]
+    # LC-BELOW-LIMIT-2026-11: the point is the 1-sigma limit (fainter-than), from its flag (one source of truth)
+    cols["below_limit"] = [_flag_cell(f) == "below_limit" for f in flags]
     cols["flag_reason"] = [
         _flag_cell(r)
         for r in (flag_reasons if flag_reasons is not None and len(flag_reasons) == n else [""] * n)
@@ -1509,7 +1512,21 @@ def lc_export_mag_column(lc_df: pd.DataFrame) -> str:
     return "delta_mag"
 
 
-def export_row_mask(lc_df: pd.DataFrame, *, differential: bool = False, mag_column: str | None = None) -> pd.Series:
+def is_below_limit_value(v: Any) -> bool:
+    """One cell of a light curve's ``below_limit`` column (CSV text, bool or number) -> bool."""
+    return str(v).strip().lower() in ("true", "1", "1.0")
+
+
+def lc_below_limit_mask(lc_df: pd.DataFrame) -> pd.Series:
+    """LC-BELOW-LIMIT-2026-11 / COVERAGE-FAINT-LIMIT-2026-10: rows whose magnitude is the 1-sigma limit (a
+    fainter-than value, never a measurement). A light curve without the column (written before) has none."""
+    if lc_df is None or "below_limit" not in lc_df.columns:
+        return pd.Series(False, index=getattr(lc_df, "index", None), dtype=bool)
+    return lc_df["below_limit"].map(is_below_limit_value).astype(bool)
+
+
+def export_row_mask(lc_df: pd.DataFrame, *, differential: bool = False, mag_column: str | None = None,
+                    include_limits: bool = False) -> pd.Series:
     """EXPORT-ROWS (G11-12 / G11-20): the one row rule of the AAVSO and VarAstro files, the PDF / UI
     "exported" counts and plots, and the trust coverage count.
 
@@ -1518,7 +1535,11 @@ def export_row_mask(lc_df: pd.DataFrame, *, differential: bool = False, mag_colu
     column; an LC without ``err`` is a broken file the exporter reports) and its flag is not one of
     ``lc_outlier.EXPORT_EXCLUDE_FLAGS`` (FRAME-REJECT-2026-10: only the physical reasons drop an epoch;
     frame_qc / artifact / high_err / spike stay, named in NOTES FLAG=). Both writers therefore carry the
-    same epochs."""
+    same epochs.
+
+    LC-BELOW-LIMIT-2026-11: a ``below_limit`` row (1-sigma fainter-than value) is not a measured epoch and is left
+    out unless ``include_limits`` - only the export writers pass it (AAVSO "<mag", VarAstro skips it); the PDF /
+    UI points, the trust coverage and the check-star epochs count measured epochs only."""
     if lc_df is None or lc_df.empty:
         return pd.Series(dtype=bool)
     mag_col = export_mag_column(lc_df, differential=differential, mag_column=mag_column)
@@ -1539,10 +1560,13 @@ def export_row_mask(lc_df: pd.DataFrame, *, differential: bool = False, mag_colu
         from lc_outlier import EXPORT_EXCLUDE_FLAGS  # noqa: PLC0415
 
         ok &= ~lc_df["flag"].astype(str).str.strip().str.lower().isin(list(EXPORT_EXCLUDE_FLAGS))
+    if not include_limits:
+        ok &= ~lc_below_limit_mask(lc_df)
     return ok
 
 
-def _select_export_lc_rows(lc_df: pd.DataFrame, *, differential: bool = False, mag_column: str | None = None) -> pd.DataFrame:
+def _select_export_lc_rows(lc_df: pd.DataFrame, *, differential: bool = False, mag_column: str | None = None,
+                           include_limits: bool = False) -> pd.DataFrame:
     """Rows of :func:`export_row_mask`; the exported magnitude is put in ``mag_calib`` for the writers.
     FIX-EXPORTALLBAD-2026-10: when every epoch carries an exclusion flag nothing is exported."""
     if lc_df is None or lc_df.empty:
@@ -1550,7 +1574,7 @@ def _select_export_lc_rows(lc_df: pd.DataFrame, *, differential: bool = False, m
     mag_col = export_mag_column(lc_df, differential=differential, mag_column=mag_column)
     if mag_col not in lc_df.columns:
         return pd.DataFrame()
-    out = lc_df.loc[export_row_mask(lc_df, mag_column=mag_col)].copy()
+    out = lc_df.loc[export_row_mask(lc_df, mag_column=mag_col, include_limits=include_limits)].copy()
     if mag_col != "mag_calib":
         out["mag_calib"] = pd.to_numeric(out[mag_col], errors="coerce")
     return out

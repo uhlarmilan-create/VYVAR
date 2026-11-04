@@ -48,7 +48,8 @@ LOCAL_SLOPE_TOL = 0.03
 #: EMVA 1288 linearity range (fraction of saturation) for the mean-vs-exposure check.
 LINEARITY_RANGE = (0.05, 0.95)
 #: Nearest-neighbour correlation of the difference image above which the covariances are summed into the
-#: variance (Astier et al. 2019; lit_cal C2: "< 1 %, else sum covariances").
+#: variance (Astier et al. 2019; lit_cal C2: "< 1 %, else sum covariances"); the effect-size gate of
+#: ``_covariance_check``, which also requires 3 standard errors of significance.
 COV_RHO_MAX = 0.01
 
 
@@ -221,6 +222,23 @@ def _load_roi(path: Path) -> np.ndarray:
         return np.array(_roi(np.asarray(hd[0].data)), dtype=np.float64)
 
 
+def ptc_frames_from_folder(folder: Path, *, db: Any = None) -> tuple[list[Path], list[Path]]:
+    """(raw flats, raw darks) of a folder for :func:`measure_from_files` - the one selection used by the
+    Calibration Library page and dev/tools/ptc_from_folder.py. Subfolders included; frames are recognised by
+    IMAGETYP (FRAME / IMTYPE); masters (MD_ / MF_ / MASTER names, NCOMBINE, MASTER history) are left out, and a
+    flat typed as a dark-flat counts as neither. ``db`` only speeds up repeated scans (FITS_HEADER_CACHE)."""
+    from calib_plan import is_dark_typed  # noqa: PLC0415
+    from importer import _collect_fits_by_type, _looks_like_master  # noqa: PLC0415
+
+    p = Path(folder)
+    if not p.is_dir():
+        raise FileNotFoundError(f"PTC folder not found: {p}")
+    by = _collect_fits_by_type(p, db=db)
+    flats = [f for f in by.get("flat", []) if not _looks_like_master(f) and not is_dark_typed(f)]
+    darks = [f for f in by.get("dark", []) if not _looks_like_master(f)]
+    return flats, darks
+
+
 def measure_from_files(
     flat_files: list[Path],
     dark_files: list[Path],
@@ -325,17 +343,36 @@ def measure_from_files(
 
 
 def _covariance_check(res: PtcResult) -> None:
-    """C2: nearest-neighbour correlation of the flat difference images, averaged over the used levels (a
-    detector property). When the larger |rho| exceeds COV_RHO_MAX and is significant (3 x its standard
-    error 1 / sqrt(pixels), so that sampling noise of small frames does not trigger it), the covariances (both
-    lags, both directions) are added to the variance of every level (Astier et al. 2019)."""
+    """C2: nearest-neighbour correlation of the flat difference images, averaged over the used levels; when it
+    is both physically relevant and statistically significant, the covariances (both lags, both directions) are
+    added to the variance of every level (Astier et al. 2019).
+
+    Two gates, both required (Milan 2026-11-04 kept the 3 sigma guard, V10-CAL-PTC-COV):
+
+    - Effect size, ``|rho| > COV_RHO_MAX`` (1 %): inter-pixel capacitance and brighter-fatter covariances move
+      shot-noise variance into the neighbours, so var(F1 - F2) alone underestimates it and the PTC gain comes
+      out high by about the summed neighbour correlation, 2 (rho_x + rho_y) for the four nearest neighbours
+      (Astier et al. 2019, A&A 629, A36; the 1 % threshold is lit_cal C2: "< 1 %, else sum covariances").
+    - Significance, ``|rho| > 3 x SE``: per level the estimator is the lag-1 sample autocorrelation of the
+      difference image, r = mean(x_i x_i+1) / mean(x_i^2) over n pixel pairs (n = rows x (cols - 1) for x; the
+      pixel count n_px differs from it by 1 / cols, negligible). Under the null of uncorrelated noise its
+      standard error is 1 / sqrt(n) (Bartlett 1946 for lag-k autocorrelations of white noise; the same 1 / sqrt(n)
+      as Fisher's large-n result for a sample correlation coefficient). The mean of L independent levels has
+      SE = sqrt(sum_l 1 / n_l) / L, which is 1 / sqrt(sum_l n_l) when every level has the same pixel count (the
+      usual case: one ROI). 3 SE is a two-sided false trigger rate of 0.27 % per statistic, about 0.54 % for the
+      larger of rho_x and rho_y. It only matters for small frames: with >= 9e4 pixels in total 3 SE < 1 % and the
+      effect-size gate decides alone.
+
+    Averaging rho over the levels is right for a detector property: the IPC correlation does not depend on the
+    level. A brighter-fatter correlation grows with the level; the mean is then the ladder-average correlation
+    applied to every level (first order; Astier's full per-level model is not fitted)."""
     use = [p for p in res.points if p.used and p.rho_x is not None and math.isfinite(p.rho_x) and p.n_px > 0]
     if not use:
         res.covariance = {"rho_x": None, "rho_y": None, "limit": COV_RHO_MAX, "summed": False}
         return
     rx = float(np.mean([p.rho_x for p in use]))
     ry = float(np.mean([p.rho_y for p in use]))
-    se = 1.0 / math.sqrt(float(sum(p.n_px for p in use)))
+    se = math.sqrt(sum(1.0 / float(p.n_px) for p in use)) / len(use)  # SE of the unweighted mean (see above)
     rmax = max(abs(rx), abs(ry))
     res.covariance = {"rho_x": rx, "rho_y": ry, "max_abs_rho": rmax, "rho_stderr": se, "limit": COV_RHO_MAX,
                       "summed": False}

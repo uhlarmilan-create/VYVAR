@@ -184,7 +184,11 @@ def _all_setups_figure(setups: dict[str, dict], cid: str) -> Any | None:
         ycol = ("delta_mag" if lc_uncalibrated(lc_dir, cid)
                 else (published_mag_column(df) or "mag_calib"))
         x = pd.to_numeric(df.get("bjd"), errors="coerce").to_numpy(float)
-        traces.append((name, x, pd.to_numeric(df[ycol], errors="coerce").to_numpy(float), ycol))
+        from photometry_lightcurve import lc_below_limit_mask  # noqa: PLC0415
+
+        # LC-BELOW-LIMIT-2026-11: a fainter-than value is not drawn as a measurement
+        y = pd.to_numeric(df[ycol], errors="coerce").where(~lc_below_limit_mask(df)).to_numpy(float)
+        traces.append((name, x, y, ycol))
         xs.append(x)
     if not traces:
         return None

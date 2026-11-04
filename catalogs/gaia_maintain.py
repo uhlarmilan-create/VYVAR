@@ -123,7 +123,7 @@ def report(db: Path) -> None:
             print(f"  {s['strip_key']:40s} {s['state']:14s} rows={s['n_stars']}")
         if at_cap:
             keys = " ".join(f"--strip {s['strip_key']}" for s in at_cap)
-            print(f"repair:        python catalogs/build_gaia_catalog.py --out {db} --repair {keys}")
+            print(f"repair:        python {Path('catalogs') / 'build_gaia_catalog.py'} --out {db} --repair {keys}")
         free = shutil.disk_usage(db.parent).free
         print(f"free disk:     {gb(free)} on the drive of the DB")
     finally:

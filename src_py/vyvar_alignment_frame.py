@@ -39,6 +39,22 @@ from utils import (
     wcs_rotation_angle_deg,
 )
 
+#: V10-CAL-WCS-AFFINE (2026-11-04): label of the registration from the frame's own WCS - the affine
+#: frame->reference fit through both WCS (7 x 7 grid, ALIGN-MATRIX-2026-10), resampled by
+#: ``warp_to_reference`` like every method (G02-25). Written to alignment_report.csv ``alignment_method``,
+#: the VYALGM / VY_AMSRC header cards and the OSC registration handoff.
+ALIGN_METHOD_WCS_AFFINE = "wcs_affine"
+#: Read-side aliases for outputs written before the rename: ``wcs_reproject`` (the reproject resampler was removed in
+#: G02-25; the label was kept until 2026-11-04) is the same WCS registration -> ``wcs_affine``.
+LEGACY_ALIGN_METHOD_ALIASES: dict[str, str] = {"wcs_reproject": ALIGN_METHOD_WCS_AFFINE}
+
+
+def canonical_align_method(method: str) -> str:
+    """The current label of an alignment method read from an older output (aliases above), else unchanged."""
+    m = str(method)
+    return LEGACY_ALIGN_METHOD_ALIASES.get(m, m)
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -750,26 +766,25 @@ def _alignment_compute_one_frame(
                             if not registration_ok(_chk_w, fwhm_px=fw_i):
                                 _alignment_emit_log(
                                     log_sink,
-                                    f"WARNING: {fp.name} wcs_reproject not verified on stars (residual "
+                                    f"WARNING: {fp.name} {ALIGN_METHOD_WCS_AFFINE} not verified on stars (residual "
                                     f"{_chk_w.resid_px:.2f} px, p90 {_chk_w.p90_px:.2f} px, "
                                     f"{_chk_w.pairs}/{_chk_w.possible} pairs, FWHM {fw_i:.2f}) "
                                     "- trying the star-matched fit",
                                 )
-                                aligned_method = "wcs_reproject"
-                                registration_handoff = {"method": "wcs_reproject", "matrix": _wcs_matrix}
+                                aligned_method = ALIGN_METHOD_WCS_AFFINE
+                                registration_handoff = {"method": ALIGN_METHOD_WCS_AFFINE, "matrix": _wcs_matrix}
                                 xy_used = np.asarray(xy, dtype=np.float32)
                                 _chk_wcs = _chk_w
                                 break
                         if _wcs_matrix is not None:
                             # G02-25: the verified WCS affine goes through the one warp of every method
-                            # (the method keeps its historical label "wcs_reproject")
                             from skimage.transform import AffineTransform  # noqa: PLC0415
 
                             _t_wcs = AffineTransform(matrix=np.asarray(_wcs_matrix, dtype=np.float64).reshape(3, 3))
                             aligned_data = _as_fits_float32_image(
                                 warp_to_reference(data, ref_data.shape, _t_wcs.inverse))
-                            aligned_method = "wcs_reproject"
-                            registration_handoff = {"method": "wcs_reproject", "matrix": _wcs_matrix}
+                            aligned_method = ALIGN_METHOD_WCS_AFFINE
+                            registration_handoff = {"method": ALIGN_METHOD_WCS_AFFINE, "matrix": _wcs_matrix}
                 except Exception:  # noqa: BLE001
                     aligned_data = None
 
@@ -1003,7 +1018,7 @@ def _alignment_compute_one_frame(
     hdr["VYALGOK"] = (True, "Aligned to reference (passed black frame guard)")
     hdr["VY_ALGN"] = (True, "Aligned to reference")
     hdr["VY_REF"] = (ref_fp_name[:60], "Reference frame for alignment")
-    hdr["VYALGM"] = (aligned_method[:30], "Alignment method (astroalign or WCS reproj.)")
+    hdr["VYALGM"] = (aligned_method[:30], "Alignment method (registration source)")
     return {
         "kind": "aligned",
         "fp": str(fp.resolve()),

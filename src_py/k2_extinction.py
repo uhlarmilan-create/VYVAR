@@ -8,6 +8,9 @@ BP-RP units via Jordi et al. 2010 (A&A 523, A48) colour slopes:
 C_native is the colour the literature k'' multiplies (Smith 2002 eqs. 4-8: u' -> u'-g', g' -> g'-r',
 r' -> r'-i', i' and z' -> i'-z'; AAVSO PEP Guide 3.5.4: B -> B-V). K2-BAND-2026-10 (G09-05 / G08-47 / G08-48):
 every resolution carries a reason; bands without a citable k'' get source NONE (no k2_delta_mag column).
+K2-RELIABLE-2026-11: only bands with a cited k'' AND a cited BP-RP slope are corrected (g, r, B); u / U are NONE;
+a target is corrected only when its colour and the colour of every weighted comp are known
+(:func:`k2_colour_reference`).
 
 The night fit of k'' (NIGHT_FIT v2, never enabled) is removed (CFG-REVIEW-2026-10).
 
@@ -32,55 +35,48 @@ LOGGER = logging.getLogger(__name__)
 
 # Jordi et al. 2010 A&A 523 A48 colour-colour polynomials (Sect. 5.2, Eq. 1):
 #   C_Gaia = a + b*C_native + c*C_native^2 + d*C_native^3
-# Converter uses d(C_native)/d(BP-RP) = 1 / (b + 2*c*C0 + 3*d*C0^2) at FGK anchor C0.
-# Validity: BaSeL3.1 FGK dwarfs; B-V fits have large scatter for Teff < 4500 K (Sect. 5.2).
+# Converter uses d(C_native)/d(BP-RP) = 1 / (b + 2*c*C0 + 3*d*C0^2) at an FGK anchor C0.
+# Validity: Table 5 SDSS fits include reddened SEDs (A = 0, 1, 3, 5 mag); B-V fits have large scatter for
+# Teff < 4500 K (Sect. 5.2). Coefficients re-read from the A&A / arXiv text 2026-11-04 (K2-RELIABLE-2026-11).
 
-# Table 6 unreddened SDSS (g-r) -> GBP-GRP: a=0.3523, b=1.1876, c=-0.5370, d=0.4003.
-# Anchor g-r=0.48 (FGK): d(g-r)/d(BP-RP) = 1/(1.1876 - 2*0.5370*0.48 + 3*0.4003*0.48^2) ~ +1.054.
-# Smith g k2 = -0.016 * 1.054 ~ -0.0169 (g' k'' multiplies g'-r').
-SLOPE_GR_PER_BPRP = 1.054  # d(g'-r')/d(BP-RP); Jordi 2010 Table 6, FGK anchor g-r=0.48
+
+def jordi_native_per_bprp(coeffs: tuple[float, float, float, float], anchor: float) -> float:
+    """d(C_native)/d(BP-RP) of a Jordi 2010 GBP-GRP(C_native) cubic at ``anchor`` (the one converter)."""
+    _a, b, c, d = coeffs
+    return 1.0 / (b + 2.0 * c * anchor + 3.0 * d * anchor ** 2)
+
+
+# K2-RELIABLE-2026-11 (b): Table 5 (g-r) -> GBP-GRP row: a=0.3482, b=1.3463, c=-0.0310, d=0.0067 (sigma 0.35).
+# The former a=0.3523 b=1.1876 c=-0.5370 d=0.4003 ("Table 6") is not in Jordi 2010 (Table 6 has V-I / g-i only).
+# Anchor g-r=0.48 (FGK): d(g-r)/d(BP-RP) ~ 0.757 (was 1.054). Smith g k2 = -0.016 x 0.757 ~ -0.0121.
+_JORDI_T5_GR = (0.3482, 1.3463, -0.0310, 0.0067)
+_GR_ANCHOR = 0.48
+SLOPE_GR_PER_BPRP = jordi_native_per_bprp(_JORDI_T5_GR, _GR_ANCHOR)  # d(g'-r')/d(BP-RP) ~ 0.757
 
 # K2-BAND-2026-10 (G09-05): Smith 2002 eq. 6 multiplies the r' k'' by (r'-i'), not (g'-r').
-# Jordi 2010 Table 5 (r-i) -> GBP-GRP: a=0.4649, b=2.3969, c=-0.2976, d=0.0207.
-# Anchor r-i=0.15 (FGK): d(r-i)/d(BP-RP) = 1/(2.3969 - 2*0.2976*0.15 + 3*0.0207*0.15^2) ~ +0.433.
-# Smith r k2 = -0.004 * 0.433 ~ -0.0017.
+# Table 5 (r-i) -> GBP-GRP: a=0.4649, b=2.3969, c=-0.2976, d=0.0207 (sigma 0.12).
+# Anchor r-i=0.15 (FGK): d(r-i)/d(BP-RP) ~ +0.433. Smith r k2 = -0.004 x 0.433 ~ -0.0017.
 _JORDI_T5_RI = (0.4649, 2.3969, -0.2976, 0.0207)
 _RI_ANCHOR = 0.15
-SLOPE_RI_PER_BPRP = 1.0 / (_JORDI_T5_RI[1] + 2.0 * _JORDI_T5_RI[2] * _RI_ANCHOR
-                           + 3.0 * _JORDI_T5_RI[3] * _RI_ANCHOR ** 2)  # d(r'-i')/d(BP-RP) ~ 0.433
+SLOPE_RI_PER_BPRP = jordi_native_per_bprp(_JORDI_T5_RI, _RI_ANCHOR)  # d(r'-i')/d(BP-RP) ~ 0.433
 
-# Table 3 Johnson-Cousins (B-V) -> GBP-GRP, all Av: a=0.0981, b=1.4290, c=-0.0269, d=0.0061.
-# Anchor B-V=0.58 (FGK): d(B-V)/d(BP-RP) = 1/(1.429 - 2*0.0269*0.58 + 3*0.0061*0.58^2) ~ +0.713.
-# Range B-V 0.45-0.75: slope ~0.71-0.72. Henden k''_B=-0.03 per (B-V) -> k2_B ~ -0.021.
-SLOPE_BV_PER_BPRP = 0.713  # d(B-V)/d(BP-RP); Jordi 2010 Table 3, FGK anchor
+# Table 3 Johnson-Cousins (B-V) -> GBP-GRP: a=0.0981, b=1.4290, c=-0.0269, d=0.0061 (sigma 0.43).
+# Anchor B-V=0.58 (FGK): d(B-V)/d(BP-RP) ~ 0.712 (the rounded 0.713 before). k''_B -0.03 per (B-V) -> k2_B ~ -0.021.
+_JORDI_T3_BV = (0.0981, 1.4290, -0.0269, 0.0061)
+_BV_ANCHOR = 0.58
+SLOPE_BV_PER_BPRP = jordi_native_per_bprp(_JORDI_T3_BV, _BV_ANCHOR)  # d(B-V)/d(BP-RP) ~ 0.712
 
-# No Jordi u-g transformation in Tables 3-6; spec-anchored value retained pending citable source.
-# Smith u k2 = -0.021 * 1.091 = -0.0229 (ledger K2-SLOPE-UG, FUTURE).
-SLOPE_UG_PER_BPRP = 1.091  # d(u'-g')/d(BP-RP); documented exception (no Jordi row)
+# K2-RELIABLE-2026-11 (v10 item 8): Jordi 2010 has no u-g relation (Tables 3-6) and no source gives
+# d(u'-g')/d(BP-RP); the uncited slope 1.091 and the Johnson U borrowing of the Sloan u' k'' are removed -
+# u / U -> source none with K2_REASON_NO_SLOPE_U.
 
-# Smith et al. 2002 - k'' per native Sloan colour (mag/airmass/mag colour).
-SMITH_K2_NATIVE: dict[str, float] = {
-    "U": -0.021,
-    "SU": -0.021,
-    "UP": -0.021,
-    "G": -0.016,
-    "SG": -0.016,
-    "GP": -0.016,
-    "G'": -0.016,
-    "R": -0.004,
-    "SR": -0.004,
-    "RP": -0.004,
-    "R'": -0.004,
-    "I": 0.006,
-    "SI": 0.006,
-    "IP": 0.006,
-    "I'": 0.006,
-    "Z": 0.003,
-    "SZ": 0.003,
-    "ZP": 0.003,
-    "Z'": 0.003,
-}
+# Smith et al. 2002 (AJ 123, 2121) Table 5 - k'' per native Sloan colour (mag/airmass/mag colour) of the bands
+# that have a cited BP-RP slope (g' per g'-r', r' per r'-i'). u' (-0.021 per u'-g'), i' (0.006) and z' (0.003
+# per i'-z') have no cited slope and are not used.
+SMITH_K2_NATIVE: dict[str, float] = {"G": -0.016, "R": -0.004}
 
+# AAVSO PEP Guide 3.0 Sect. 3.5.4: k''_B typically -0.02 ... -0.04 per (B-V) (Henden & Kaitchuck 1982;
+# Hall & Genet -0.03); the midpoint -0.03 is used.
 HENDEN_K2_B_PER_BV = -0.03
 
 # Tokens with STANDARD_FILTER band class but no citable k'' (OSC Bayer RGB).
@@ -115,18 +111,24 @@ def k2_native_to_bprp(k_native: float, *, native_slope: float) -> float:
 
 
 # G08-13: k'' per standard band of the ONE filter table (band_classify.standard_band_of_filter).
-# Johnson U uses the Sloan u' value of Smith et al. 2002 (no Johnson U k'' in the cited sources).
+# K2-RELIABLE-2026-11 audit - every applied band has a cited k'' AND a cited BP-RP slope:
+#   g: Smith 2002 k''_g' per g'-r' x Jordi 2010 Table 5 g-r row; r: Smith 2002 k''_r' per r'-i' x Jordi 2010
+#   Table 5 r-i row; B: AAVSO PEP Guide 3.5.4 k''_B per B-V x Jordi 2010 Table 3 B-V row.
+#   u / U, i, z: no cited slope -> none; V / Rc / Ic / Rj / Ij: negligible -> none; others: not standard -> none.
 # K2-BAND-2026-10 (G08-47 / G08-48): Johnson-Cousins V, R, I have no k'' correction (negligible, AAVSO PEP
 # Guide 3.5.4) - source NONE, not a column of zeros; Sloan i' / z' (Smith: per i'-z') have no citable
 # BP-RP slope (no Jordi 2010 i-z relation) - source NONE until one is sourced.
-_K2_SLOAN_OF_BAND: dict[str, str] = {"u": "U", "g": "G", "r": "R", "U": "U"}
-_K2_SLOPE_OF_SLOAN: dict[str, float] = {"U": SLOPE_UG_PER_BPRP, "G": SLOPE_GR_PER_BPRP, "R": SLOPE_RI_PER_BPRP}
+_K2_SLOAN_OF_BAND: dict[str, str] = {"g": "G", "r": "R"}
+_K2_SLOPE_OF_SLOAN: dict[str, float] = {"G": SLOPE_GR_PER_BPRP, "R": SLOPE_RI_PER_BPRP}
 _K2_ZERO_BANDS: frozenset[str] = frozenset({"V", "Rc", "Ic", "Rj", "Ij"})
 _K2_NO_SLOPE_BANDS: frozenset[str] = frozenset({"i", "z"})
+_K2_NO_SLOPE_U_BANDS: frozenset[str] = frozenset({"u", "U"})
 
 K2_REASON_NEGLIGIBLE = "none - negligible per AAVSO PEP Guide 3.5.4"
 K2_REASON_UNCORRECTED = "none - uncorrected (no literature k'' for unfiltered / tri-colour); k'' X dC remains"
 K2_REASON_NO_SLOPE = "none - no citable colour slope (Smith 2002 k'' per i'-z'; no Jordi 2010 i-z relation)"
+K2_REASON_NO_SLOPE_U = ("none - no citable colour slope (Smith 2002 k'' per u'-g'; no Jordi 2010 u-g relation; "
+                        "no Johnson U k'' in the cited sources)")
 K2_REASON_NOT_STANDARD = "none - filter is not a standard band"
 K2_REASON_OFF = "none - k2_mode off"
 K2_REASON_OVERRIDE = "config k2_defaults_bprp"
@@ -148,13 +150,17 @@ def k2_for_token(token: str) -> tuple[float | None, str]:
         return None, K2_REASON_NEGLIGIBLE
     if band in _K2_NO_SLOPE_BANDS:
         return None, K2_REASON_NO_SLOPE
+    if band in _K2_NO_SLOPE_U_BANDS:
+        return None, K2_REASON_NO_SLOPE_U
     if band == "B":
         return (k2_native_to_bprp(HENDEN_K2_B_PER_BV, native_slope=SLOPE_BV_PER_BPRP),
-                "Henden & Kaitchuck 1982 k''_B per B-V x Jordi 2010 d(B-V)/d(BP-RP)")
+                "AAVSO PEP Guide 3.5.4 (Henden & Kaitchuck 1982) k''_B per B-V x Jordi 2010 Table 3 d(B-V)/d(BP-RP)")
+    if band not in _K2_SLOAN_OF_BAND:
+        return None, "none - no literature k'' for this band"
     slo = _K2_SLOAN_OF_BAND[band]
-    colour = {"U": "u'-g'", "G": "g'-r'", "R": "r'-i'"}[slo]
+    colour = {"G": "g'-r'", "R": "r'-i'"}[slo]
     return (k2_native_to_bprp(SMITH_K2_NATIVE[slo], native_slope=_K2_SLOPE_OF_SLOAN[slo]),
-            f"Smith et al. 2002 k'' per {colour} x d({colour})/d(BP-RP)")
+            f"Smith et al. 2002 k'' per {colour} x Jordi 2010 Table 5 d({colour})/d(BP-RP)")
 
 
 def computed_k2_bprp_for_token(token: str) -> float | None:
@@ -246,6 +252,35 @@ def colourless_weight_fraction(comp_bp_rp: dict[str, float], weights: dict[str, 
         if not math.isfinite(float(comp_bp_rp.get(cid, float("nan")))):
             miss += w
     return miss / tot if tot > 0 else float("nan")
+
+
+K2_REASON_TARGET_COLOUR = "none - target BP-RP unknown: dC = C_target - C_comparison unknown, k'' X dC not applied"
+K2_REASON_NO_WEIGHTS = "none - no ensemble weights: comparison colour unknown, k'' X dC not applied"
+
+
+def k2_colour_reference(target_bp_rp: float, comp_bp_rp: dict[str, float],
+                        weights: dict[str, float]) -> tuple[float, float, str]:
+    """K2-RELIABLE-2026-11 (v10 item 8): (comparison colour, colourless weight share, reason) of one target's
+    k'' X X x dC term. The reason is "" when the correction applies; otherwise the colour reference is NaN and the
+    reason says why (no assumed colour is ever used):
+
+    - target BP-RP unknown -> dC unknown;
+    - no positive Broeg weights -> the comparison colour is undefined;
+    - any Broeg weight on comps without BP-RP (share f > 0): the comparison colour is
+      (1 - f) C_measured + f C_unknown, so dC carries the unmeasured term f (C_unknown - C_measured), unbounded by the
+      data. The colour ladder of the comparison selection gives every colourless candidate |dBP-RP| = inf when the
+      target has a colour (``photometry_comp._sel_colour_ladder``), so f > 0 here means the k'' colour source and
+      the selection disagree - shown, not covered by an assumed colour.
+    """
+    wfrac = colourless_weight_fraction(comp_bp_rp, weights)
+    if not math.isfinite(float(target_bp_rp)):
+        return float("nan"), wfrac, K2_REASON_TARGET_COLOUR
+    if not math.isfinite(wfrac):
+        return float("nan"), wfrac, K2_REASON_NO_WEIGHTS
+    if wfrac > 0.0:
+        return float("nan"), wfrac, (f"none - {100.0 * wfrac:.1f} % of the ensemble weight on comps without BP-RP: "
+                                     "comparison colour unknown, k'' X dC not applied")
+    return ensemble_bp_rp(comp_bp_rp, weights), wfrac, ""
 
 
 def bp_rp_comp_median(

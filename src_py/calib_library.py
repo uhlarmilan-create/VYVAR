@@ -138,12 +138,19 @@ def _backfill_capture_date(db: Any) -> None:
 def _migrate_exact_gain(db: Any) -> None:
     """G01-10: library rows registered before the exact gain key stored ``int(round(GAIN))`` (a 12.48
     e-/ADU card became 12, a 1.6 card 2). Re-read the GAIN card of every not yet migrated master once;
-    a row whose file is missing keeps its value and is marked GAIN_EXACT = 0."""
+    a row whose file is missing keeps its value and is marked GAIN_EXACT = 0.
+
+    V10-CAL-GAIN-EXACT (2026-11-04): a GAIN_EXACT = 0 row is retried every time the database is opened, so
+    a master on a drive that was not mounted at the first migration gets its exact gain once it is back.
+    While the file is missing the rounded value cannot be recovered (it is never used for matching: every
+    matcher requires the file); :func:`_row_to_master` logs a WARNING for it."""
     rows = db.conn.execute(
-        "SELECT ID, FILE_PATH, GAIN FROM CALIBRATION_LIBRARY WHERE GAIN_EXACT IS NULL;"
+        "SELECT ID, FILE_PATH, GAIN, GAIN_EXACT FROM CALIBRATION_LIBRARY "
+        "WHERE GAIN_EXACT IS NULL OR GAIN_EXACT = 0;"
     ).fetchall()
     if not rows:
         return
+    n = 0
     for r in rows:
         p = Path(str(r["FILE_PATH"]))
         exact = 0
@@ -155,13 +162,21 @@ def _migrate_exact_gain(db: Any) -> None:
                 exact = 1
             except (OSError, ValueError) as exc:
                 log_event(f"CALIB LIB: gain of {p.name} not re-read ({exc}); kept {r['GAIN']}")
+        if not exact and r["GAIN_EXACT"] == 0:
+            continue  # still not recoverable; nothing to write
         if exact and g_new != r["GAIN"]:
             log_event(f"CALIB LIB: {p.name} gain {r['GAIN']} -> {g_new:g} (exact header GAIN, G01-10)")
         db.conn.execute(
             "UPDATE CALIBRATION_LIBRARY SET GAIN = ?, GAIN_EXACT = ? WHERE ID = ?;",
             (g_new, int(exact), int(r["ID"])),
         )
-    db.conn.commit()
+        n += 1
+    if n:
+        db.conn.commit()
+
+
+#: V10-CAL-GAIN-EXACT: paths already warned about a rounded (GAIN_EXACT = 0) gain in this process.
+_WARNED_INEXACT_GAIN: set[str] = set()
 
 
 # ---------------------------------------------------------------------------
@@ -324,6 +339,8 @@ class LibraryMaster:
     offset_adu: float | None
     camera_name: str = ""
     telescope_name: str = ""
+    #: False: GAIN is the rounded value of a row registered before G01-10 whose master could not be re-read
+    gain_exact: bool = True
 
     def valid_until(self, validity_days: float) -> datetime | None:
         if self.capture_utc is None:
@@ -348,6 +365,22 @@ def _row_to_master(row: Any) -> LibraryMaster:
                     cap = header_capture_utc(h[0].header)
             except (OSError, ValueError):
                 cap = None
+    gain = gain_key(r.get("GAIN"))
+    gain_exact = r.get("GAIN_EXACT") != 0
+    if not gain_exact:
+        # V10-CAL-GAIN-EXACT: a rounded legacy gain is never matched silently - the exact card of the
+        # master when it is readable again (read only; the next database open stores it), else a WARNING
+        p = Path(str(r.get("FILE_PATH")))
+        try:
+            with fits.open(p, memmap=True) as h:
+                gain, gain_exact = header_gain(h[0].header), True
+        except (OSError, ValueError):
+            if str(p) not in _WARNED_INEXACT_GAIN:
+                _WARNED_INEXACT_GAIN.add(str(p))
+                msg = (f"WARNING: CALIB LIB: {p.name} has a rounded gain {gain:g} (registered before the exact "
+                       "gain key G01-10, master file not readable) - re-register the master")
+                LOGGER.warning(msg)
+                log_event(msg)
     origin = str(r.get("ORIGIN") or ORIGIN_VYVAR)
     oh = str(r.get("OFFSET_HANDLING") or "")
     if not oh and kind == KIND_FLAT:
@@ -360,7 +393,7 @@ def _row_to_master(row: Any) -> LibraryMaster:
         exptime=float(r.get("EXPTIME") or 0.0),
         temp=(float(r["CCD_TEMP"]) if r.get("CCD_TEMP") is not None else None),
         filter_name=str(r.get("FILTER_NAME") or ""),
-        gain=gain_key(r.get("GAIN")),
+        gain=gain,
         offset=(int(r["OFFSET"]) if r.get("OFFSET") is not None else None),
         ncombine=(int(r["NCOMBINE"]) if r.get("NCOMBINE") is not None else None),
         camera_id=(int(r["ID_EQUIPMENTS"]) if r.get("ID_EQUIPMENTS") is not None else None),
@@ -373,6 +406,7 @@ def _row_to_master(row: Any) -> LibraryMaster:
         offset_adu=(float(r["OFFSET_ADU"]) if r.get("OFFSET_ADU") is not None else None),
         camera_name=str(r.get("CAMERA_NAME") or ""),
         telescope_name=str(r.get("TELESCOPE_NAME") or ""),
+        gain_exact=bool(gain_exact),
     )
 
 

@@ -55,6 +55,11 @@ _DELTA_MAX_FRAMES = 30
 # then fits with the sky set to 0: 70059 instead of 29802 ADU on a test star - the annulus and its fallback box
 # had < SKY_MIN_PIX sky pixels, e.g. in the halo of a saturated star).
 _BAD_FIT_FLAGS = 2 | 4 | 8 | 16 | 64 | 128 | 256 | 1024 | 2048
+# fit_frame_psf result attrs (PSF-SKY-GROUP-2026-11), per frame over fit stars + neighbours: sources without a local
+# sky of their own fitted with their group's sky, and sources without any sky whose model was not subtracted for the
+# pass-2 sky of the others
+SKY_FROM_GROUP_ATTR = "psf_sky_from_group"
+SKY_MODELS_NOT_SUBTRACTED_ATTR = "psf_sky_models_not_subtracted"
 # Names of the unusable-fit bits, counted per frame in the manifest (``frame_fit_stats``).
 _BAD_FIT_FLAG_NAMES = {
     2: "position_outside_image", 4: "non_positive_flux", 8: "no_convergence", 16: "no_covariance",
@@ -449,30 +454,42 @@ def fit_frame_psf(
     # unsaturated and not on a detected source - the aperture photometry's estimator; replaces photutils
     # MedianBackground, whose default is a 3-sigma clip with 10 iterations (zero-clipping policy).
     lbkg = annulus_sky_medians(sky_image(np.where(mask, np.nan, d), fw), np.c_[xs, ys], 4.0 * fw, 6.0 * fw)
+    # PSF-SKY-GROUP-2026-11: a source without its own local sky (the annulus and its fallback box lie on a saturated
+    # star's halo) is fitted with the sky of its fit group - IRAF/DAOPHOT ALLSTAR fits every group with one sky
+    # averaged over its members' skies - so its model (the light it puts on its neighbours, in the group fit and in
+    # the pass-2 sky below) carries no sky pedestal; fitted with sky 0 its flux absorbed the whole pedestal of its fit
+    # box. Its own row stays an unusable fit (flag 2048, C4: no sky of its own); without any group sky it keeps NaN.
+    lbkg_fit1 = _sky_of_group_for_skyless(lbkg, xs, ys, group_r)
     rn_adu2 = (float(read_noise_e) / float(gain)) ** 2
     err1 = np.sqrt(np.clip(np.nan_to_num(d, nan=sky0), sky0, None) / float(gain) + rn_adu2)
-    init = Table({"id": np.arange(1, len(xs) + 1), "x": xs, "y": ys, "local_bkg": lbkg})
+    init = Table({"id": np.arange(1, len(xs) + 1), "x": xs, "y": ys, "local_bkg": lbkg_fit1})
     r1 = phot(d, mask=mask, init_params=init, error=err1)
     model_img = phot.make_model_image(d.shape, include_local_bkg=False)
     # PSF-SKY-ALLSTAR-2026-10 (C1, DAOPHOT II ALLSTAR sky re-determination): the pass-2 sky is the same annulus
     # median measured on the frame with ALL pass-1 fitted stars subtracted - a bright neighbour's wing outside the
     # source mask no longer lifts a faint star's sky (Moffat beta 2.7, 5.75 mag brighter neighbour at 8 / 12 px,
     # model truncated at the cutout: +24.7 / +11.8 -> 0.0 mmag). One sky pass (a second one changed < 1 mmag).
-    # A star without a pass-1 sky (C4: flag 2048) keeps NaN: its pass-1 fit ran with sky 0, so the residual around
-    # it (its own over-fitted core included) is no sky; it stays an unusable fit.
-    lbkg2 = annulus_sky_medians(sky_image(np.where(mask, np.nan, d - model_img), fw), np.c_[xs, ys], 4.0 * fw, 6.0 * fw)
+    # A star without a pass-1 sky of its own keeps no own pass-2 sky (the residual around it is no sky) and takes
+    # its group's pass-2 sky again. A source with no sky at all (none in its group) was fitted with sky 0: its model
+    # holds the pedestal, so it is not subtracted for the others' sky (ALLSTAR subtracts only the fitted stars;
+    # an undefined sky is its rejection code 2); counted per frame (PSF-SKY-GROUP-2026-11).
+    sky_model_img, n_not_sub = _pass1_model_without_skyless(phot, model_img, lbkg_fit1)
+    lbkg2 = annulus_sky_medians(sky_image(np.where(mask, np.nan, d - sky_model_img), fw), np.c_[xs, ys], 4.0 * fw, 6.0 * fw)
     lbkg2 = np.where(np.isfinite(lbkg), lbkg2, np.nan)
+    own2 = np.isfinite(lbkg2)
+    lbkg_fit2 = _sky_of_group_for_skyless(lbkg2, xs, ys, group_r)
     err2 = np.sqrt(np.clip(sky0 + model_img, 0.0, None) / float(gain) + rn_adu2)
     r1 = r1[np.argsort(np.asarray(r1["id"]))]
     init2 = Table({"id": np.asarray(r1["id"]), "x": xs, "y": ys, "flux": np.asarray(r1["flux_fit"], float),
-                   "local_bkg": lbkg2})
+                   "local_bkg": lbkg_fit2})
     r2 = phot(d, mask=mask, init_params=init2, error=err2)
     all_img = phot.make_model_image(d.shape, include_local_bkg=False)
     r2 = r2[np.argsort(np.asarray(r2["id"]))][:n_st]
     flux = np.asarray(r2["flux_fit"], float)
     nb_frac = _neighbour_light_in_box(psf, all_img, xs[:n_st], ys[:n_st], flux, fsz // 2)
     chi2 = np.asarray(r2["reduced_chi2"], float)
-    flags = np.asarray(r2["flags"], int)
+    flags = np.asarray(r2["flags"], int).copy()
+    flags[~own2[:n_st]] |= 2048  # no local sky of its own: unusable (C4), whatever sky its model was fitted with
     ferr_fit = np.asarray(r2["flux_err"], float)
     # Blend term (EPSF-BLEND-2026-10): model-shape error of the neighbours' light inside the fit box,
     # not in the Fisher error; relative sigma = k * (neighbour light / own light).
@@ -481,7 +498,7 @@ def fit_frame_psf(
     good = ((flags & _BAD_FIT_FLAGS) == 0) & np.isfinite(flux) & (flux > 0) & np.isfinite(ferr)
     with np.errstate(divide="ignore", invalid="ignore"):
         snr = np.where(good & (ferr > 0), flux / ferr, np.nan)
-    return pd.DataFrame(
+    out = pd.DataFrame(
         {
             "catalog_id": stars["catalog_id"].astype(str).to_numpy(),
             "psf_flux": flux,
@@ -499,6 +516,46 @@ def fit_frame_psf(
             "psf_edge_masked": off_footprint(off, stars["x"].to_numpy(float), stars["y"].to_numpy(float), fsz // 2, 4.0 * fw, 6.0 * fw, square_core=True),
         }
     )
+    # frame-level counts (fit stars + neighbours) for frame_fit_stats; attrs survive the worker pickle
+    out.attrs[SKY_FROM_GROUP_ATTR] = int(np.count_nonzero(~own2 & np.isfinite(lbkg_fit2)))
+    out.attrs[SKY_MODELS_NOT_SUBTRACTED_ATTR] = int(n_not_sub)
+    return out
+
+
+def _sky_of_group_for_skyless(sky: np.ndarray, xs: np.ndarray, ys: np.ndarray, group_r: float) -> np.ndarray:
+    """``sky`` with each non-finite entry replaced by the plain median of the finite skies of its fit group (the
+    photutils ``SourceGrouper`` groups of ``fit_frame_psf``); NaN when the group has none."""
+    out = np.asarray(sky, dtype=float).copy()
+    own = np.isfinite(out)
+    if own.all():
+        return out
+    group_id = np.asarray(SourceGrouper(min_separation=group_r)(np.asarray(xs, float), np.asarray(ys, float)), dtype=int)
+    for i in np.flatnonzero(~own):
+        v = out[(group_id == group_id[i]) & own]
+        if v.size:
+            out[i] = float(np.median(v))
+    return out
+
+
+def _pass1_model_without_skyless(phot: Any, model_img: np.ndarray, lbkg: np.ndarray) -> tuple[np.ndarray, int]:
+    """The pass-1 model image of the sources fitted with a finite sky, and how many sources were left out.
+
+    ``lbkg`` is indexed by source id - 1 (the init table order). With every sky finite the photutils model image
+    itself is returned (bit-identical to the pass-1 image)."""
+    from photutils.datasets import make_model_image  # noqa: PLC0415
+
+    res = phot.results
+    ids = np.asarray(res["id"], dtype=int)
+    skyless = ~np.isfinite(np.asarray(lbkg, dtype=float)[ids - 1])
+    n = int(skyless.sum())
+    if n == 0:
+        return model_img, 0
+    params = phot.results_to_model_params(remove_invalid=False)
+    keep = ~skyless & np.all([np.isfinite(np.asarray(params[c], dtype=float)) for c in params.colnames], axis=0)
+    psf_model = phot.psf_model
+    img = make_model_image(model_img.shape, psf_model, params[keep], x_name=getattr(psf_model, "x_name", "x_0"),
+                           y_name=getattr(psf_model, "y_name", "y_0"))
+    return np.asarray(img, dtype=np.float64), n
 
 
 def frame_fit_stats(fit_df: pd.DataFrame, frame_name: str) -> dict[str, Any]:
@@ -525,6 +582,15 @@ def frame_fit_stats(fit_df: pd.DataFrame, frame_name: str) -> dict[str, Any]:
     # C1: how much the ALLSTAR re-measurement moved the sky (ADU/px), median over the fit stars
     dsky = (pd.to_numeric(fit_df["psf_sky"], errors="coerce") - pd.to_numeric(fit_df["psf_sky_pass1"], errors="coerce")).abs()
     out["sky_allstar_median_abs_diff_adu"] = round(float(dsky.median()), 4) if dsky.notna().any() else None
+    # PSF-SKY-GROUP-2026-11: sources (fit stars + neighbours) without a local sky of their own, fitted with their
+    # group's sky / without any sky and not subtracted for the others' pass-2 sky (None: fit_df without the counts)
+    for key, name in ((SKY_FROM_GROUP_ATTR, "sky_from_group"), (SKY_MODELS_NOT_SUBTRACTED_ATTR, "sky_models_not_subtracted")):
+        v = fit_df.attrs.get(key)
+        out[name] = None if v is None else int(v)
+    if out["sky_from_group"] or out["sky_models_not_subtracted"]:
+        LOGGER.warning("[ePSF] frame %s: %s source(s) without a local sky of their own fitted with their group's sky, "
+                       "%s without any sky not subtracted for their neighbours' pass-2 sky", frame_name,
+                       out["sky_from_group"], out["sky_models_not_subtracted"])
     if n_bad:
         LOGGER.warning("[ePSF] frame %s: %d fit star(s) with unusable-fit photutils flags %s (psf_converged False)",
                        frame_name, n_bad, out["bad_fit_flag_counts"])

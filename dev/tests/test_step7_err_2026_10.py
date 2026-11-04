@@ -61,7 +61,8 @@ def test_k2_r_band_uses_r_minus_i_slope_jordi_table5():
     # Jordi 2010 Table 5: BP-RP = 0.4649 + 2.3969 x - 0.2976 x^2 + 0.0207 x^3, x = r-i, at r-i = 0.15
     assert SLOPE_RI_PER_BPRP == pytest.approx(0.433, rel=0.01)
     assert computed_k2_bprp_for_token("r") == pytest.approx(-0.004 * 0.433, rel=0.01)
-    assert computed_k2_bprp_for_token("g") == pytest.approx(-0.016 * 1.054, rel=1e-6)
+    # K2-RELIABLE-2026-11: the g slope is the Jordi 2010 Table 5 g-r row (0.757; the uncited 1.054 is gone)
+    assert computed_k2_bprp_for_token("g") == pytest.approx(-0.016 * 0.757, rel=1e-3)
 
 
 @pytest.mark.parametrize("og,src,why", [

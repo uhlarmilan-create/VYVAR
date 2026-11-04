@@ -164,7 +164,8 @@ def test_missing_check_file_is_hard_red() -> None:
     assert trust_level(_TH.strong, hard, soft, _TH) == "RED"
 
 
-def test_check_scatter_uses_sample_std_ddof1(tmp_path: Path) -> None:
+def test_check_scatter_is_robust_mad_scale(tmp_path: Path) -> None:
+    """CHECK-ROBUST-2026-11: 1.4826 x MAD (was the sample std, ddof=1)."""
     lc = tmp_path / "lightcurves"
     lc.mkdir()
     cid = "999"
@@ -177,7 +178,7 @@ def test_check_scatter_uses_sample_std_ddof1(tmp_path: Path) -> None:
         lc / f"lightcurve_{cid}.csv", index=False)
     scatter, n = check_star_scatter(tmp_path, cid)
     assert n == len(vals)
-    assert scatter == pytest.approx(float(np.nanstd(vals, ddof=1)), rel=0, abs=1e-9)
+    assert scatter == pytest.approx(1.4826 * 0.1, rel=0, abs=1e-9)
 
 
 def test_short_baseline_thin_comp_thin_check_stays_yellow() -> None:

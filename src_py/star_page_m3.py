@@ -109,7 +109,10 @@ def lc_plot_data(df: pd.DataFrame, chk: pd.DataFrame | None, *, uncalibrated: bo
     e = MAG_ERR_SCALE * pd.to_numeric(df["err"], errors="coerce").to_numpy(float) if "err" in df.columns else None
     fl = (df["flag"].astype(str).str.strip().str.lower().to_numpy() if "flag" in df.columns
           else np.array(["normal"] * len(df)))
-    ok = np.isfinite(x) & np.isfinite(y)
+    from photometry_lightcurve import lc_below_limit_mask  # noqa: PLC0415
+
+    # LC-BELOW-LIMIT-2026-11: a fainter-than value (AAVSO "<mag") is not drawn as a measured point
+    ok = np.isfinite(x) & np.isfinite(y) & ~lc_below_limit_mask(df).to_numpy(bool)
     if int(ok.sum()) < 2:
         return None
     exp = export_row_mask(df, mag_column=ycol).to_numpy(bool)
@@ -133,7 +136,7 @@ def lc_plot_data(df: pd.DataFrame, chk: pd.DataFrame | None, *, uncalibrated: bo
     return {
         "xcol": xcol, "ycol": ycol, "x": x, "y": y, "e": e, "flag": fl, "ok": ok, "good": good, "bad": bad,
         "x0": x0, "ut_offset": ut_offset, "has_check": has_check, "kx": kx, "kr": kr, "check_lim": lim,
-        "check_text": f"check star scatter {st.scatter:.3f} mag" if has_check else "",
+        "check_text": f"check star robust scatter {st.scatter:.3f} mag" if has_check else "",
         "xlabel": f"BJD_TDB - {x0:.0f}" if xcol == "bjd" else f"JD - {x0:.0f}",
     }
 
@@ -428,6 +431,10 @@ def lc_facts(lc_csv: Path, *, mag_column: str | None = None) -> dict[str, Any]:
     out["n_total"] = int(len(df))
     out["n_exported"] = int(exp.sum())
     out["n_excluded"] = out["n_total"] - out["n_exported"]
+    # LC-BELOW-LIMIT-2026-11: of the not exported measurements, the 1-sigma limits (in the AAVSO file as "<mag")
+    from photometry_lightcurve import lc_below_limit_mask  # noqa: PLC0415
+
+    out["n_below_limit"] = int(lc_below_limit_mask(df).sum())
     # exported with FLAG=<flag> in the AAVSO NOTES (REPORT-AUDIT-2026-10)
     out["n_noted"] = int((exp & fl.ne("normal").to_numpy()).sum())
     t = _col(df, "bjd")

@@ -29,14 +29,14 @@ from typing import Any, Callable
 
 import pandas as pd
 
-from net_call import call_with_timeout, mark_unavailable, unavailable_reason
+from gaia_tap_job import TapTimeout, tap_dataframe
+from net_call import mark_unavailable, unavailable_reason
 from catalog_db import add_catalog_meta_rows, connect_ro, connect_rw, ra_intervals_deg, resolve_catalog_path
 
 LOGGER = logging.getLogger(__name__)
 
 #: Agreed margin around the field edges for a top-up (Milan 2026-10-14: "+- 1 degree around the field edges").
 TOPUP_MARGIN_DEG = 1.0
-_TAP_TIMEOUT_S = 600.0
 _INSERT_BATCH = 8000
 _EPS_DEG = 1e-6
 
@@ -579,15 +579,9 @@ def build_topup_adql(box: tuple[float, float, float, float], *, g_from: float, g
 
 
 def _fetch_tap(adql: str) -> pd.DataFrame:
-    """Run one ADQL job on the Gaia archive (astroquery), bounded by a timeout."""
-
-    def _run() -> pd.DataFrame:
-        from astroquery.gaia import Gaia  # noqa: PLC0415
-
-        table = Gaia.launch_job_async(adql).get_results()
-        return pd.DataFrame() if table is None or len(table) == 0 else table.to_pandas()
-
-    return call_with_timeout(_run, _TAP_TIMEOUT_S, "Gaia TAP top-up")
+    """One ADQL job on the Gaia archive with the deadlines of ``gaia_tap_job`` (a stuck job is
+    aborted on the server and raises TapTimeout); its progress goes to the run log."""
+    return tap_dataframe(adql, what="Gaia TAP top-up", report=lambda m: _log(f"GAIA TOP-UP: {m}"))
 
 
 def top_up_field(
@@ -631,10 +625,12 @@ def top_up_field(
                               on_rows=parts.append)
     except IncompleteDownload as exc:
         complete_error = str(exc)
-    except Exception as exc:  # noqa: BLE001 - offline / archive down: continue with the local DB
+    except Exception as exc:  # noqa: BLE001 - offline / archive down / timeout: continue with the local DB
         if fetch is None:
             mark_unavailable("gaia_tap_topup", exc)
-        out.update({"status": "offline", "error": f"{type(exc).__name__}: {str(exc)[:200]}"})
+        # NET-GAIA-TAP-DEADLINE-2026-11: a job past its deadline is its own status (aborted on the archive)
+        out.update({"status": "timeout" if isinstance(exc, TapTimeout) else "offline",
+                    "error": f"{type(exc).__name__}: {str(exc)[:300]}"})
         return out
     df = normalize_tap_dataframe(pd.concat(parts, ignore_index=True)) if parts else normalize_tap_dataframe(None)
     try:
@@ -685,7 +681,7 @@ def _warn_unverified_strips(db_path: str | Path, box: tuple[float, float, float,
     for s in bad:
         _log(f"WARNING: GAIA DB strip {s['strip_key']} ({s['n_stars']} rows, {s['state']}"
              f"{', at the anonymous TAP row cap' if s['at_anonymous_cap'] else ''}) overlaps this field: the "
-             "local Gaia DB may miss stars here; run catalogs/build_gaia_catalog.py --repair")
+             f"local Gaia DB may miss stars here; run python {Path('catalogs') / 'build_gaia_catalog.py'} --repair")
 
 
 def ensure_field_depth(
@@ -728,7 +724,7 @@ def ensure_field_depth(
         )
     else:
         _log(
-            f"GAIA TOP-UP: not possible ({top.get('error')}); continuing with the local DB "
+            f"WARNING: GAIA TOP-UP not possible ({top.get('status')}: {top.get('error')}); continuing with the local DB "
             f"complete to G {before:.2f} (frame reaches G {float(g_needed):.2f})"
         )
     return res

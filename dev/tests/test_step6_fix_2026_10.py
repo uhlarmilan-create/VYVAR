@@ -448,7 +448,7 @@ def test_gaia_repair_is_documented_for_users() -> None:
         text = (docs / name).read_text(encoding="ascii")
         assert head in text, name
         for cmd in ("build_gaia_catalog.py --check", "build_gaia_catalog.py --repair --strip",
-                    "gaia_maintain.py --report", ".venv\\Scripts\\python.exe", "GAIA_USER"):
+                    "gaia_maintain.py --report", "python catalogs\\build_gaia_catalog.py --repair", "GAIA_USER"):
             assert cmd in text, (name, cmd)
     from gaia_coverage import ESA_ANON_ASYNC_ROW_CAP
 

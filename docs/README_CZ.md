@@ -104,6 +104,12 @@ spolehlivosti periody.
 PDF report **Summary Measure** obsahuje sv?telne k?ivky jednotlivych hv?zd, HR diagram s
 klasifikaci podle Gaia a plnou **stranku provenience konfigurace** - p?esny snimek parametr?,
 git head a ?asove razitko zape?ene v kazdem reportu, takze je libovolny obrazek reprodukovatelny.
+Presnost svetelne krivky se uvadi dvema cisly: hlavni **presnost (chyba bodu, MERR)** - median
+chyby exportovanych bodu vcetne systematickeho dna noci, tedy chyba, kterou nesou soubory AAVSO /
+VarAstro - a vedlejsi **kratkodoby rozptyl (p2p)**, robustni rozptyl snimek-snimek (1.4826 MAD
+rozdilu po sobe jdoucich bodu / sqrt 2; Sokolovsky et al. 2017). p2p nevidi pomale drifty behem
+noci, proto je u jasnych hvezd vyrazne pod chybou; u slabych hvezd se obe cisla shoduji. Rozptyl
+kontrolni hvezdy je robustni 1.4826 MAD (jeden spatny snimek ho nenafoukne).
 
 ### Export AAVSO / VarAstro
 Soubory k odeslani se zapisuji s plnymi cita?nimi hlavi?kami ?izenymi `CITATIONS.bib` (jediny
@@ -197,15 +203,15 @@ streamlit run app.py
 Katalog Gaia DR3 postavte jednou (spoust?jte zevnit? repozita?e - buildery importuji
 `gaia_catalog_id.py` z `src_py/`; pomoci `--out` umistite velkou databazi kamkoli):
 
-```bash
-python GAIA_DR3/build_gaia_catalog.py --mag-limit 16.5 --out <cesta-k-db>
-python GAIA_DR3/build_astro_index.py --db <cesta-k-db>
+```
+python catalogs\build_gaia_catalog.py --mag-limit 16.5 --out <cesta-k-db>
+python catalogs\build_astro_index.py --db <cesta-k-db>
 ```
 
 Rychly zkusebni build (maly kousek oblohy):
 
-```bash
-python GAIA_DR3/build_gaia_catalog.py --dec-min 89 --dec-max 90 --mag-limit 10 --skip-vacuum --out tmp/smoke_gaia.db
+```
+python catalogs\build_gaia_catalog.py --dec-min 89 --dec-max 90 --mag-limit 10 --skip-vacuum --out tmp\smoke_gaia.db
 ```
 
 #### Gaia DB neuplna -> jak ji zkontrolovat a opravit
@@ -215,21 +221,24 @@ vrati na jeden dotaz jen pevny pocet radku. VYVAR nyni kazdy pas overuje proti p
 archiv, a upozorni, kdyz pole zasahuje do pasu, ktery neni overen jako uplny:
 
 - **Pri behu** (infolog zpracovaneho pole):
-  `WARNING: GAIA DB strip 258.3495_270.0926_-34.0319_-26.0365 (3000000 rows, truncated, at the anonymous TAP row cap) overlaps this field: the local Gaia DB may miss stars here; run catalogs/build_gaia_catalog.py --repair`
+  `WARNING: GAIA DB strip 258.3495_270.0926_-34.0319_-26.0365 (3000000 rows, truncated, at the anonymous TAP row cap) overlaps this field: the local Gaia DB may miss stars here; run python catalogs\build_gaia_catalog.py --repair`
 - **V Nastaveni -> Paths and catalogs -> Gaia DR3 -> Report**: log ukaze
   `strips: N not verified complete (COUNT check), M truncated or at the anonymous TAP row cap`
-  a pri M > 0 i hotovy prikaz pro opravu (`repair: python catalogs/build_gaia_catalog.py --out ... --repair --strip ...`).
+  a pri M > 0 i hotovy prikaz pro opravu (`repair: python catalogs\build_gaia_catalog.py --out ... --repair --strip ...`).
 
-Kontrola a oprava ze slozky VYVAR (Windows, PowerShell; skripty pouziji cestu ke Gaia DB ulozenou
-v Nastaveni, `gaia_db_path`; pro jiny soubor pridejte `--out <cesta>` / `--db <cesta>`). Nejdriv ukoncete
-bezici behy VYVAR.
+Kontrola a oprava ze slozky VYVAR (Windows, PowerShell nebo cmd, obycejny `python` - virtualni
+prostredi neni potreba; skripty pouziji cestu ke Gaia DB ulozenou v Nastaveni, `gaia_db_path`; pro jiny
+soubor pridejte `--out <cesta>` / `--db <cesta>`). Nejdriv ukoncete bezici behy VYVAR. Anonymni pristup
+do archivu je pomaly (~1-2 min na jeden dotaz); kazda uloha v archivu ma casovy limit, zaseknuta uloha
+se v archivu zrusi a jeji pas se na konci vypise jako neuspesny (spustte stejny prikaz znovu); Ctrl+C je
+bezpecne. Podrobnosti: `docs/INSTALL.md`, "Gaia archive: anonymous access, timeouts, interrupting".
 
 ```
 cd C:\path\to\VYVAR
-.\.venv\Scripts\python.exe catalogs\gaia_maintain.py --report --db <cesta-k-vyvar_gaia_dr3.db>
-.\.venv\Scripts\python.exe catalogs\build_gaia_catalog.py --check
-.\.venv\Scripts\python.exe catalogs\build_gaia_catalog.py --repair --strip <strip_key> --strip <strip_key>
-.\.venv\Scripts\python.exe catalogs\build_gaia_catalog.py --repair
+python catalogs\gaia_maintain.py --report --db <cesta-k-vyvar_gaia_dr3.db>
+python catalogs\build_gaia_catalog.py --check
+python catalogs\build_gaia_catalog.py --repair --strip <strip_key> --strip <strip_key>
+python catalogs\build_gaia_catalog.py --repair
 ```
 
 - `--check` jen vypise pasy, ktere nejsou overene jako uplne (nic nemeni).
@@ -237,7 +246,7 @@ cd C:\path\to\VYVAR
   samotne `--repair` opravi vsechny neoverene pasy - u DB postavene pred 2026-10-31 jsou to vsechny pasy,
   proto radeji pouzijte tvar se `--strip` pro pasy, ktere Report oznaci jako truncated / at the row cap.
 - Pro kazdy pas se archivu zepta na pocet hvezd; kdyz je DB uz ma vsechny, pas se jen oznaci jako overeny
-  (sekundy), jinak se stahne znovu a deli se na mensi oblasti, dokud neni kazda cast uplna. Pocitejte
+  (jeden dotaz do archivu, ~1-2 min), jinak se stahne znovu a deli se na mensi oblasti, dokud neni kazda cast uplna. Pocitejte
   s minutami na pas, u hustych pasu Mlecne drahy dele (sest pasu bulge dohromady nekolik hodin).
 - Je **navazatelna**: jeden pas = jedna transakce; zastavte ji Ctrl+C a spustte stejny prikaz znovu -
   uz opravene pasy se preskoci.

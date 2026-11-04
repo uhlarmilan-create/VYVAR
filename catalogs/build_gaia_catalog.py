@@ -17,12 +17,19 @@ Downloads Gaia DR3 from the ESA archive (TAP, astroquery) in RA/Dec strips:
 Output: the ``gaia_db_path`` of config.json (Settings -> Paths and catalogs), default
 ``<data>/catalogs/vyvar_gaia_dr3.db``.
 
-Examples (from the VYVAR folder):
-  python catalogs/build_gaia_catalog.py --help
-  python catalogs/build_gaia_catalog.py --mag-limit 17.5
-  python catalogs/build_gaia_catalog.py --check                  # strips not verified complete
-  python catalogs/build_gaia_catalog.py --repair --strip 258.3495_270.0926_-34.0319_-26.0365
-  python catalogs/build_gaia_catalog.py --dec-min 89 --dec-max 90 --mag-limit 10 --skip-vacuum --out tmp/smoke_gaia.db
+Archive jobs (NET-GAIA-TAP-DEADLINE-2026-11): every TAP job runs through ``gaia_tap_job`` with a
+deadline; a job stuck on the archive is aborted there and its strip is reported as failed, the
+build continues with the next strip and the summary lists the failed strips (rerun the same
+command: finished strips are skipped). While a job waits, its phase and elapsed time are printed.
+Anonymous access is slow (~1-2 min per archive request). Ctrl+C is safe: the open job is aborted
+on the archive and the strip being stored is rolled back.
+
+Examples (from the VYVAR folder; Linux / macOS: use / instead of \\):
+  python catalogs\\build_gaia_catalog.py --help
+  python catalogs\\build_gaia_catalog.py --mag-limit 17.5
+  python catalogs\\build_gaia_catalog.py --check                  # strips not verified complete
+  python catalogs\\build_gaia_catalog.py --repair --strip 258.3495_270.0926_-34.0319_-26.0365
+  python catalogs\\build_gaia_catalog.py --dec-min 89 --dec-max 90 --mag-limit 10 --skip-vacuum --out tmp\\smoke_gaia.db
 
 Environment fallbacks (when the option is not given): GAIA_MAG_LIMIT, GAIA_DEC_MIN, GAIA_DEC_MAX,
 GAIA_OUT, GAIA_RA_STEP, GAIA_DEC_STEP, GAIA_MAX_STRIPS, GAIA_SOURCE_FULL, SKIP_VACUUM,
@@ -62,6 +69,7 @@ if str(_SRC) not in sys.path:
 import pandas as pd  # noqa: E402
 from astroquery.gaia import Gaia  # noqa: E402
 
+from gaia_tap_job import TapTimeout, tap_dataframe  # noqa: E402
 from gaia_coverage import (  # noqa: E402
     GAIA_SOURCE_LITE_SELECT,
     GAIA_SOURCE_SELECT,
@@ -92,6 +100,12 @@ DEFAULT_OUT = configured_catalog_path("gaia_db_path", GAIA_DB_DEFAULT)
 MAX_RETRIES = 8
 RETRY_BASE_S = 20
 RETRY_MAX_WAIT_S = 240
+#: NET-GAIA-TAP-DEADLINE-2026-11: a job that passes its deadline (gaia_tap_job) is tried once more;
+#: a second timeout ends the call - eight attempts of up to 50 min each would look like the old hang.
+MAX_TIMEOUT_ATTEMPTS = 2
+#: this many strips in a row failing by timeout stop the run: the archive is not processing jobs
+#: now, and every further strip would cost its full deadlines. Finished strips are kept; rerun later.
+STOP_AFTER_TIMEOUT_STRIPS = 3
 
 def _env_float(name: str, default: float) -> float:
     raw = os.environ.get(name, "").strip()
@@ -434,19 +448,32 @@ def built_depth_g(conn: sqlite3.Connection, keys: set[str]) -> float | None:
     return depth
 
 
-def _tap_fetch(adql: str, *, max_retries: int = MAX_RETRIES) -> pd.DataFrame:
-    """One TAP job (rows or COUNT) with retries; raises after ``max_retries`` failures."""
+def _cli_report(msg: str) -> None:
+    """Progress of a waiting archive job (phase, elapsed) on its own line of the strip output."""
+    print(f"\n      {msg}", end="", flush=True)
+
+
+def _tap_job(adql: str) -> pd.DataFrame:
+    return tap_dataframe(adql, what="Gaia TAP", report=_cli_report)
+
+
+def _tap_fetch(adql: str, *, max_retries: int = MAX_RETRIES, run=_tap_job, sleep=time.sleep) -> pd.DataFrame:
+    """One TAP job (rows or COUNT) with retries and backoff; every attempt has the deadline of
+    ``gaia_tap_job``. Raises after ``max_retries`` failures, or TapTimeout after
+    ``MAX_TIMEOUT_ATTEMPTS`` timed-out attempts."""
+    n_timeouts = 0
     for attempt in range(max_retries):
         try:
-            results = Gaia.launch_job_async(adql).get_results()
-            return results.to_pandas() if len(results) else pd.DataFrame()
+            return run(adql)
         except Exception as e:  # noqa: BLE001
-            if attempt == max_retries - 1:
+            if isinstance(e, TapTimeout):
+                n_timeouts += 1
+            if attempt == max_retries - 1 or n_timeouts >= MAX_TIMEOUT_ATTEMPTS:
                 raise
             wait = min(RETRY_MAX_WAIT_S, int(RETRY_BASE_S * (2**attempt)))
-            print(f"\n    WARN attempt {attempt + 1}/{max_retries}: {e}")
-            print(f"    waiting {wait} s ...", flush=True)
-            time.sleep(wait)
+            print(f"\n    WARN attempt {attempt + 1}/{max_retries}: {type(e).__name__}: {e}")
+            print(f"    waiting {wait} s ...", end="", flush=True)
+            sleep(wait)
     raise RuntimeError("unreachable")
 
 
@@ -488,8 +515,9 @@ def _store_strip(
     n_stars_if_truncated: int = 0,
 ) -> tuple[str, int, int]:
     """Download + record one strip in ONE transaction: ("ok", rows, new), ("truncated", 0, 0)
-    (its new rows rolled back, recorded verified 0 with ``n_stars_if_truncated``) or
-    ("error", 0, 0) (nothing recorded, the strip stays as it was)."""
+    (its new rows rolled back, recorded verified 0 with ``n_stars_if_truncated``), ("timeout", 0, 0)
+    (an archive job passed its deadline) or ("error", 0, 0); after a timeout / error nothing is
+    recorded and the strip stays as it was (to do on the next run)."""
     try:
         n_exp, n_rows, n_new = download_strip_complete(
             conn, strip, last_ra, last_dec, mag_limit=mag_limit, use_full_source=use_full_source, fetch=fetch)
@@ -503,6 +531,10 @@ def _store_strip(
         mark_strip_done(conn, strip, int(n_stars_if_truncated), mag_limit, n_expected=None, verified=False)
         conn.commit()
         return "truncated", 0, 0
+    except TapTimeout as exc:
+        conn.rollback()
+        print(f" TIMEOUT: {exc}")
+        return "timeout", 0, 0
     except Exception as exc:  # noqa: BLE001 - archive down / insert failure: strip stays to do
         conn.rollback()
         print(f" ERR: {type(exc).__name__}: {exc}")
@@ -578,9 +610,14 @@ def create_local_gaia(cfg: BuildConfig, *, fetch=_tap_fetch) -> None:
 
     if todo:
         total_inserted = 0
-        failed: list[tuple[float, float, float, float]] = []
+        failed: list[tuple[str, str]] = []
         recent_dt: list[float] = []
+        timeouts_in_row = 0
+        n_not_tried = 0
         for idx, (strip, last_ra, last_dec) in enumerate(todo, start=1):
+            if timeouts_in_row >= STOP_AFTER_TIMEOUT_STRIPS:
+                n_not_tried = len(todo) - idx + 1
+                break
             r0, r1, d0, d1 = strip
             t_strip = time.time()
             remaining = len(todo) - idx + 1
@@ -605,8 +642,9 @@ def create_local_gaia(cfg: BuildConfig, *, fetch=_tap_fetch) -> None:
                 conn, strip, last_ra, last_dec, mag_limit=cfg.mag_limit,
                 use_full_source=cfg.use_full_source, fetch=fetch,
             )
+            timeouts_in_row = timeouts_in_row + 1 if state == "timeout" else 0
             if state != "ok":
-                failed.append(strip)
+                failed.append((strip_key(strip), state))
                 continue
             total_inserted += n_new
             recent_dt.append(time.time() - t_strip)
@@ -614,8 +652,7 @@ def create_local_gaia(cfg: BuildConfig, *, fetch=_tap_fetch) -> None:
 
         print()
         print(f"  New stars inserted: {total_inserted:,}")
-        if failed:
-            print(f"  Failed strips: {len(failed)} - restart skips done (strip_progress).")
+        _print_failed_summary(failed, n_not_tried, rerun="the same command")
 
     left = [s for (s, _lr, _ld) in items if strip_key(s) not in get_done_strips(conn)]
     n_cov = int(conn.execute("SELECT COUNT(*) FROM gaia_coverage").fetchone()[0])
@@ -665,6 +702,20 @@ def create_local_gaia(cfg: BuildConfig, *, fetch=_tap_fetch) -> None:
     print("=" * 62)
 
 
+def _print_failed_summary(failed: list[tuple[str, str]], n_not_tried: int, *, rerun: str) -> None:
+    """End summary of the strips that did not finish (NET-GAIA-TAP-DEADLINE-2026-11)."""
+    if n_not_tried:
+        print(f"  STOPPED: {STOP_AFTER_TIMEOUT_STRIPS} strips in a row timed out - the Gaia archive is not "
+              f"processing jobs now; {n_not_tried} strip(s) not tried.")
+    if not failed and not n_not_tried:
+        return
+    if failed:
+        print(f"  Failed strips: {len(failed)} (state: timeout = archive job passed its deadline and was aborted)")
+        for key, state in failed:
+            print(f"    {key:40s} {state}")
+    print(f"  Rerun {rerun} later to finish them (resumable: finished strips are skipped).")
+
+
 def _completeness_params(conn: sqlite3.Connection) -> dict[str, object]:
     """catalog_meta params of G05-03: strips never COUNT-checked, strips known truncated."""
     bad = strips_needing_repair(conn)
@@ -708,11 +759,20 @@ def repair_strips(cfg: BuildConfig, *, fetch=_tap_fetch) -> dict[str, int]:
             conn.close()
             raise SystemExit(f"--strip not among the unverified strips of {cfg.db_path}: {missing}")
         todo = [s for s in todo if s["strip_key"] in set(cfg.repair_keys)]
+    # NET-GAIA-TAP-DEADLINE-2026-11: strips stored exactly at the anonymous row cap are certainly
+    # cut and need the long split download; the normal strips are verified first (stable order).
+    todo = sorted(todo, key=lambda s: bool(s["at_anonymous_cap"]))
     dec_top = conn.execute("SELECT MAX(dec_max) FROM strip_progress").fetchone()[0]
     table, _sel = _source(cfg.use_full_source)
     print(f"  Repair:      {len(todo)} strip(s) of {cfg.db_path} ({table})")
-    out = {"verified": 0, "downloaded": 0, "truncated": 0, "error": 0, "new_rows": 0}
+    out: dict = {"verified": 0, "downloaded": 0, "truncated": 0, "error": 0, "new_rows": 0}
+    failed: list[tuple[str, str]] = []
+    timeouts_in_row = 0
+    n_not_tried = 0
     for i, s in enumerate(todo, start=1):
+        if timeouts_in_row >= STOP_AFTER_TIMEOUT_STRIPS:
+            n_not_tried = len(todo) - i + 1
+            break
         r0, r1, d0, d1 = s["box"]
         last_ra, last_dec = r1 >= 360.0 - 1e-9, dec_top is not None and abs(d1 - float(dec_top)) < 1e-9
         ml = float(s["mag_limit"]) if s["mag_limit"] is not None else float(cfg.mag_limit)
@@ -721,9 +781,13 @@ def repair_strips(cfg: BuildConfig, *, fetch=_tap_fetch) -> dict[str, int]:
             n_exp = int(fetch(build_count_adql(r0, r1, d0, d1, last_ra=last_ra, last_dec=last_dec,
                                                mag_limit=ml, use_full_source=cfg.use_full_source)).iloc[0, 0])
         except Exception as exc:  # noqa: BLE001
-            print(f" ERR (COUNT): {type(exc).__name__}: {exc}")
+            timed_out = isinstance(exc, TapTimeout)
+            print(f" {'TIMEOUT' if timed_out else 'ERR'} (COUNT): {type(exc).__name__}: {exc}")
             out["error"] += 1
+            failed.append((s["strip_key"], "timeout" if timed_out else "error"))
+            timeouts_in_row = timeouts_in_row + 1 if timed_out else 0
             continue
+        timeouts_in_row = 0
         if s["n_stars"] is not None and int(s["n_stars"]) == n_exp:
             mark_strip_done(conn, s["box"], n_exp, ml, n_expected=n_exp)
             conn.commit()
@@ -734,16 +798,22 @@ def repair_strips(cfg: BuildConfig, *, fetch=_tap_fetch) -> dict[str, int]:
         state, n_rows, n_new = _store_strip(conn, s["box"], last_ra, last_dec, mag_limit=ml,
                                             use_full_source=cfg.use_full_source, fetch=fetch,
                                             n_stars_if_truncated=int(s["n_stars"] or 0))
+        timeouts_in_row = timeouts_in_row + 1 if state == "timeout" else 0
         if state == "ok":
             print(f" ok rows={n_rows:,} new={n_new:,}")
             out["downloaded"] += 1
             out["new_rows"] += n_new
         else:
-            out[state] += 1
+            out["error" if state == "timeout" else state] += 1
+            if state != "truncated":
+                failed.append((s["strip_key"], state))
     params = _completeness_params(conn)
     conn.close()
     print(f"  Repair done: {out}; still unverified {params['strips_unverified']}, "
           f"truncated {len(params['truncated_strips'])}")
+    _print_failed_summary(failed, n_not_tried, rerun="the same --repair command")
+    out["failed_strips"] = [k for k, _st in failed]
+    out["not_tried"] = n_not_tried
     return out
 
 

@@ -448,6 +448,9 @@ def write_one_internal_psf_lc(
     ap_delta = pd.to_numeric(ap.get("delta_mag"), errors="coerce").to_numpy(dtype=np.float64)
     if len(ap_delta) != n:
         ap_delta = np.full(n, np.nan)
+    from photometry_lightcurve import lc_below_limit_mask  # noqa: PLC0415
+
+    ap_delta = np.where(lc_below_limit_mask(ap).to_numpy(bool), np.nan, ap_delta)  # LC-BELOW-LIMIT-2026-11: no level
     level_vals = []
     for i in range(n):
         if drop_reason[i]:

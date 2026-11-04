@@ -28,25 +28,28 @@ Settings -> Paths and catalogs -> Catalog builder runs the scripts below as sepa
   rows added / removed / changed are shown on the card.
 - Blind index: build or complete it from the Gaia DB.
 
-## Build (from the VYVAR folder)
+## Build (from the VYVAR folder, plain `python`; Linux / macOS: `/` instead of `\`)
 
-```bash
-python catalogs/build_gaia_catalog.py --mag-limit 17.5      # ESA Gaia TAP, hours to days; resumable
-python catalogs/objects_make.py --vsx --exoplanets          # VizieR + NASA archive, minutes
-python catalogs/build_astro_index.py                        # from the Gaia DB, optional
+```
+python catalogs\build_gaia_catalog.py --mag-limit 17.5      # ESA Gaia TAP, hours to days; resumable
+python catalogs\objects_make.py --vsx --exoplanets          # VizieR + NASA archive, minutes
+python catalogs\build_astro_index.py                        # from the Gaia DB, optional
 ```
 
 Release install: the same scripts through the launcher, e.g. `./vyvar.sh --tool build_gaia -- --mag-limit 17.5`
 (tools: `build_gaia`, `build_objects`, `build_astro_index`, `gaia_maintain`; `VYVAR.bat` on Windows).
 
-The Gaia build is resumable (`strip_progress`): run it again after an interruption. VYVAR fetches
+The Gaia build is resumable (`strip_progress`): run it again after an interruption (Ctrl+C is
+safe). Anonymous archive access is slow (~1-2 min per request); every archive job has a deadline,
+a stuck job is cancelled on the archive and its strip listed as failed in the end summary (run the
+same command again). See `docs/INSTALL.md`, "Gaia archive: anonymous access, timeouts, interrupting". VYVAR fetches
 fainter stars of one field online when a frame reaches deeper than the DB (`gaia_coverage`);
 those rows are added to `vyvar_gaia_dr3.db` and to its `catalog_meta` row count.
 
 ## Gaia maintenance (`gaia_maintain.py`, standard library only; close VYVAR first)
 
-```bash
-python catalogs/gaia_maintain.py --report                   # indexes, free space, catalog_meta, coverage
-python catalogs/gaia_maintain.py --drop-unused --register   # drop indexes VYVAR never uses; write catalog_meta
-python catalogs/gaia_maintain.py --vacuum-into catalogs/vyvar_gaia_dr3_new.db   # compact copy, checked
+```
+python catalogs\gaia_maintain.py --report                   # indexes, free space, catalog_meta, coverage
+python catalogs\gaia_maintain.py --drop-unused --register   # drop indexes VYVAR never uses; write catalog_meta
+python catalogs\gaia_maintain.py --vacuum-into catalogs\vyvar_gaia_dr3_new.db   # compact copy, checked
 ```

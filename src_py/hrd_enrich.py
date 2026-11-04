@@ -13,6 +13,7 @@ from typing import Any
 import pandas as pd
 
 from gaia_catalog_id import normalize_gaia_source_id
+from gaia_tap_job import TAP_COUNT_EXEC_DEADLINE_S, TapTimeout, run_tap_job
 from infolog import log_event
 from net_call import call_with_timeout, mark_unavailable, unavailable_reason
 from photometry_provenance import git_head_hash
@@ -134,13 +135,15 @@ def _needs_simbad_fetch(cache: dict[str, dict[str, Any]], sid: str) -> bool:
     return any(k not in hit for k in _SIMBAD_CACHE_KEYS)
 
 
-def _fetch_gaia_tap(source_ids: list[str], *, timeout_s: float) -> dict[str, dict[str, Any]]:
+def _fetch_gaia_tap(source_ids: list[str], *, deadline_s: float = TAP_COUNT_EXEC_DEADLINE_S) -> dict[str, dict[str, Any]]:
+    """Gaia DR3 parameters of ``source_ids``, one archive job per batch of _GAIA_BATCH ids, each
+    with the deadline of ``gaia_tap_job`` (NET-GAIA-TAP-DEADLINE-2026-11: a stuck job is aborted on
+    the archive and raises TapTimeout; the old thread timeout of 60 s was shorter than an anonymous
+    job takes, ~100 s, and left the job running)."""
     if not source_ids:
         return {}
 
     def _run() -> dict[str, dict[str, Any]]:
-        from astroquery.gaia import Gaia  # noqa: PLC0415
-
         out: dict[str, dict[str, Any]] = {}
         for i0 in range(0, len(source_ids), _GAIA_BATCH):
             chunk = source_ids[i0 : i0 + _GAIA_BATCH]
@@ -156,8 +159,8 @@ def _fetch_gaia_tap(source_ids: list[str], *, timeout_s: float) -> dict[str, dic
                 "ON gs.source_id = ap.source_id "
                 f"WHERE gs.source_id IN ({id_list})"
             )
-            job = Gaia.launch_job_async(adql)
-            table = job.get_results()
+            table = run_tap_job(adql, what="Gaia TAP (HRD enrichment)", exec_deadline_s=deadline_s,
+                                report=lambda m: log_event(f"HRD enrichment: {m}"))
             if table is None or len(table) == 0:
                 continue
             for row in table:
@@ -186,20 +189,21 @@ def _fetch_gaia_tap(source_ids: list[str], *, timeout_s: float) -> dict[str, dic
                 }
         return out
 
-    return call_with_timeout(_run, timeout_s, "Gaia TAP")
+    return _run()
 
 
 def _fetch_gaia_tap_with_retry(
     source_ids: list[str],
     *,
-    timeout_s: float,
     max_attempts: int = 3,
     backoffs: tuple[float, ...] = (5.0, 15.0),
 ) -> tuple[dict[str, dict[str, Any]], int]:
     """Bounded retry wrapper for Gaia TAP (fail-open callers catch final exception).
 
     After all attempts fail once, later calls in the same process fail at once
-    (the service is down for this run; no repeated waiting per setup).
+    (the service is down for this run; no repeated waiting per setup). A job that passed its
+    deadline (TapTimeout, aborted on the archive) is not retried: the archive is jammed, and each
+    further attempt would hold the run for a whole deadline again.
     """
     from infolog import log_event
 
@@ -211,9 +215,11 @@ def _fetch_gaia_tap_with_retry(
     for attempt in range(max(1, int(max_attempts))):
         attempts = attempt + 1
         try:
-            return _fetch_gaia_tap(source_ids, timeout_s=timeout_s), attempts
+            return _fetch_gaia_tap(source_ids), attempts
         except Exception as exc:  # noqa: BLE001
             last_exc = exc
+            if isinstance(exc, TapTimeout):
+                break
             if attempt < max_attempts - 1:
                 delay = backoffs[attempt] if attempt < len(backoffs) else backoffs[-1]
                 log_event(
@@ -287,6 +293,10 @@ def enrich_candidates(
 ) -> pd.DataFrame:
     """Merge online teff/logg/DSC (Gaia TAP) and SIMBAD id/otype/sp_type into candidates (fail-open).
 
+    ``timeout_s`` bounds the SIMBAD queries; the Gaia archive jobs use the deadlines of
+    ``gaia_tap_job`` (NET-GAIA-TAP-DEADLINE-2026-11). A failure is a WARNING in the run log and
+    ``enrich_skip_reason`` in ``last_enrich`` of the cache file.
+
     ``fetch=False`` (NEW-1, the GUI's HRD tab): the cache file only - no network query, nothing written."""
     if candidates_df is None or candidates_df.empty:
         return candidates_df if candidates_df is not None else pd.DataFrame()
@@ -311,7 +321,7 @@ def enrich_candidates(
     tap_attempts = 0
     if need_gaia:
         try:
-            gaia_hits, tap_attempts = _fetch_gaia_tap_with_retry(need_gaia, timeout_s=timeout_s)
+            gaia_hits, tap_attempts = _fetch_gaia_tap_with_retry(need_gaia)
             for sid, payload in gaia_hits.items():
                 prev = cache.get(sid, {})
                 prev.update(payload)
@@ -342,7 +352,7 @@ def enrich_candidates(
             logger.warning("HRD SIMBAD enrich failed (optional, rows kept without SIMBAD): %s", exc)
 
     if skip_reason:
-        log_event(f"HRD enrichment skipped: {skip_reason}")
+        log_event(f"WARNING: HRD enrichment skipped: {skip_reason}")
 
     if cache_file is not None and fetch:
         _save_cache(

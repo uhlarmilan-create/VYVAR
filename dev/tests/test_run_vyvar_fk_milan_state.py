@@ -9,6 +9,7 @@ import numpy as np
 import pytest
 from astropy.io import fits
 
+import calib_library as cl
 from database import VyvarDatabase
 from importer import smart_import_session, smart_scan_source
 
@@ -22,6 +23,7 @@ def _write_master_dark(path: Path, *, age_days: float) -> None:
     hdu.header["YBINNING"] = 2
     hdu.header["EXPTIME"] = 60.0
     hdu.header["GAIN"] = 100
+    hdu.header["CCD-TEMP"] = -10.0
     path.parent.mkdir(parents=True, exist_ok=True)
     hdu.writeto(path, overwrite=True)
 
@@ -109,27 +111,9 @@ def test_milan_state_scan_shows_expired_dark_and_import_succeeds(tmp_path: Path)
     flat = cal_root / "Flat_NoFilter_Bin2.fits"
     _write_master_dark(dark, age_days=150.0)
     _write_master_flat(flat)
-    assert db.register_calibration_library_entry(
-        kind="dark",
-        file_path=dark,
-        xbinning=2,
-        exptime=60.0,
-        ccd_temp=-10.0,
-        gain=100,
-        id_equipments=eq,
-        id_telescope=tel,
-    )
-    assert db.register_calibration_library_entry(
-        kind="flat",
-        file_path=flat,
-        xbinning=2,
-        exptime=0.0,
-        ccd_temp=-10.0,
-        filter_name="NoFilter",
-        gain=100,
-        id_equipments=eq,
-        id_telescope=tel,
-    )
+    # v10 item 21: registered through the one library implementation (calib_library), header keys
+    cl.register_master(db, dark, kind="dark", camera_id=eq, telescope_id=tel)
+    cl.register_master(db, flat, kind="flat", camera_id=eq, telescope_id=tel)
 
     source = tmp_path / "session" / "Lights"
     _write_light(source / "light_0001.fits")

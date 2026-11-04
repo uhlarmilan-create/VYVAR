@@ -39,7 +39,7 @@ from mag_constants import MAG_ERR_SCALE
 from psf_photometry import EPSF_FRAMES_DIR, EPSF_FRAMES_MANIFEST
 from report_methods import lc_csv_path
 
-AP_HARD_FAIL_FLAGS = frozenset({"saturated", "edge_fail", "no_data", "nondetection"})
+AP_HARD_FAIL_FLAGS = frozenset({"saturated", "edge_fail", "no_data", "nondetection", "below_limit"})  # below_limit: LC-BELOW-LIMIT-2026-11
 
 
 def p2p_scatter(values: Any) -> float:

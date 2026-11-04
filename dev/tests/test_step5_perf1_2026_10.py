@@ -1796,7 +1796,7 @@ def _bp_repair_ref(
     from scipy.spatial import cKDTree  # noqa: PLC0415
 
     from epsf_frame import fit_box_px  # noqa: PLC0415
-    from psf_photometry import _EPSF_CUTOUT_FWHM, _to_odd_cutout  # noqa: PLC0415
+    from psf_photometry import epsf_cutout_px  # noqa: PLC0415
     from sky_estimation import annulus_sky_medians, sky_image  # noqa: PLC0415
 
     d = np.asarray(data, dtype=np.float64)
@@ -1814,7 +1814,7 @@ def _bp_repair_ref(
     sky = sky_image(np.where(missing, np.nan, d), fw)
     sky_px = annulus_sky_medians(sky, np.c_[mx, my].astype(float), 4.0 * fw, 6.0 * fw)
 
-    cutout = _to_odd_cutout(int(round(fw * _EPSF_CUTOUT_FWHM)))
+    cutout = epsf_cutout_px(fw)
     fsz = fit_box_px(fw)
     half = cutout / 2.0
     reach = half + fsz / 2.0 + 1.0

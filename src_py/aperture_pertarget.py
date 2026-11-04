@@ -867,6 +867,7 @@ def apply_grid_fluxes_to_frames(
     f_star: float,
     gain: float,
     read_noise: float,
+    limit_ids: Sequence[str] = (),
 ) -> pd.DataFrame:
     """Set mag_inst / aperture_r_px (r = k* x FWHM_frame) / err for target, comps and check star.
 
@@ -879,14 +880,22 @@ def apply_grid_fluxes_to_frames(
     (flux = sum - sky x area), so there is no flux to give an error to. A star whose aperture or
     annulus is off the aligned frame's data in that frame (``night.edge_by_frame``) gets
     mag_inst = NaN, err = NaN and flag ``edge_fail``. Gain and read noise are required (ValueError).
+
+    LC-BELOW-LIMIT-2026-11 (the rule of COVERAGE-FAINT-LIMIT-2026-10, ``ccd_noise.limit_magnitudes``): for the
+    stars of ``limit_ids`` (the target) a grid flux below its 1-sigma CCD error - zero and negative included -
+    takes the 1-sigma flux: mag_inst = -2.5 log10(sigma_F), err = 1 (relative) and ``below_limit`` True; every
+    other row of those stars has ``below_limit`` False. The comparison and check stars keep NaN for F <= 0.
     """
-    from ccd_noise import check_gain_read_noise, ccd_rel_error  # noqa: PLC0415
+    from ccd_noise import ccd_variance_adu2, check_gain_read_noise, ccd_rel_error, limit_magnitudes  # noqa: PLC0415
 
     g, rn = check_gain_read_noise(gain, read_noise)
     if all_frames is None or all_frames.empty or "source_file" not in all_frames.columns:
         return all_frames
     out = all_frames.copy()
     want = {str(c) for c in catalog_ids}
+    lim = {str(c) for c in limit_ids}
+    if lim and "below_limit" not in out.columns:
+        out["below_limit"] = False
     k = float(f_star)
     # SPEED-2026-10: visit only the rows of the wanted stars (column lists, same order as iterrows).
     _n = len(out)
@@ -922,7 +931,7 @@ def apply_grid_fluxes_to_frames(
             out.at[i, "flag"] = "edge_fail"
             out.at[i, "edge_fail"] = True
             continue
-        if flux is None or not math.isfinite(float(flux)) or float(flux) <= 0:
+        if flux is None or not math.isfinite(float(flux)) or (float(flux) <= 0 and cid not in lim):
             out.at[i, "mag_inst"] = float("nan")
             continue
         sky = (night.sky_pp.get(stem, {}).get(cid) or {}).get(k, float("nan"))
@@ -931,6 +940,17 @@ def apply_grid_fluxes_to_frames(
             out.at[i, "mag_inst"] = float("nan")
             out.at[i, "flag"] = "no_data"
             continue
+        if cid in lim:
+            var = ccd_variance_adu2(float(flux), float(sky), math.pi * r_ap * r_ap, float(n_sky), gain=g, read_noise=rn)
+            m_lim, _e_mag, below = limit_magnitudes(float(flux), float(var))
+            if bool(below):
+                out.at[i, "mag_inst"] = float(m_lim)
+                out.at[i, "err"] = 1.0  # sigma_F / F at F = sigma_F
+                out.at[i, "below_limit"] = True
+                continue
+            if float(flux) <= 0:  # no finite CCD variance (cannot happen with a finite sky and n_sky)
+                out.at[i, "mag_inst"] = float("nan")
+                continue
         out.at[i, "mag_inst"] = float(-2.5 * math.log10(float(flux)))
         out.at[i, "err"] = float(
             ccd_rel_error(float(flux), float(sky), math.pi * r_ap * r_ap, float(n_sky), gain=g, read_noise=rn)

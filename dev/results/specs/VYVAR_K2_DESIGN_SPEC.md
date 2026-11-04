@@ -1,6 +1,10 @@
 # VYVAR -- K2: Band-aware second-order extinction (design spec, v1.0 DRAFT)
 
 Status: **v1.1 -- Cursor live-tree review incorporated (2026-07-07); ready for implementation.**
+
+> Superseded in part (K2-BAND-2026-10, K2-RELIABLE-2026-11, docs/VYVAR_DECISIONS.md): u / U, i, z, V, R, I are
+> source none; g slope = Jordi 2010 Table 5 g-r row (0.757, the 1.054 "Table 6" value is not in the paper);
+> r slope = Table 5 r-i row (0.433). The tables below are the v1 history.
 v1.1 changes: defaults table -> converter module with explicit slope direction
 (k2_bprp = k''_native * d(C_native)/d(C_bprp); review's division corrected to
 multiplication); OSC tri-colour policy row (CT standard, k2 none); k2_mode declared

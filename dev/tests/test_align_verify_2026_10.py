@@ -220,7 +220,7 @@ def test_capture_wcs_failing_the_star_check_is_not_reprojected(field, monkeypatc
     log: list[str] = []
     r = V._alignment_compute_one_frame(p, 1, _ctx_wcs(ref, tmp), log)
     assert r["kind"] == "aligned" and r["aligned_method"] == "star_similarity"
-    assert any("wcs_reproject not verified on stars" in s for s in log)
+    assert any("wcs_affine not verified on stars" in s for s in log)
     assert r["star_count"]["align_residual_px"] <= max(ALIGN_P90_MAX_FWHM * FWHM, ALIGN_P90_FLOOR_PX)
 
 
@@ -232,7 +232,7 @@ def test_accurate_frame_wcs_is_reprojected(field):
     crpix_f = np.linalg.solve(a, np.array([W / 2, H / 2]) - t)
     p = _write_wcs(tmp, "goodwcs.fits", fits.getdata(fp), _wcs_hdr(_CD_REF @ a, (crpix_f[0], crpix_f[1])))
     r = V._alignment_compute_one_frame(p, 1, _ctx_wcs(ref, tmp), [])
-    assert r["kind"] == "aligned" and r["aligned_method"] == "wcs_reproject"
+    assert r["kind"] == "aligned" and r["aligned_method"] == "wcs_affine"
 
 
 def _distort(xy: np.ndarray, k: float) -> np.ndarray:

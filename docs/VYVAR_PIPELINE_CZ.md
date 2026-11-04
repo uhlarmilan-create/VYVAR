@@ -141,7 +141,7 @@ skriptu (generovane vystupy nejsou v gitu).
 
 Kazdy MASTERSTAR resi `astrosolve.py`: s napovedou polohy z hlavicky FITS, bez ni naslepo pres
 vicemeritkovy index ctyrhvezdnych vzoru z lokalni Gaia DB (`astro_index.py`, slozka
-`vyvar_astro_index/`; stavba `python GAIA_DR3/build_astro_index.py`).
+`vyvar_astro_index/`; stavba `python catalogs\build_astro_index.py`).
 Prijeti podle Bayesovskych log-odds proti Gaia hvezdam vlastniho pole, zpresneni TAN+SIP (rad SIP
 podle BIC). Stary trojuhelnikovy blind solver (`vyvar_blind_solver.py`, PKL indexy z
 `build_blind_index.py`) a stary VYVAR solver byly odstraneny 2026-10-19 (CFG-REVIEW-2026-10).
@@ -170,10 +170,10 @@ SHA helper (kotvy): `tests/photometry_sha.py`. Guard testy:
 
 ## 5) Gaia katalog -- G <= 17.5 a build pro noveho uzivatele
 
-- Lokalni Gaia DR3 SQLite se stavi skriptem `GAIA_DR3/build_gaia_catalog.py` (full-sky, default
+- Lokalni Gaia DR3 SQLite se stavi skriptem `catalogs/build_gaia_catalog.py` (full-sky, default
   G <= 16.5, cil prohloubeni **G <= 17.5**), resume-safe pres tabulku `strip_progress`,
   `source_id` jako INTEGER PRIMARY KEY.
-- Index pro slepe reseni se stavi `GAIA_DR3/build_astro_index.py` (slozka `vyvar_astro_index/` vedle DB).
+- Index pro slepe reseni se stavi `catalogs/build_astro_index.py` (slozka `vyvar_astro_index/` vedle DB).
 - **Build pro noveho uzivatele:** skripty se pousti **z klonu repozitare** (sdili
   `gaia_catalog_id.py`, ktery resi presnost 19-cifernych `source_id` pres `Decimal` -- naivni
   `int(float)` by je poskodil). `--out` presmeruje velky soubor
@@ -182,9 +182,9 @@ SHA helper (kotvy): `tests/photometry_sha.py`. Guard testy:
 
 Priklad:
 
-```bash
-python GAIA_DR3/build_gaia_catalog.py --mag-limit 16.5 --out <path-to-db>
-python GAIA_DR3/build_astro_index.py --db <path-to-db>
+```
+python catalogs\build_gaia_catalog.py --mag-limit 16.5 --out <path-to-db>
+python catalogs\build_astro_index.py --db <path-to-db>
 ```
 
 ---

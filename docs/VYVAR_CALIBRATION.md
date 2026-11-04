@@ -69,6 +69,7 @@ save_lightcurve_csv():
 | `ct_correction`, `ac_correction` | Scalar korekce per cil/noc (metadata) | CT: `apply_color_term` ~2612; AC: `compute_aperture_correction` ~2193 |
 | `ac_scatter` | Median abs dev ?M ref stars (metadata, ne `err`) | `compute_aperture_correction` ~2194 |
 | `err` | Photon/SNR + ensemble SEM | Viz sekce 4 |
+| `below_limit` | True: the target flux was below its 1-sigma CCD error; the magnitudes are the 1-sigma limit (fainter-than; AAVSO "<mag", not in VarAstro, not a measurement). Absent in LCs written before LC-BELOW-LIMIT-2026-11 (= False) | `aperture_pertarget.apply_grid_fluxes_to_frames(limit_ids)` -> flag `below_limit` -> `save_lightcurve_csv` |
 
 **Poznamka:** `mag_calib_ct` v CSV je CT aplikovany na `mag_calib` **pred** Savitzky-Golay;
 `mag_calib_final` aplikuje scalar `ct_correction` na **final** `mag_calib` (po SG), takze pri

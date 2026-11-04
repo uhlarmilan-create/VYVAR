@@ -701,7 +701,8 @@ def test_g0503_repair_verifies_or_redownloads_resumable(tmp_path) -> None:
     assert {r[0] for r in con.execute("SELECT verified FROM strip_progress")} == {1}
     con.close()
     again = b.repair_strips(_cfg(b, db, repair=True), fetch=tap)
-    assert again == {"verified": 0, "downloaded": 0, "truncated": 0, "error": 0, "new_rows": 0}
+    assert again == {"verified": 0, "downloaded": 0, "truncated": 0, "error": 0, "new_rows": 0,
+                     "failed_strips": [], "not_tried": 0}
 
 
 def test_g0503_truncated_strip_has_no_coverage_claim(tmp_path) -> None:

@@ -96,19 +96,42 @@ drive before copying. The set fits on a 16 GB USB stick. (The full 50 GB
 The blind plate-solve index (`catalogs/vyvar_astro_index/`, ~7 GB) is not copied by the installer.
 It is only needed for frames without a usable position in the FITS header; copy the folder from
 the source machine or build it from the Gaia DB:
-`python catalogs/build_astro_index.py`.
+`python catalogs\build_astro_index.py`.
 
 ### Option 2 - Build from sources
 
 Downloads and builds the catalogs from the ESA Gaia archive, AAVSO VSX, and the
 NASA exoplanet archive. Expect large downloads and hours-to-days depending on your
-connection. This is not the quick-setup path. The builders are:
+connection. This is not the quick-setup path. The builders are (run from the VYVAR folder with
+the Python that runs VYVAR - plain `python`, no virtual environment needed; if you do use one,
+activate it first; on Linux / macOS write `/` instead of `\`):
 
 ```
-python catalogs/build_gaia_catalog.py     # Gaia DR3 -> sqlite (astroquery TAP)
-python catalogs/build_astro_index.py
-python catalogs/objects_make.py --vsx --exoplanets   # AAVSO VSX + NASA archive -> sqlite
+python catalogs\build_gaia_catalog.py     # Gaia DR3 -> sqlite (astroquery TAP)
+python catalogs\build_astro_index.py
+python catalogs\objects_make.py --vsx --exoplanets   # AAVSO VSX + NASA archive -> sqlite
 ```
+
+#### Gaia archive: anonymous access, timeouts, interrupting
+
+- **No login is needed.** The builder and `--repair` use the ESA Gaia archive anonymously
+  (optional login: environment variables `GAIA_USER` / `GAIA_PASS`).
+- **Anonymous access is slow:** every archive request (a star count or a strip download) takes
+  about 1-2 minutes, even for a tiny sky box, because the archive queues anonymous jobs (since
+  2026-10-14 it runs at most 5 jobs per user at a time and queues up to 50; anonymous users may
+  share these slots). A full build is two requests per strip, so plan hours to days.
+- **The output never freezes:** while the archive works on a job, a line such as
+  `Gaia TAP COUNT: job 1762... QUEUED 2m00s (deadline 10m00s)` is printed every minute.
+- **Timeouts:** every archive job has a deadline - 10 min for a star count, 20 min for a strip
+  download to finish on the archive plus 30 min to transfer the result. A job past its deadline is
+  cancelled on the archive (so it does not keep a job slot) and tried once more; if it times out
+  again, that strip is reported as failed and the build continues with the next strip. When three
+  strips in a row time out the archive is not processing jobs: the run stops. The summary at the
+  end lists the failed strips - run the same command again later to finish them.
+- **Resume:** each strip is stored in one transaction and recorded as finished; running the same
+  command again skips every finished strip (for `--repair`: every strip already verified).
+- **Ctrl+C is safe** at any time: the open archive job is cancelled, the strip being stored is
+  rolled back, and the strips already finished stay in the DB. Run the same command again to continue.
 
 ### Gaia DB incomplete -> how to check and repair
 
@@ -117,20 +140,21 @@ archive caps one query at a fixed number of rows. VYVAR now verifies each strip 
 own star count, and tells you when a field touches a strip that is not verified complete:
 
 - **In a run** (infolog of the processed field):
-  `WARNING: GAIA DB strip 258.3495_270.0926_-34.0319_-26.0365 (3000000 rows, truncated, at the anonymous TAP row cap) overlaps this field: the local Gaia DB may miss stars here; run catalogs/build_gaia_catalog.py --repair`
+  `WARNING: GAIA DB strip 258.3495_270.0926_-34.0319_-26.0365 (3000000 rows, truncated, at the anonymous TAP row cap) overlaps this field: the local Gaia DB may miss stars here; run python catalogs\build_gaia_catalog.py --repair`
 - **In Settings -> Paths and catalogs -> Gaia DR3 -> Report**: the log shows
   `strips: N not verified complete (COUNT check), M truncated or at the anonymous TAP row cap`
-  and, when M > 0, the ready repair command (`repair: python catalogs/build_gaia_catalog.py --out ... --repair --strip ...`).
+  and, when M > 0, the ready repair command (`repair: python catalogs\build_gaia_catalog.py --out ... --repair --strip ...`).
 
-Check and repair from the VYVAR folder (Windows, PowerShell; the scripts use the Gaia DB path saved
-in Settings, `gaia_db_path`; add `--out <path>` / `--db <path>` for another file). Close VYVAR runs first.
+Check and repair from the VYVAR folder (Windows, PowerShell or cmd, plain `python`; the scripts use the
+Gaia DB path saved in Settings, `gaia_db_path`; add `--out <path>` / `--db <path>` for another file).
+Close VYVAR runs first.
 
 ```
 cd C:\path\to\VYVAR
-.\.venv\Scripts\python.exe catalogs\gaia_maintain.py --report --db <path-to-vyvar_gaia_dr3.db>
-.\.venv\Scripts\python.exe catalogs\build_gaia_catalog.py --check
-.\.venv\Scripts\python.exe catalogs\build_gaia_catalog.py --repair --strip <strip_key> --strip <strip_key>
-.\.venv\Scripts\python.exe catalogs\build_gaia_catalog.py --repair
+python catalogs\gaia_maintain.py --report --db <path-to-vyvar_gaia_dr3.db>
+python catalogs\build_gaia_catalog.py --check
+python catalogs\build_gaia_catalog.py --repair --strip <strip_key> --strip <strip_key>
+python catalogs\build_gaia_catalog.py --repair
 ```
 
 - `--check` only lists the strips that are not verified complete (nothing is changed).
@@ -138,11 +162,13 @@ cd C:\path\to\VYVAR
   `--repair` alone repairs every unverified strip - for a DB built before 2026-10-31 that is every
   strip, so prefer the `--strip` form for the strips the Report marks truncated / at the row cap.
 - For each strip the archive is asked for its star count; when the DB already has all of them the strip
-  is only marked verified (seconds), otherwise it is downloaded again, split into smaller boxes until each
-  part is complete. Plan minutes per strip, longer for dense Milky Way strips (a few hours for the six bulge
-  strips together).
+  is only marked verified (one archive request, ~1-2 min anonymously), otherwise it is downloaded again,
+  split into smaller boxes until each part is complete. Plan a few minutes per strip, longer for dense
+  Milky Way strips (a few hours for the six bulge strips together). The strips stored exactly at the
+  anonymous row cap (certainly cut, the long downloads) are repaired last, after all other strips.
 - It is **resumable**: one strip per transaction; stop it with Ctrl+C and run the same command again - the
-  strips already repaired are skipped.
+  strips already repaired are skipped. A strip whose archive job timed out is listed at the end as
+  failed; run the same command again later (see "Gaia archive: anonymous access, timeouts, interrupting").
 - It needs **internet access to the ESA Gaia archive** (gea.esac.esa.int, TAP). Optional archive login:
   environment variables `GAIA_USER` / `GAIA_PASS`.
 
@@ -155,15 +181,16 @@ pipeline is not usable for science until catalogs arrive. Re-run the installer
 
 ## 4. First run
 
-Start the app from the repository root (activate `.venv` first if the installer
-created one):
+Start the app from the repository root. If the installer created a virtual environment
+(`.venv`), activate it first (optional - with the packages installed in your system Python, just
+run `streamlit run app.py`):
 
 ```
-# Windows
+# Windows (only with a virtual environment)
 .\.venv\Scripts\Activate.ps1
 streamlit run app.py
 
-# Linux
+# Linux (only with a virtual environment)
 source .venv/bin/activate
 streamlit run app.py
 ```
@@ -217,6 +244,10 @@ setting, offset, readout mode and temperature of your science frames.
    shows the local slopes (EMVA: within 3 %), the mean level vs exposure time (linearity, 5-95 %) and the
    neighbour correlation of the flat differences (above 1 % the covariances are summed). Read the
    messages: unsteady light, non-linearity or too few levels are named there.
+   Without the GUI (same selection and measurement, nothing saved): `python dev/tools/ptc_from_folder.py
+   <folder> --inventory` lists the usable frames per exposure (and says when the folder is only a master-flat
+   set, not a ladder); `python dev/tools/ptc_from_folder.py <folder> --db <data_root>/vyvar.sqlite3
+   --camera-id <ID> --json ptc.json` measures (or `--saturation-adu N --adc-bits B` instead of the database).
 6. **Save to camera.** Saves the gain (with its 1-sigma error), the read noise and the whole report as a
    measured point at this gain setting and binning. A new measurement replaces the old one at the same
    key. The night runs use it at that binning without any binning convention; keep the old catalog / default
@@ -242,6 +273,10 @@ offset, rezim cteni a teplota musi byt stejne jako u vedeckych snimku.
    VYVAR odecte rozptyl paru darku na kazde urovni, prolozi primku 0-70 % saturace a ukaze lokalni sklony
    (EMVA: do 3 %), prumernou uroven proti expozici (linearita 5-95 %) a korelaci sousednich pixelu rozdilu
    flatu (nad 1 % se kovariance sectou). Prectete hlaseni: nestabilni svetlo, nelinearita nebo malo urovni.
+   Bez GUI (stejny vyber i mereni, nic se neuklada): `python dev/tools/ptc_from_folder.py <slozka> --inventory`
+   vypise pouzitelne snimky po expozicich (a upozorni, kdyz je ve slozce jen sada pro master flat, ne rada
+   urovni); `python dev/tools/ptc_from_folder.py <slozka> --db <data_root>/vyvar.sqlite3 --camera-id <ID>
+   --json ptc.json` meri (misto databaze lze `--saturation-adu N --adc-bits B`).
 6. **Save to camera.** Ulozi gain (s chybou 1 sigma), sum cteni a cely protokol jako mereny bod pri tomto
    gainu a binningu. Nove mereni nahradi stare se stejnym klicem. Nocni zpracovani ho pri tom binningu
    pouzije bez jakekoli konvence binningu.

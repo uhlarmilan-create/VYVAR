@@ -498,7 +498,7 @@ class AppConfig:
     masterdark_validity_days: int = 90
     masterflat_validity_days: int = 200
 
-    #: Max |DeltaT| ( degC) when matching library dark masters to light ``CCD_TEMP`` (``find_best_calibration_library_path``).
+    #: Max |DeltaT| ( degC) when matching library dark masters to light ``CCD_TEMP`` (``calib_library.find_dark``).
     calibration_master_ccd_temp_tolerance_c: float = 0.5
 
     #: Local Gaia DR3 SQLite (table ``gaia_dr3``), built by ``catalogs/build_gaia_catalog.py``

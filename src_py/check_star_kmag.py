@@ -10,7 +10,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-from stats_core import coerce_bool, coerce_bool_series
+from stats_core import coerce_bool, coerce_bool_series, robust_sigma
 
 from config import AppConfig
 from gaia_catalog_id import normalize_gaia_source_id
@@ -553,14 +553,14 @@ class CheckStarStats:
 
     n: int
     median: float
-    scatter: float  # standard deviation, ddof=1 (NaN below 2 epochs)
+    scatter: float  # robust scatter 1.4826 x MAD (stats_core.robust_sigma; NaN below 2 epochs) - CHECK-ROBUST-2026-11
     err_med: float  # median kmag_err
     bjd: np.ndarray
     kmag: np.ndarray
 
 
 def check_star_stats(sidecar: pd.DataFrame | None, source_files: Any = None) -> CheckStarStats:
-    """G11-11: the one computation of the check-star median, scatter and median error (export header, PDF and
+    """G11-11: the one computation of the check-star median, robust scatter and median error (export header, PDF and
     UI facts, plot strip, trust). ``source_files``: the target's exported rows (``export_row_mask``); the
     check epochs of other frames are not counted. ``None`` counts every finite check epoch."""
     empty = CheckStarStats(0, float("nan"), float("nan"), float("nan"), np.array([]), np.array([]))
@@ -583,7 +583,9 @@ def check_star_stats(sidecar: pd.DataFrame | None, source_files: Any = None) -> 
     return CheckStarStats(
         n=n,
         median=float(np.median(km)) if n else float("nan"),
-        scatter=float(np.std(km, ddof=1)) if n > 1 else float("nan"),
+        # CHECK-ROBUST-2026-11 (Sokolovsky et al. 2017 Sect. 2.3): 1.4826 MAD, not the standard deviation -
+        # one bad frame of the check star must not inflate the night repeatability (no clipping)
+        scatter=robust_sigma(km),
         err_med=float(np.nanmedian(ke)) if np.isfinite(ke).any() else float("nan"),
         bjd=bjd,
         kmag=km,

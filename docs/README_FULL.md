@@ -126,6 +126,13 @@ and period-reliability classification.
 A PDF **Summary Measure Report** carries per-star light curves, an HR diagram with Gaia-based
 classification, and a full **configuration-provenance page** - the exact parameter snapshot,
 git head, and generation timestamp baked into every report so any figure is reproducible.
+The precision of a light curve is stated as two numbers: the headline **precision (error per
+point, MERR)** - the median error of the exported points, including the night's systematic floor,
+i.e. the error the AAVSO / VarAstro files carry - and, as a secondary number, the **short-term
+scatter (p2p)**, the robust frame-to-frame scatter (1.4826 MAD of successive differences / sqrt 2;
+Sokolovsky et al. 2017). p2p does not see slow night drifts, so on bright stars it is well below
+the error; on faint, photon-limited stars the two agree. The check-star scatter is a robust
+1.4826 MAD (one bad frame does not inflate it).
 
 ### AAVSO / VarAstro export
 Submission files are written with full citation headers driven by `CITATIONS.bib` (the single
@@ -221,15 +228,15 @@ Build the local Gaia DR3 catalog once (the builders in `catalogs/` import their 
 `src_py/`; by default they write to the paths set in Settings, `catalogs/` in the data directory;
 `--out` places the database anywhere). See `catalogs/README.md`.
 
-```bash
-python catalogs/build_gaia_catalog.py --mag-limit 16.5 --out <path-to-db>
-python catalogs/build_astro_index.py --db <path-to-db>
+```
+python catalogs\build_gaia_catalog.py --mag-limit 16.5 --out <path-to-db>
+python catalogs\build_astro_index.py --db <path-to-db>
 ```
 
 Quick smoke build (small sky patch):
 
-```bash
-python catalogs/build_gaia_catalog.py --dec-min 89 --dec-max 90 --mag-limit 10 --skip-vacuum --out tmp/smoke_gaia.db
+```
+python catalogs\build_gaia_catalog.py --dec-min 89 --dec-max 90 --mag-limit 10 --skip-vacuum --out tmp\smoke_gaia.db
 ```
 
 #### Gaia DB incomplete -> how to check and repair
@@ -239,20 +246,24 @@ archive caps one query at a fixed number of rows. VYVAR now verifies each strip 
 own star count, and tells you when a field touches a strip that is not verified complete:
 
 - **In a run** (infolog of the processed field):
-  `WARNING: GAIA DB strip 258.3495_270.0926_-34.0319_-26.0365 (3000000 rows, truncated, at the anonymous TAP row cap) overlaps this field: the local Gaia DB may miss stars here; run catalogs/build_gaia_catalog.py --repair`
+  `WARNING: GAIA DB strip 258.3495_270.0926_-34.0319_-26.0365 (3000000 rows, truncated, at the anonymous TAP row cap) overlaps this field: the local Gaia DB may miss stars here; run python catalogs\build_gaia_catalog.py --repair`
 - **In Settings -> Paths and catalogs -> Gaia DR3 -> Report**: the log shows
   `strips: N not verified complete (COUNT check), M truncated or at the anonymous TAP row cap`
-  and, when M > 0, the ready repair command (`repair: python catalogs/build_gaia_catalog.py --out ... --repair --strip ...`).
+  and, when M > 0, the ready repair command (`repair: python catalogs\build_gaia_catalog.py --out ... --repair --strip ...`).
 
-Check and repair from the VYVAR folder (Windows, PowerShell; the scripts use the Gaia DB path saved
-in Settings, `gaia_db_path`; add `--out <path>` / `--db <path>` for another file). Close VYVAR runs first.
+Check and repair from the VYVAR folder (Windows, PowerShell or cmd, plain `python` - no virtual
+environment needed; the scripts use the Gaia DB path saved in Settings, `gaia_db_path`; add
+`--out <path>` / `--db <path>` for another file). Close VYVAR runs first. Anonymous archive access
+is slow (~1-2 min per request); every archive job has a deadline, a stuck job is cancelled and its
+strip listed as failed at the end (run the same command again); Ctrl+C is safe. Details:
+`docs/INSTALL.md`, "Gaia archive: anonymous access, timeouts, interrupting".
 
 ```
 cd C:\path\to\VYVAR
-.\.venv\Scripts\python.exe catalogs\gaia_maintain.py --report --db <path-to-vyvar_gaia_dr3.db>
-.\.venv\Scripts\python.exe catalogs\build_gaia_catalog.py --check
-.\.venv\Scripts\python.exe catalogs\build_gaia_catalog.py --repair --strip <strip_key> --strip <strip_key>
-.\.venv\Scripts\python.exe catalogs\build_gaia_catalog.py --repair
+python catalogs\gaia_maintain.py --report --db <path-to-vyvar_gaia_dr3.db>
+python catalogs\build_gaia_catalog.py --check
+python catalogs\build_gaia_catalog.py --repair --strip <strip_key> --strip <strip_key>
+python catalogs\build_gaia_catalog.py --repair
 ```
 
 - `--check` only lists the strips that are not verified complete (nothing is changed).
@@ -260,7 +271,7 @@ cd C:\path\to\VYVAR
   `--repair` alone repairs every unverified strip - for a DB built before 2026-10-31 that is every
   strip, so prefer the `--strip` form for the strips the Report marks truncated / at the row cap.
 - For each strip the archive is asked for its star count; when the DB already has all of them the strip
-  is only marked verified (seconds), otherwise it is downloaded again, split into smaller boxes until each
+  is only marked verified (one archive request, ~1-2 min), otherwise it is downloaded again, split into smaller boxes until each
   part is complete. Plan minutes per strip, longer for dense Milky Way strips (a few hours for the six bulge
   strips together).
 - It is **resumable**: one strip per transaction; stop it with Ctrl+C and run the same command again - the

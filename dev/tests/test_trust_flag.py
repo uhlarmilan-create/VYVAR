@@ -138,7 +138,8 @@ def test_hard_forces_red() -> None:
         assert info["trust"] == "RED", (n_clean, lq, chk)
 
 
-def test_check_scatter_ddof(tmp_path: Path) -> None:
+def test_check_scatter_robust(tmp_path: Path) -> None:
+    """CHECK-ROBUST-2026-11: 1.4826 x MAD of the two epochs (the ddof=1 std gave 0.01414)."""
     lc = tmp_path / "lightcurves"
     lc.mkdir()
     cid = "999"
@@ -148,7 +149,7 @@ def test_check_scatter_ddof(tmp_path: Path) -> None:
                   "err": [0.01, 0.01], "flag": ["normal", "normal"]}).to_csv(lc / f"lightcurve_{cid}.csv", index=False)
     scatter, n = check_star_scatter(tmp_path, cid)
     assert n == 2
-    assert scatter == pytest.approx(0.014142135623730951, abs=1e-9)
+    assert scatter == pytest.approx(1.4826 * 0.01, abs=1e-9)
 
 
 def test_short_baseline_alone_is_yellow() -> None:

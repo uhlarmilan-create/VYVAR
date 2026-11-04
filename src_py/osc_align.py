@@ -270,11 +270,14 @@ def apply_registration_handoff_to_frame(
 ) -> tuple[np.ndarray | None, fits.Header, str]:
     """Apply stored oneRGGB registration to a channel frame (D2); ``None`` when the donor has
     no verified registration for it (the frame is then not aligned and not measured)."""
-    method = str(handoff_entry.get("method") or "astroalign")
+    from vyvar_alignment_frame import canonical_align_method
+
+    # V10-CAL-WCS-AFFINE: a handoff written before the rename says "wcs_reproject" -> "wcs_affine"
+    method = canonical_align_method(str(handoff_entry.get("method") or "astroalign"))
     data = np.asarray(frame_data, dtype=np.float32)
     hdr = frame_hdr.copy()
     # ALIGN-VERIFY-2026-10: the donor's registration was verified on star pairs as a frame->
-    # reference matrix (astroalign, wcs_reproject or star_similarity); exactly that matrix is
+    # reference matrix (astroalign, wcs_affine, star_similarity or star_polynomial); exactly that matrix is
     # applied to the channel frame. Without a finite matrix the frame has no verified
     # registration and is not aligned (no own-WCS reprojection, no shift, no identity).
     mat = np.asarray(handoff_entry.get("matrix") or [], dtype=np.float64)

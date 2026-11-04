@@ -185,6 +185,28 @@ def _int0(v: Any) -> int:
     return int(x) if pd.notna(x) else 0
 
 
+#: LC-PRECISION-ERR-2026-11 (v10 item 2): plain-language labels of the two precision numbers of a light curve
+#: (target page in the PDF and in the UI). The headline is the per-point error incl. the night systematic floor -
+#: the error the AAVSO / VarAstro export carries; the point-to-point scatter is the short-term (frame-to-frame)
+#: scatter, blind to slow night systematics (hence below the error on bright stars).
+PRECISION_LABEL = "Precision (error per point)"
+SHORT_SCATTER_LABEL = "Short-term scatter (p2p)"
+
+
+def precision_facts(merr: float, p2p: float) -> list[tuple[str, str]]:
+    """The two precision rows of a target page: headline MERR (median error of the exported points, incl. the
+    night floor), then the p2p scatter with its ratio to that error."""
+    merr, p2p = float(merr), float(p2p)
+    head = (f"{merr:.4f} mag (median, exported points, incl. night floor)"
+            if np.isfinite(merr) else "-")
+    sec = "-"
+    if np.isfinite(p2p):
+        sec = f"{p2p:.4f} mag frame-to-frame"
+        if np.isfinite(merr) and merr > 0:
+            sec += f" ({p2p / merr:.2f} x error)"
+    return [(PRECISION_LABEL, head), (SHORT_SCATTER_LABEL, sec)]
+
+
 def star_fields(row: Mapping[str, Any], lc_stats: Mapping[str, Any]) -> dict[str, Any]:
     """Summary-row facts of one target used on its page (no image paths)."""
     cid = str(row.get("_cid", "") or _norm_cid_decimal(row.get("catalog_id", "")))
@@ -194,7 +216,7 @@ def star_fields(row: Mapping[str, Any], lc_stats: Mapping[str, Any]) -> dict[str
         "vsx_type": row.get("vsx_type", ""),
         "zone_flag": row.get("zone_flag", ""),
         "bp_rp": row.get("bp_rp", float("nan")),
-        # LC-PRECISION-P2P-2026-10 (G08-17): headline precision = robust point-to-point scatter
+        # LC-PRECISION-ERR-2026-11: secondary short-term scatter (the headline is merr_med below)
         "lc_precision_p2p": row.get("lc_precision_p2p", float("nan")),
         "lc_rms_full": row.get("lc_rms", float("nan")),
         "good_comp": row.get("n_stability_good", row.get("n_good_comp", 0)),
@@ -487,7 +509,8 @@ class TargetPages:
         sdf = self.check_df(cid) if cid else None
         if sdf is None or sdf.empty or "kmag" not in sdf.columns:
             return out
-        # G11-11: the check-star numbers of the export header and the trust (exported epochs, ddof=1)
+        # G11-11: the check-star numbers of the export header and the trust (exported epochs; CHECK-ROBUST-2026-11:
+        # robust scatter 1.4826 MAD)
         st = self.check_stats(cid)
         med, sc = st.median, st.scatter
         out["kmag"] = f"{med:.3f}" if np.isfinite(med) else "na"
@@ -676,11 +699,11 @@ class TargetPages:
         _sc_t = str(chk.get("scatter", "-")).replace(" mag", "")  # night repeatability (red noise included)
         if chk.get("err_med"):
             _sc_t += f" (expected {chk['err_med']}, x{chk.get('scatter_ratio') or '-'})"
-        _chk_facts.append(("Check scatter", _sc_t))
+        _chk_facts.append(("Check scatter (robust)", _sc_t))
         warn_rows: set[str] = set()
         try:
             if float(chk.get("scatter_ratio") or "nan") > 2.0:
-                warn_rows.add("Check scatter")
+                warn_rows.add("Check scatter (robust)")
         except ValueError:
             pass
         if _psf_txt:
@@ -704,9 +727,7 @@ class TargetPages:
             ("Aperture", (f"{_r:.1f} px ({_k:.2f} x FWHM)" if np.isfinite(_r) else "-") + _psf_txt),
             ("Sky annulus", f"{max(_ain * _fw_t, _r if np.isfinite(_r) else 0.0):.1f}-{_aout * _fw_t:.1f} px"
              if np.isfinite(_fw_t) else "-"),
-            ("Precision (p2p) / MERR", (f"{_p2p:.4f} / {_merr:.4f} mag"
-                                        + (f" (p2p/err {_p2p / _merr:.2f})" if np.isfinite(_merr) and _merr > 0 else ""))
-             if np.isfinite(_p2p) else "-"),
+            *precision_facts(_merr, _p2p),
             ("rms (full)", f"{_lc_rms_full:.4f} mag (amplitude + noise)" if np.isfinite(_lc_rms_full) else "-"),
             *_chk_facts,
             ("Comps", f"{len(rows)}  n_eff {m3.n_eff(w_br):.1f}" if w_br else f"{len(rows)}"),

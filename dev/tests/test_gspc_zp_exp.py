@@ -163,7 +163,8 @@ def test_k2_on_delta_mag_and_mag_calib() -> None:
     i_k2 = s.index("delta_mag, _, k2_source_rows = apply_k2_per_frame(")
     assert i_cal < i_k2
     assert "mag_calib, _, _ = apply_k2_per_frame(" in s
-    assert "ensemble_bp_rp(comp_bp_rp, comp_weight_map)" in s
+    # K2-RELIABLE-2026-11: the weighted ensemble colour comes through the reliability gate
+    assert "k2_colour_reference(float(target_bp_rp), comp_bp_rp" in s
     assert s.count('_calibrated = _band_system != "NONE"') == 1
 
 

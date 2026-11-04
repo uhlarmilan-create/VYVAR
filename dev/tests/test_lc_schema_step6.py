@@ -26,7 +26,7 @@ from photometry_report import _publication_lc_mag_column  # noqa: E402
 LC_BASE = [
     "bjd", "hjd", "jd", "time_base", "airmass", "mag_inst", "mag_calib", "delta_mag", "err",
     "err_photon", "err_sem_rel", "err_scint_rel", "err_sigma_sys_rel", "aperture_r_px",
-    "flag", "flag_reason", "source_file",
+    "flag", "below_limit", "flag_reason", "source_file",  # below_limit: LC-BELOW-LIMIT-2026-11
 ]
 
 

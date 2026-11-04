@@ -305,7 +305,7 @@ def test_aligned_reference_carries_identity_transform() -> None:
 
     h = fits.Header()
     with pytest.raises(ValueError):
-        stamp_alignment_transform(h, {"method": "wcs_reproject"}, (10, 10))
+        stamp_alignment_transform(h, {"method": "wcs_affine"}, (10, 10))
     stamp_alignment_transform(h, {"method": "reference", "matrix": list(np.eye(3).ravel())}, (10, 12))
     assert h["VY_AM0"] == 1.0 and h["VY_AM2"] == 0.0 and h["VY_RAWNX"] == 12 and "VY_AMERR" not in h
     src = (SRC / "astrometry_align.py").read_text(encoding="utf-8")

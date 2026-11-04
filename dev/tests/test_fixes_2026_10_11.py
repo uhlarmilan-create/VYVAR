@@ -240,7 +240,8 @@ def test_check_star_report_facts(tmp_path) -> None:
     out = b.check_star("77")
     assert out["kcid"] == kc and out["g"] == "10.51" and out["bp_rp"] == "0.88"
     assert out["kmag"] == "10.200" and out["kref"] == "10.180" and out["kdelta"] == "+0.020"
-    assert out["err_med"] == "0.0040" and out["scatter_ratio"] == "2.0"  # G11-11: std ddof=1 (was ddof=0: 1.8)
+    # CHECK-ROBUST-2026-11: robust scatter 1.4826 MAD = 0.0074 -> x1.9 (std ddof=1 gave 2.0)
+    assert out["err_med"] == "0.0040" and out["scatter_ratio"] == "1.9"
     b.uncalibrated = lambda cid: True
     b._chk.clear()
     out2 = b.check_star("77")
