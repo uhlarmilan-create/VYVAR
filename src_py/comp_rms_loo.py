@@ -1,6 +1,6 @@
 """Leave-one-out differential-mag RMS for comparison candidacy (COMP-RMS-DEF-01-B).
 
-Gated statistic is MAD*1.4826 of (mag(star) - its night median) - median over the other pool
+Gated statistic is MAD_TO_SIGMA x MAD of (mag(star) - its night median) - median over the other pool
 stars of (mag - their night median), on loadable proc frames (COMP-RMS-NORM-2026-10). No clipping. The old mag-bin relative-flux MAD is
 ``comp_relflux_mad`` (diagnostic only).
 """
@@ -16,10 +16,11 @@ import numpy as np
 import pandas as pd
 
 from comp_pool_rms import _norm_id_val
+from mag_constants import MAG_ERR_SCALE
+from stats_core import MAD_TO_SIGMA, robust_sigma
 
 LOGGER = logging.getLogger(__name__)
 
-LN10_OVER_2P5 = 1.0857362047581294
 COMP_RMS_LOO_PHOTON_K_DEFAULT = 5.0
 COMP_RMS_FRAMES_BASIS = "all_loadable"
 #: COMP-CEIL-FIELDK-2026-10: pool column with the photon (CCD-equation) magnitude error at the comp_rms
@@ -41,13 +42,10 @@ BRIGHT_K_BOOT: int = 200
 
 
 def mad_sigma_scale_or_zero(values: np.ndarray) -> float:
-    """1.4826*MAD after dropping non-finite; n<3 returns nan; MAD==0 returns 0.0."""
-    a = np.asarray(values, dtype=np.float64)
-    a = a[np.isfinite(a)]
-    if a.size < 3:
-        return float("nan")
-    med = float(np.median(a))
-    return float(1.4826 * np.median(np.abs(a - med)))
+    """MAD_TO_SIGMA x MAD of the finite values (``stats_core.robust_sigma``).
+
+    Degenerate policy (G07-32 per-caller policy): n < 3 returns NaN; MAD == 0 returns 0.0."""
+    return robust_sigma(values, min_points=3)
 
 
 def _nan_row_median(m: np.ndarray) -> np.ndarray:
@@ -149,7 +147,7 @@ def loo_mag_rms_maps(
     min_frames_frac: float = 0.3,
     strict_flux_col: bool = False,
 ) -> dict[str, dict[str, float]]:
-    """G07-31: ``{flux_col: {normalized_id: MAD*1.4826 of LOO dmag}}`` for several flux columns, one pass.
+    """G07-31: ``{flux_col: {normalized_id: MAD_TO_SIGMA x MAD of LOO dmag}}`` for several flux columns, one pass.
 
     The one LOO engine of comparison selection (field aperture k, comp_rms) and of the brightness-based
     aperture k (AP-BRIGHT-K). Pool is ``cand_ids`` excluding the star itself. Frames: every loadable
@@ -193,7 +191,7 @@ def loo_mag_rms_maps(
         n_ok = np.sum(~np.isnan(dmag_m), axis=1)
         # mad_sigma_scale_or_zero per star (n >= min_frames >= 3 here), row-wise
         med = _nan_row_median(dmag_m)
-        rms_all = 1.4826 * _nan_row_median(np.abs(dmag_m - med[:, None]))
+        rms_all = MAD_TO_SIGMA * _nan_row_median(np.abs(dmag_m - med[:, None]))
         out: dict[str, float] = {}
         for i, cid in enumerate(norm_ids):
             if n_ok[i] >= min_frames and math.isfinite(rms_all[i]):
@@ -219,7 +217,7 @@ def compute_loo_mag_rms_map(
     min_frames_frac: float = 0.3,
     strict_flux_col: bool = False,
 ) -> tuple[dict[str, float], str]:
-    """Return ``{normalized_id: MAD*1.4826 of LOO dmag}`` and the frames-basis stamp (one column of
+    """Return ``{normalized_id: MAD_TO_SIGMA x MAD of LOO dmag}`` and the frames-basis stamp (one column of
     ``loo_mag_rms_maps``)."""
     m = loo_mag_rms_maps(
         cand_ids, per_frame_csv_paths, csv_cache, [flux_col],
@@ -334,7 +332,7 @@ def photon_mag_err_map(
     if not cols:
         return {}
     med = _nan_row_median(np.column_stack(cols))
-    return {cid: float(LN10_OVER_2P5 * med[i]) for i, cid in enumerate(norm_ids) if math.isfinite(med[i])}
+    return {cid: float(MAG_ERR_SCALE * med[i]) for i, cid in enumerate(norm_ids) if math.isfinite(med[i])}
 
 
 def scint_mag_err_map(

@@ -1660,10 +1660,10 @@ def generate_masterstar_and_catalog(
     If ``masterstar_platesolve_only=True``, stop after a successful plate-solve and WCS scale adjustment (no DAO CSV,
     ``masterstars_full_match.csv``, photometric plan or MASTER_SOURCES write).
     """
-    ap = Path(archive_path).expanduser()
+    from draft_provenance import draft_root_of_import_path  # noqa: PLC0415
+
     # Draft UI may pass .../draft_x/non_calibrated - MASTERSTAR and platesolve belong under the draft root.
-    if ap.name.casefold() == "non_calibrated":
-        ap = ap.parent
+    ap = draft_root_of_import_path(Path(archive_path).expanduser())
     # SAT-PRECAL-2026-10 (Milan 2026-10-13): the saturation level is measured on this draft's
     # own light frames (SAT-DIAG) BEFORE the MASTERSTAR zones are set; a measured level wins
     # over EQUIPMENTS / header values (SAT-LIN-2026-10). Before, the MASTERSTAR read

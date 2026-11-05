@@ -17,7 +17,6 @@ _EXO_HOST_ANNOTATION_COLUMNS: tuple[str, ...] = (
 
 # FRAME-QC-PARITY-02C: two-sided n_stars diagnostic (status=ok); no drop authority.
 N_STARS_DIAG_K = 5.0
-_N_STARS_DIAG_MAD_TO_SIGMA = 1.4826
 
 # SAT-LIMIT-01 / GAIN-DOMAIN-01: 16-bit FITS container clip (pile-up at 65535, not 65532).
 SAT_LIMIT_CONTAINER_CLIP_ADU = 65535.0
@@ -100,8 +99,6 @@ ALIGNMENT_MAX_CONTROL_POINTS = 80
 # which dao_detection_fwhm_pixels already raised to 3.0.
 DAO_FWHM_FALLBACK_PX = 3.0
 
-# MAD -> sigma for a normal distribution: sigma = MAD / 0.6745 (= 1.4826 x MAD).
-MAD_CONSISTENCY = 0.6745
 # F-BINGAIN-1: clamp of the empirical / Howell background scale ratio.
 BKG_SCALE_R_CLAMP_LO = 0.05
 BKG_SCALE_R_CLAMP_HI = 2.0

@@ -16,6 +16,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from mag_constants import MAG_ERR_SCALE
 from stats_core import coerce_bool
 from scipy.optimize import curve_fit
 from scipy.special import erf, erfinv
@@ -892,10 +893,6 @@ DAO_ONLY_CLASS_LABELS = (
     DAO_ONLY_CLASS_INDETERMINATE,
 )
 
-# err_mag ~ 1.0857 / SNR (photometry_core aperture convention)
-SIGMA_G_SNR_TERM = 1.0857362
-
-
 @dataclass
 class FluxToGFitResult:
     ok: bool
@@ -961,7 +958,7 @@ def sigma_g_row(*, zp_residual_rms: float, snr: float) -> float:
     s = float(snr)
     if not math.isfinite(s) or s <= 0:
         return float("nan")
-    return float(math.hypot(rms, SIGMA_G_SNR_TERM / s))
+    return float(math.hypot(rms, MAG_ERR_SCALE / s))  # err_mag = (2.5 / ln 10) / SNR
 
 
 def fit_instrumental_flux_to_g(

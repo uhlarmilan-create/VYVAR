@@ -97,12 +97,14 @@ def merge_psf_frame_result(
     *,
     frame_name: str,
     pipeline_meta: dict[str, Any] | None = None,
+    locus_tables: dict[str, pd.DataFrame] | None = None,
 ) -> int:
     """Replace the PSF columns of one proc sidecar with ``fit_df`` (INV-PSF-ADDITIVE-01 enforced).
 
     Earlier PSF columns are dropped (the per-star cutout fitter left psf_quality / psf_ac_* /
     psf_group_n); ``psf_fit_ok`` stays False until the night chi^2 locus sets it. Returns the
-    number of rows the fit covered.
+    number of rows the fit covered. ``locus_tables``: when given, the night-locus columns of the written
+    file (its guarded read-back) are kept under ``locus_table_key(sidecar_path)`` for the locus fit (G09-27).
     """
     if not sidecar_path.is_file():
         raise FileNotFoundError(f"Missing proc sidecar for {frame_name}: {sidecar_path}")
@@ -119,7 +121,11 @@ def merge_psf_frame_result(
     after["psf_fit_ok"] = False
     after["psf_converged"] = after["psf_converged"].astype("boolean").fillna(False).astype(bool)
     assert_inv_psf_additive_01(before, after, frame_name=frame_name, pipeline_meta=pipeline_meta)
-    guarded_psf_sidecar_write(sidecar_path, after, before)
+    on_disk = guarded_psf_sidecar_write(sidecar_path, after, before)
+    if locus_tables is not None:
+        from psf_chi2_locus import locus_columns_of, locus_table_key  # noqa: PLC0415
+
+        locus_tables[locus_table_key(sidecar_path)] = locus_columns_of(on_disk)
     return int(key.isin(fit.index).sum())
 
 
@@ -143,14 +149,38 @@ def clear_psf_frame_result(
     guarded_psf_sidecar_write(sidecar_path, after, before)
 
 
+#: The proc columns the per-frame ePSF fit reads (frame FWHM, saturation limit).
+FRAME_FIT_PROC_COLUMNS: tuple[str, ...] = ("fwhm_px_for_aperture", "saturate_limit_adu_85pct")
+
+
+def _sat_limit_of(df: pd.DataFrame) -> float | None:
+    """Median ``saturate_limit_adu_85pct`` of a proc table; None when it has no value."""
+    vals = pd.to_numeric(df.get("saturate_limit_adu_85pct"), errors="coerce").dropna()
+    return None if vals.empty else float(vals.median())
+
+
+def _checked_sat_limit(value: float | None, sidecar_path: Path) -> float:
+    if value is None:
+        raise ValueError(f"saturate_limit_adu_85pct missing in {Path(sidecar_path).name}")
+    return value
+
+
 def frame_saturation_limit_adu(sidecar_path: Path) -> float:
     """The frame's peak non-linearity / saturation limit (``saturate_limit_adu_85pct`` of its proc
     sidecar, INV-SAT-LIMIT): PSF fit pixels at or above it are masked. Raises when it is unknown."""
     df = read_vyvar_csv(sidecar_path, low_memory=False, usecols=lambda c: c == "saturate_limit_adu_85pct")
-    vals = pd.to_numeric(df.get("saturate_limit_adu_85pct"), errors="coerce").dropna()
-    if vals.empty:
-        raise ValueError(f"saturate_limit_adu_85pct missing in {Path(sidecar_path).name}")
-    return float(vals.median())
+    return _checked_sat_limit(_sat_limit_of(df), sidecar_path)
+
+
+def _frame_fwhm_of(df: pd.DataFrame) -> float:
+    """Median ``fwhm_px_for_aperture`` of a proc table (frame values included); NaN for an empty table."""
+    return float(pd.to_numeric(df.get("fwhm_px_for_aperture"), errors="coerce").median()) if len(df) else float("nan")
+
+
+def _checked_frame_fwhm(value: float, sidecar_path: Path) -> float:
+    if not (math.isfinite(value) and value > 0):
+        raise ValueError(f"fwhm_px_for_aperture missing in {Path(sidecar_path).name} - frame ePSF size unknown")
+    return value
 
 
 def frame_fwhm_px(sidecar_path: Path) -> float:
@@ -159,10 +189,34 @@ def frame_fwhm_px(sidecar_path: Path) -> float:
     from proc_frame_store import read_proc_csv  # noqa: PLC0415
 
     df = read_proc_csv(sidecar_path, usecols=lambda c: c == "fwhm_px_for_aperture")
-    v = float(pd.to_numeric(df.get("fwhm_px_for_aperture"), errors="coerce").median()) if len(df) else float("nan")
-    if not (math.isfinite(v) and v > 0):
-        raise ValueError(f"fwhm_px_for_aperture missing in {Path(sidecar_path).name} - frame ePSF size unknown")
-    return v
+    return _checked_frame_fwhm(_frame_fwhm_of(df), sidecar_path)
+
+
+def _read_frame_fit_tables(sidecars: list[Path]) -> dict[str, pd.DataFrame]:
+    """G09-27: one read per proc sidecar of the columns the ePSF job takes before the fit (night FWHM vector,
+    frame FWHM, saturation limit), ``{str(path): table}``. A file that cannot be read is left out: the
+    readers that need it read it themselves and fail / skip it exactly as without this table."""
+    from proc_frame_store import read_proc_csv  # noqa: PLC0415
+
+    out: dict[str, pd.DataFrame] = {}
+    for sc in sidecars:
+        try:
+            out[str(sc)] = read_proc_csv(sc, usecols=lambda c: c in FRAME_FIT_PROC_COLUMNS, low_memory=False)
+        except Exception:  # noqa: BLE001 - not silent: the per-frame reader raises it again (recorded per frame)
+            continue
+    return out
+
+
+def _frame_fit_values(tables: dict[str, pd.DataFrame]) -> dict[str, tuple[float, float | None]]:
+    """``{str(path): (frame FWHM, saturation limit or None)}`` from ``_read_frame_fit_tables``. A table the
+    values cannot be taken from is left out; the worker then reads the file and raises as before."""
+    out: dict[str, tuple[float, float | None]] = {}
+    for key, df in tables.items():
+        try:
+            out[key] = (_frame_fwhm_of(df), _sat_limit_of(df))
+        except Exception:  # noqa: BLE001 - not silent: the worker's own read raises it again
+            continue
+    return out
 
 
 _FIT_CTX: dict[str, Any] = {}
@@ -185,8 +239,11 @@ def _fit_frame_task(fp: Path) -> dict[str, Any]:
                            "traceback_tail": None}
     try:
         sidecar = proc_csv_path_for_aligned_fits(fp)
+        # G09-27: the frame's FWHM and saturation limit as the parent read them (one read per file); a frame
+        # it has no values for is read here
+        pre = (c.get("frame_values") or {}).get(str(sidecar))
         # EPSF-CUTOUT-FRAME-2026-10 (C3): the model size follows the frame's own seeing (12 x frame FWHM)
-        fw_frame = frame_fwhm_px(sidecar)
+        fw_frame = frame_fwhm_px(sidecar) if pre is None else _checked_frame_fwhm(pre[0], sidecar)
         model, mrec = build_frame_model(fp, c["build_stars"], cutout_size=epsf_cutout_px(fw_frame), fwhm_px=fw_frame,
                                         delta=c["delta"], grid=c["grid"])
         mrec["frame_fwhm_px"] = round(fw_frame, 4)
@@ -198,7 +255,8 @@ def _fit_frame_task(fp: Path) -> dict[str, Any]:
         gain, rn = _psf_resolve_gain_read_noise(hdr, photometry_dir=Path(c["platesolve_dir"]) / "photometry", cfg=c["app_config"])
         out["fit_df"] = fit_frame_psf(
             data, model, c["fit_stars"], c["neighbours"], fwhm_px=mrec["fwhm_px"], gain=gain, read_noise_e=rn,
-            sat_limit_adu=frame_saturation_limit_adu(sidecar), covered=covered,
+            sat_limit_adu=(frame_saturation_limit_adu(sidecar) if pre is None else _checked_sat_limit(pre[1], sidecar)),
+            covered=covered,
         )
     except Exception as exc:  # noqa: BLE001 - recorded per frame, INV-PSF-FRAME-01 decides the job
         _record_exception(out, exc)
@@ -241,7 +299,7 @@ def run_epsf_psf_merge_job(
         EPSF_FRAMES_MANIFEST,
         EPSF_SPATIAL_DELTA_NAME,
     )
-    from psf_chi2_locus import finalize_night_locus_for_inv_psf_frame_01
+    from psf_chi2_locus import finalize_night_locus_for_inv_psf_frame_01, locus_table_key
 
     ps = Path(platesolve_dir)
     root = Path(frames_root)
@@ -264,8 +322,13 @@ def run_epsf_psf_merge_job(
     # frames' fwhm_px_for_aperture, NIGHT-FWHM-2026-10), not at the MASTERSTAR (the best frame).
     from photometry_comp import night_frame_fwhms_px, night_median_fwhm_px
 
-    # G07-16 / G09-27: the per-frame FWHM vector is read once (median and worst-seeing reach)
-    _fw_frames = night_frame_fwhms_px([proc_csv_path_for_aligned_fits(f) for f in files])
+    # G07-16 / G09-27: the per-frame FWHM vector is read once (median and worst-seeing reach), in the same
+    # read as each frame's FWHM and saturation limit for its fit
+    _sidecars = [proc_csv_path_for_aligned_fits(f) for f in files]
+    _fit_tables = _read_frame_fit_tables(_sidecars)
+    _fw_frames = night_frame_fwhms_px(_sidecars, store=_fit_tables)
+    frame_values = _frame_fit_values(_fit_tables)
+    del _fit_tables
     fwhm_night, fwhm_night_src = night_median_fwhm_px(None, float("nan"), frame_fwhms=_fw_frames)
     if not (math.isfinite(fwhm_night) and fwhm_night > 0):
         raise ValueError("ePSF: no per-frame fwhm_px_for_aperture in the proc sidecars - night FWHM unknown")
@@ -289,9 +352,12 @@ def run_epsf_psf_merge_job(
     grid = (int(spatial["grid"][0]), int(spatial["grid"][1]))
 
     ctx = {"build_stars": build_stars, "delta": delta, "grid": grid,
-           "platesolve_dir": str(ps), "app_config": app_config, "fit_stars": fit_stars, "neighbours": neighbours}
+           "platesolve_dir": str(ps), "app_config": app_config, "fit_stars": fit_stars, "neighbours": neighbours,
+           "frame_values": frame_values}
     records: list[dict[str, Any]] = []
     models: list[dict[str, Any]] = []
+    # G09-27: night-locus columns of each merged sidecar, from the merge's guarded read-back
+    locus_tables: dict[str, pd.DataFrame] = {}
     done = map_frames(_fit_frame_task, files, workers=workers, initializer=_fit_worker_init, ctx=ctx, stage="ePSF fit")
     for i, (fp, res) in enumerate(zip(files, done, strict=True), start=1):
         if progress_cb is not None:
@@ -309,7 +375,8 @@ def run_epsf_psf_merge_job(
         if res["exception_class"] is None:
             try:
                 rec["n_fit"] = merge_psf_frame_result(
-                    proc_csv_path_for_aligned_fits(fp), res["fit_df"], frame_name=fp.name, pipeline_meta=pipeline_meta
+                    proc_csv_path_for_aligned_fits(fp), res["fit_df"], frame_name=fp.name, pipeline_meta=pipeline_meta,
+                    locus_tables=locus_tables,
                 )
             except Exception as exc:  # noqa: BLE001 - recorded per frame, INV-PSF-FRAME-01 decides the job
                 _record_exception(rec, exc)
@@ -317,6 +384,7 @@ def run_epsf_psf_merge_job(
             rec.update({k: res[k] for k in ("exception_class", "exception_message", "traceback_tail")})
         if rec["exception_class"] is not None:
             LOGGER.warning("[ePSF] frame %s failed: %s: %s", fp.name, rec["exception_class"], rec["exception_message"])
+            locus_tables.pop(locus_table_key(proc_csv_path_for_aligned_fits(fp)), None)  # the file is rewritten below
             clear_psf_frame_result(proc_csv_path_for_aligned_fits(fp), frame_name=fp.name, pipeline_meta=pipeline_meta)
         records.append(rec)
 
@@ -351,7 +419,7 @@ def run_epsf_psf_merge_job(
     frames_dir.mkdir(parents=True, exist_ok=True)
     (frames_dir / EPSF_FRAMES_MANIFEST).write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
-    locus = finalize_night_locus_for_inv_psf_frame_01(root, records)
+    locus = finalize_night_locus_for_inv_psf_frame_01(root, records, tables=locus_tables)
     if pipeline_meta is not None:
         pipeline_meta["psf_chi2_locus_night"] = locus
     summary = finalize_epsf_frame_job(records, science_set_meta=fit_set.to_meta_dict(), pipeline_meta=pipeline_meta)

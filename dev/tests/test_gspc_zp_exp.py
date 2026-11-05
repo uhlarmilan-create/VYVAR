@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 
 import photometry_core  # noqa: F401  (import order: avoids circular import)
+from mag_constants import MAG_ERR_SCALE
 from gspc_zp import CACHE_NAME, fetch_gspc, gspc_mag, gspc_query, read_cache, sigma_c_star
 
 HDR = ("source_id,g,bp_rp,ruwe,c_star,g_sdss_mag,g_sdss_relerr,g_sdss_flag,"
@@ -28,7 +29,7 @@ def test_accept_and_reject_reasons(tmp_path) -> None:
     m, s, why = gspc_mag(c["2172293994744599040"], "g")
     assert why == "" and abs(m - 16.843708) < 1e-9
     # photon error 1.0857*0.00638 = 6.9 mmag (+) 10 mmag floor
-    assert abs(s - math.hypot(1.0857 * 0.0063797487, 0.010)) < 1e-12
+    assert abs(s - math.hypot(MAG_ERR_SCALE * 0.0063797487, 0.010)) < 1e-12
     assert gspc_mag(c["2172312342844990976"], "g")[2] == "XP spectrum blended"  # 33/33 transits
     assert gspc_mag(c["2172294991177191680"], "g")[2] == "flag 0 (extrapolation)"
     assert gspc_mag(c["2172294991177191680"], "g", flag_policy="any")[2] == ""

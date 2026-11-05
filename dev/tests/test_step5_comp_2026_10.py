@@ -23,11 +23,11 @@ from ccd_noise import ccd_rel_error, ccd_variance_adu2  # noqa: E402
 from comp_rms_loo import (  # noqa: E402
     COMP_PHOTON_MAG_COL,
     COMP_SIGMA_REF_COL,
-    LN10_OVER_2P5,
     choose_field_aperture_k,
     loo_mag_rms_maps,
     photon_mag_err_map,
 )
+from mag_constants import MAG_ERR_SCALE  # noqa: E402  (v11 26a: the one 2.5 / ln 10)
 from photometry_comp import _select_comps_by_rms_then_color  # noqa: E402
 from photometry_defs import flux_k_column, flux_k_radius_px  # noqa: E402
 
@@ -75,7 +75,7 @@ def test_photon_reference_is_the_ccd_error_at_the_field_k():
             row = df[df["catalog_id"] == cid].iloc[0]
             r = flux_k_radius_px(k, float(row["fwhm_px_for_aperture"]))
             per_frame.append(ccd_rel_error(float(row[col]), SKY, math.pi * r * r, N_SKY, gain=GAIN, read_noise=RN))
-        assert ph[cid] == pytest.approx(LN10_OVER_2P5 * float(np.median(per_frame)), rel=1e-12)
+        assert ph[cid] == pytest.approx(MAG_ERR_SCALE * float(np.median(per_frame)), rel=1e-12)
     # a smaller aperture (less light, sky-limited stars) gives a larger reference for faint stars
     p75 = photon_mag_err_map(set(ids), paths, cache, flux_k_column(0.75), k=0.75, gain=GAIN, read_noise=RN)
     p88 = photon_mag_err_map(set(ids), paths, cache, flux_k_column(0.875), k=0.875, gain=GAIN, read_noise=RN)
@@ -100,9 +100,9 @@ def test_photon_limited_comp_admitted_at_both_k_independent_of_masterstar_snr():
             "_nn_dist_fwhm": 10.0,
             COMP_SIGMA_REF_COL: [ph[c] for c in ids],
             # a MASTERSTAR S/N 10x the frame S/N: the old ceiling 5 x 1.0857 / snr is below the scatter
-            "snr_ap_pixscaled": [10.0 * LN10_OVER_2P5 / ph[c] for c in ids],
+            "snr_ap_pixscaled": [10.0 * MAG_ERR_SCALE / ph[c] for c in ids],
         })
-        old_ceiling = 5.0 * LN10_OVER_2P5 / cand["snr_ap_pixscaled"]
+        old_ceiling = 5.0 * MAG_ERR_SCALE / cand["snr_ap_pixscaled"]
         assert (cand["comp_rms"] > old_ceiling).sum() > len(ids) // 2  # the old gate rejected most of them
         out = _select_comps_by_rms_then_color(cand, 1.0, 3, len(ids), 0.5)
         assert set(out["catalog_id"]) == set(ids)
@@ -151,7 +151,7 @@ def test_pool_requires_gain_and_carries_the_photon_column():
     # frames without the grid: dao_flux at aperture_r_px (7 px), sky 200 ADU/px over 500 px (fixture)
     cid = str(pool["catalog_id"].iloc[0])
     fl = [float(cache[str(p)].set_index("catalog_id").loc[cid, "dao_flux"]) for p in paths]
-    want = LN10_OVER_2P5 * float(np.median([ccd_rel_error(f, 200.0, math.pi * 49.0, 500, gain=1.0, read_noise=10.0)
+    want = MAG_ERR_SCALE * float(np.median([ccd_rel_error(f, 200.0, math.pi * 49.0, 500, gain=1.0, read_noise=10.0)
                                             for f in fl]))
     assert float(pool[COMP_PHOTON_MAG_COL].iloc[0]) == pytest.approx(want, rel=1e-12)
     assert pool[COMP_PHOTON_MAG_COL].notna().all()

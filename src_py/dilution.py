@@ -33,20 +33,12 @@ from stats_core import coerce_bool
 
 from catalog_db import query_local_gaia
 from gaia_catalog_id import normalize_gaia_source_id
+from sky_separation import angular_distance_deg
 
 LOGGER = logging.getLogger(__name__)
 
 #: Below this D the contamination is too large to correct: the correction is skipped and flagged.
 GS11_TARGET_MIN_DILUTION = 0.50
-
-
-def _haversine_arcsec(ra1_deg: float, dec1_deg: float, ra2_deg: float, dec2_deg: float) -> float:
-    """Great-circle separation in arcseconds (scalar haversine)."""
-    ra1, dec1, ra2, dec2 = map(math.radians, (ra1_deg, dec1_deg, ra2_deg, dec2_deg))
-    dra = ra2 - ra1
-    ddec = dec2 - dec1
-    a = math.sin(ddec / 2) ** 2 + math.cos(dec1) * math.cos(dec2) * math.sin(dra / 2) ** 2
-    return math.degrees(2 * math.asin(min(1.0, math.sqrt(max(0.0, a))))) * 3600.0
 
 
 def _normalize_exclude_source_id(catalog_id: int | str | None) -> int | None:
@@ -123,7 +115,7 @@ def query_gaia_neighbors(
             continue
         if not (math.isfinite(ra_n) and math.isfinite(dec_n) and math.isfinite(g_mag)):
             continue
-        sep = _haversine_arcsec(ra, dec, ra_n, dec_n)
+        sep = angular_distance_deg(ra, dec, ra_n, dec_n) * 3600.0  # G07-32: the one haversine (finite coords)
         if sep > r_arcsec:
             continue
         out.append(

@@ -41,6 +41,7 @@ from typing import Any
 import numpy as np
 
 from badpix_sidecar import REPAIR_HDU
+from stats_core import MAD_TO_SIGMA
 
 __all__ = ["REPAIR_HDU", "RepairResult", "calibrated_saturation_adu", "repair_missing_pixels", "repair_table_hdu"]
 
@@ -192,7 +193,7 @@ def repair_missing_pixels(
     reach = half + fsz / 2.0 + 1.0
     finite = d[~missing]
     bg = float(np.median(finite))
-    sig = 1.4826 * float(np.median(np.abs(finite - bg)))
+    sig = MAD_TO_SIGMA * float(np.median(np.abs(finite - bg)))
     del finite
     # Detection sees each missing pixel as the median of its finite 3x3 neighbours: masked, a missing
     # pixel at a star's peak hides the star from DAOStarFinder and the pixel would get the sky. The

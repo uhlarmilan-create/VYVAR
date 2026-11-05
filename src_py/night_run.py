@@ -575,7 +575,7 @@ def _night_run_preprocess(
     progress_cb: Callable[[int, int, str], None],
 ) -> None:
     """Preprocess (calibrated -> processed) for RUN VYVAR (GUI and CLI)."""
-    from draft_provenance import resolve_draft_lights_root
+    from draft_provenance import draft_root_of_import_path, resolve_draft_lights_root
     from pipeline_preprocess import (
         build_prefilter_rejected_map,
         calibrated_paths_for_draft_apply_filters,
@@ -584,7 +584,7 @@ def _night_run_preprocess(
     from pipeline_calibrate import _iter_light_fits
 
     _app_cfg = pipeline.config
-    ap_root = ap.parent if ap.name.casefold() == "non_calibrated" else ap
+    ap_root = draft_root_of_import_path(ap)
     _dqf = pending.get("quality_filter_draft_id")
     if _dqf is None:
         raise RuntimeError("INV-FRAME-QC-01: quality_filter_draft_id is required")
@@ -1268,7 +1268,9 @@ def _nr_calibrate(
     result.import_result = import_result
     result.plan = plan
     ap = Path(str(import_result.archive_path))
-    ap_root = ap.parent if ap.name.casefold() == "non_calibrated" else ap
+    from draft_provenance import draft_root_of_import_path  # noqa: PLC0415
+
+    ap_root = draft_root_of_import_path(ap)
     result.draft_dir = ap_root.resolve()
     result.archive_path = ap
 

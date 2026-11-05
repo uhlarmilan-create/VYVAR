@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 
 from gaia_catalog_id import normalize_gaia_source_id
 from infolog import log_event
+from mag_constants import MAG_ERR_SCALE
 
 #: default catalog DBs under the VYVAR data directory (one folder for every catalog)
 from pipeline_constants import (  # noqa: E402,F401  (one default)
@@ -434,7 +435,7 @@ def query_local_gaia_bp_rp_error(db_path: str | Path | None, source_id: Any) -> 
             row = conn.execute("SELECT bp_flux_error_rel, rp_flux_error_rel FROM gaia_dr3 WHERE source_id = ?;",
                                (sid,)).fetchone()
             ok = row is not None and row[0] is not None and row[1] is not None
-            v = 1.0857362047581294 * math.hypot(float(row[0]), float(row[1])) if ok else float("nan")
+            v = MAG_ERR_SCALE * math.hypot(float(row[0]), float(row[1])) if ok else float("nan")
             src = "gaia_db:bp_rp_flux_error_rel"
         else:
             return float("nan"), "unavailable: Gaia DB has no BP/RP error columns"

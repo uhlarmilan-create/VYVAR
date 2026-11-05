@@ -24,6 +24,7 @@ from typing import Any
 
 import numpy as np
 from pipeline_constants import Z_90  # LAYER-2026-10: moved there
+from stats_core import MAD_TO_SIGMA
 
 #: G_lim = G50 + N_SIGMA * sigma (C = 0.13 %): beyond it the frame holds practically no detections.
 N_SIGMA_LIMIT = 3.0
@@ -141,7 +142,7 @@ def measure_frame_depth(
         zp = float(np.median(res))
         faint = g_m[ok] >= np.median(g_m[ok])
         rf = res[faint]
-        sig = float(1.4826 * np.median(np.abs(rf - np.median(rf)))) if rf.size >= 10 else float("nan")
+        sig = float(MAD_TO_SIGMA * np.median(np.abs(rf - np.median(rf)))) if rf.size >= 10 else float("nan")
         g50_est = zp - 2.5 * math.log10(float(threshold_adu))
         out.update({"zp_peak": round(zp, 3), "g50_detector": round(g50_est, 3),
                     "sigma_detector": round(sig, 3) if math.isfinite(sig) else None})

@@ -38,8 +38,7 @@ import numpy as np
 
 from fits_meta import normalize_filter_name
 from infolog import log_event
-
-MAD_TO_SIGMA = 1.4826
+from stats_core import MAD_TO_SIGMA, median_mad
 FRAME_QC_JSON = "frame_qc.json"
 QC_STARS_JSON = Path("qc") / "qc_stars.json"
 SPEC = "QC-PER-GROUP-2026-10 / QC-METRICS-2026-10"
@@ -121,8 +120,7 @@ def _robust_limit(vals: Sequence[float | None], k: float) -> tuple[float | None,
     a = np.asarray([v for v in vals if v is not None and math.isfinite(v)], dtype=np.float64)
     if a.size == 0:
         return None, None, None
-    med = float(np.median(a))
-    mad = float(np.median(np.abs(a - med)))
+    med, mad = median_mad(a)
     if a.size < MIN_FRAMES_FOR_LIMIT or mad <= 0.0:
         return med, mad, None
     return med, mad, med + float(k) * MAD_TO_SIGMA * mad

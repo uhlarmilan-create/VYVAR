@@ -8136,3 +8136,53 @@ literature (cited bands with known colours only) / off).
   EQUIPMENT_CURVE point (11mp, setting 0, bin 1; bin 2 sum -> 4.08 e-/ADU, RN 13.2 e-). Agrees with the sky-pair
   diagnostic (527 0.97 +- 0.03 file, FI Boo 1.00 +- 0.05) and the vendor full well (65 ke- / 2^14 = 3.97). The
   equipment default 3.17 stays for provenance.
+
+## CONST-ONE-2026-11 - one MAD -> sigma factor, one 2.5 / ln 10, MAD helpers on one core (v11 item 26a+26b; code review G12-50, G08-31, G07-32; Milan approved 2026-11-04)
+- G12-50: `stats_core.MAD_TO_SIGMA = 1.4826` is the only MAD -> sigma factor (1 / Phi^-1(3/4) = 1.482602 for a
+  Gaussian, Rousseeuw & Croux 1993, JASA 88, 1273; the 5-digit value kept, 1.5e-6 below exact; rig-independent,
+  assumes a Gaussian core). Removed: pipeline_constants `_N_STARS_DIAG_MAD_TO_SIGMA` and `MAD_CONSISTENCY = 0.6745`
+  (the LAYER-2026-10 placement of MAD_CONSISTENCY is obsolete), calib_library `MAD_SIGMA`, cal_diag `CAL_MAD_SIGMA`,
+  comp_frame_normalize `_MAD_SIGMA_SCALE`, lc_outlier `_MAD_CONSISTENCY` / `_MAD_TO_SIGMA`, own `MAD_TO_SIGMA` in
+  gain_ptc / frame_metrics / frame_qc / psf_chi2_locus; every literal 1.4826 in code now names the constant. The two
+  `MAD / 0.6745` sites (lc_outlier.mad_sigma, photometry_gate_helpers._robust_scatter_mad) now multiply by 1.4826:
+  +1.37e-5 relative (accepted).
+- G08-31: `mag_constants.MAG_ERR_SCALE = 2.5 / ln 10` everywhere; removed comp_rms_loo `LN10_OVER_2P5` (same value)
+  and dao_reconcile `SIGMA_G_SNR_TERM = 1.0857362` (4e-9 relative); the short 1.0857 in ccd_noise.limit_magnitudes,
+  variability_field snr_med, gspc_zp per-star sigma, tess_analysis, transient_field LC err: +3.4e-5 relative
+  (accepted, sub-micromag). sigma_floor_core 1.0857362 -> exact (4e-9 relative).
+- G07-32: the one MAD computation is `stats_core.median_mad` / `mad` (finite values, input precision kept) and
+  `robust_sigma`; the named helpers call it and keep their own degenerate policy, stated in their docstring
+  (Milan: per-caller policy): comp_frame_normalize.mad_sigma_or_std (std / inf fallback), comp_rms_loo.
+  mad_sigma_scale_or_zero and photometry_gate_helpers._robust_scatter_mad (NaN n < 3, 0 for MAD 0), lc_outlier.
+  mad_sigma (floor 1e-12), gain_ptc._mad_sigma (NaN only when empty), cal_diag._mad_sigma_r (0 when empty),
+  calibration._robust_sigma (NaN for 0 / empty, float32 eps floor), pipeline_calibrate._n_stars_mad (0 when empty),
+  plain_stats.sky_mad_sigma_adu, frame_qc._robust_limit, sigma_floor_core._robust_pull_scale; photometry_lightcurve.
+  compute_lc_precision_p2p calls stats_core.robust_p2p_scatter. Outputs bit-identical on recorded inputs except the
+  two former / 0.6745 helpers. dilution `_haversine_arcsec` removed for sky_separation.angular_distance_deg
+  (bit-identical on the tested pairs incl. RA wrap and poles).
+- Guard: dev/tests/test_v11_const_2026_11.py fails on any numeric literal 1.4826 / 0.6745 / 1.0857 in src_py outside
+  stats_core.py / mag_constants.py. Consistent with D-CONSTANTS-LEAF-01 (these are mathematical constants in leaf
+  modules, not pipeline-physical ones). Supersedes nothing.
+
+## ARCHIVE-ROOT-ONE-2026-11 - one non_calibrated archive-path rule (v11 26c, 2026-11-04, Milan approved)
+
+- Code review G12-19 (rest). The inline rule `ap.parent if ap.name.casefold() == "non_calibrated" else ap`
+  (night_run.py x2, pipeline.quick_calibrate_last_import, masterstar_build.generate_masterstar_and_catalog, and
+  draft_provenance.draft_archive_root) is now one function, `draft_provenance.draft_root_of_import_path`.
+- `draft_archive_root` itself is NOT used at the four former inline sites: it also expands `~`, resolves the path
+  (symlinks / junctions, relative -> absolute, Windows mapped drive -> UNC) and strips `lights` / `calibrated`, which
+  would change the paths those sites pass on (calibration outputs, provenance, MASTERSTAR folder). The pure rule is
+  shared instead; `draft_archive_root` calls it after its own resolve. No behaviour change.
+
+## EPSF-IO-ONE-READ-2026-11 - fewer proc CSV reads in the ePSF merge job (v11 26d, 2026-11-04, Milan approved)
+
+- Code review G09-27 (rest; 61afbdc did the stack usecols, one-pass locus read, one FWHM vector). Per fitted
+  frame the ePSF merge job read each proc CSV 5 times by columns + 4 times in full; now 1 + 4:
+  frame FWHM and saturation limit come from the same read as the night FWHM vector (values handed to the fit
+  workers), the night locus fit takes the locus columns from the merge's guarded read-back
+  (`guarded_psf_sidecar_write` returns it), and the INV-PSF-FRAME-01 `n_ok` refresh takes the psf_fit_ok count the
+  locus pass wrote instead of re-reading the file. Files the job did not merge (or whose values could not be taken)
+  are read exactly as before.
+- Output bytes unchanged: proc CSVs, epsf_frames_manifest.json, invariant records and locus summary identical to
+  04801fb on 60 v10_527 proc CSVs (A/B harness) and in dev/tests/test_v11_io_2026_11.py. Writes per CSV stay 2
+  (merge, locus): one write needs every merged frame in memory before the night locus (not done).

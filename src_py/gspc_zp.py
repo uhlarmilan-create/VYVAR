@@ -32,6 +32,8 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
+from mag_constants import MAG_ERR_SCALE
+
 TAP_SYNC_URL = "https://gea.esac.esa.int/tap-server/tap/sync"
 CACHE_NAME = "gspc_cache.csv"
 # VYVAR zero-point band -> GSPC column prefix
@@ -164,7 +166,7 @@ def gspc_mag(row: dict[str, Any], band: str, *, flag_policy: str = "flag1", c_st
         return float("nan"), float("nan"), "XP spectrum blended"
     if ruwe_max is not None and _f(row.get("ruwe")) >= ruwe_max:
         return float("nan"), float("nan"), "ruwe"
-    sig = math.hypot(1.0857 * rel, sigma_sys)
+    sig = math.hypot(MAG_ERR_SCALE * rel, sigma_sys)
     return m, sig, ""
 
 

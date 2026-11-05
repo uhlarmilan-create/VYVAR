@@ -166,14 +166,11 @@ SCINT_SHARE_WARN = 0.5
 
 
 def _robust_pull_scale(z: Any) -> float:
-    """1.4826 MAD of the pooled pulls (no clipping)."""
-    import numpy as np
+    """MAD_TO_SIGMA x MAD of the pooled pulls (``stats_core.robust_sigma``, no clipping); NaN below 3 finite
+    pulls."""
+    from stats_core import robust_sigma  # noqa: PLC0415  (numpy stays a lazy import of this module)
 
-    z = np.asarray(z, float)
-    z = z[np.isfinite(z)]
-    if z.size < 3:
-        return float("nan")
-    return float(1.4826 * np.median(np.abs(z - np.median(z))))
+    return robust_sigma(z, min_points=3)
 
 
 def night_sigma_sys_from_comps(
@@ -235,7 +232,7 @@ def night_sigma_sys_from_comps(
         r_ap = float(k) * fw
         area = math.pi * r_ap**2
         var = ccd_variance_adu2(F, S, area, NS, gain=gain, read_noise=read_noise)
-        E2 = (1.0857362 * np.sqrt(var) / F) ** 2  # photon + sky + read noise per comp and frame [mag^2]
+        E2 = (MAG_ERR_SCALE * np.sqrt(var) / F) ** 2  # photon + sky + read noise per comp and frame [mag^2]
         E2 = np.where(np.isfinite(M) & (F > 0), E2, np.nan)
     sc = np.zeros(F.shape[1]) if scint_mag_by_frame is None else np.nan_to_num(np.asarray(scint_mag_by_frame, float))
     sc2 = sc * sc

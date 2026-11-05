@@ -28,7 +28,7 @@ from typing import Any, Sequence
 
 import numpy as np
 import pandas as pd
-from stats_core import coerce_bool_series
+from stats_core import MAD_TO_SIGMA, coerce_bool_series
 
 from gaia_catalog_id import read_vyvar_csv
 
@@ -43,7 +43,6 @@ MIN_N_BIN = 30
 MIN_STARS_BIN = 15
 # Flux resolution of the reference: 0.25 dex = 0.625 mag.
 LOCUS_BIN_DEX = 0.25
-MAD_TO_SIGMA = 1.4826
 DEFAULT_NSIGMA = 5.0
 
 
@@ -248,8 +247,38 @@ def chi2_ok_from_locus(
     return float(resid_sigma) <= float(n_sigma)
 
 
-def fit_night_locus_from_proc_dir(proc_dir: Path) -> Chi2Locus | None:
-    """Pool locus members from all proc_*.csv under ``proc_dir``."""
+#: The proc columns the night locus fit reads.
+LOCUS_PROC_COLUMNS: tuple[str, ...] = (
+    "catalog_id",
+    "psf_flux",
+    "psf_chi2",
+    "psf_converged",
+    "psf_fit_ok",
+    "likely_saturated",
+    "is_saturated",
+)
+
+
+def locus_columns_of(df: pd.DataFrame) -> pd.DataFrame:
+    """The ``LOCUS_PROC_COLUMNS`` of a proc table read in full, in file order: the same table as a read of the
+    file with those columns only (G09-27: the ePSF merge keeps it from its guarded write's read-back)."""
+    return df[[c for c in df.columns if c in LOCUS_PROC_COLUMNS]]
+
+
+def locus_table_key(path: Path | str) -> str:
+    """Key of a proc file in a ``tables`` mapping: its resolved path (the ePSF job lists resolved FITS paths,
+    the locus pass globs the frames root as given)."""
+    return str(Path(path).resolve())
+
+
+def fit_night_locus_from_proc_dir(
+    proc_dir: Path,
+    tables: dict[str, pd.DataFrame] | None = None,
+) -> Chi2Locus | None:
+    """Pool locus members from all proc_*.csv under ``proc_dir``.
+
+    ``tables``: ``{locus_table_key(proc path): locus_columns_of(table)}`` of files whose current content the caller
+    already read (G09-27); every other file is read here."""
     files = sorted(Path(proc_dir).glob("proc_*.csv"))
     if not files:
         return None
@@ -258,18 +287,11 @@ def fit_night_locus_from_proc_dir(proc_dir: Path) -> Chi2Locus | None:
     convs: list[np.ndarray] = []
     sats: list[np.ndarray] = []
     ids: list[np.ndarray] = []
-    usecols = [
-        "catalog_id",
-        "psf_flux",
-        "psf_chi2",
-        "psf_converged",
-        "psf_fit_ok",
-        "likely_saturated",
-        "is_saturated",
-    ]
     for fp in files:
-        # G09-27: one read (no nrows=0 header read); the same columns in file order
-        df = read_vyvar_csv(fp, usecols=lambda c: c in usecols, low_memory=False)
+        df = tables.get(locus_table_key(fp)) if tables else None
+        if df is None:
+            # G09-27: one read (no nrows=0 header read); the same columns in file order
+            df = read_vyvar_csv(fp, usecols=lambda c: c in LOCUS_PROC_COLUMNS, low_memory=False)
         if "psf_flux" not in df.columns or "psf_chi2" not in df.columns:
             continue
         if "catalog_id" not in df.columns:
@@ -307,10 +329,24 @@ def reapply_night_locus_to_proc_dir(
     *,
     n_sigma: float | None = None,
     night_locus: Chi2Locus | None = None,
+    tables: dict[str, pd.DataFrame] | None = None,
 ) -> dict[str, Any]:
-    """Rewrite fit_ok against the night chi2 reference curve shifted by each frame's offset."""
+    """Rewrite fit_ok against the night chi2 reference curve shifted by each frame's offset.
+
+    ``tables``: already-read locus columns for the night locus fit (``fit_night_locus_from_proc_dir``)."""
+    return _reapply_night_locus(proc_dir, n_sigma=n_sigma, night_locus=night_locus, tables=tables)[0]
+
+
+def _reapply_night_locus(
+    proc_dir: Path,
+    *,
+    n_sigma: float | None,
+    night_locus: Chi2Locus | None,
+    tables: dict[str, pd.DataFrame] | None,
+) -> tuple[dict[str, Any], dict[str, int]]:
+    """``reapply_night_locus_to_proc_dir`` plus ``{str(proc path): number of psf_fit_ok rows written}``."""
     ns = float(n_sigma) if n_sigma is not None else DEFAULT_NSIGMA
-    night = night_locus or fit_night_locus_from_proc_dir(proc_dir)
+    night = night_locus or fit_night_locus_from_proc_dir(proc_dir, tables)
     summary: dict[str, Any] = {
         "n_sigma": ns,
         "night_locus": night.to_dict() if night else None,
@@ -319,9 +355,10 @@ def reapply_night_locus_to_proc_dir(
         "n_kept_frame": 0,
         "offsets": [],
     }
+    n_ok_written: dict[str, int] = {}
     if night is None:
         summary["error"] = "night_locus_unavailable"
-        return summary
+        return summary, n_ok_written
     files = sorted(Path(proc_dir).glob("proc_*.csv"))
     for fp in files:
         df = read_vyvar_csv(fp, low_memory=False)
@@ -357,6 +394,7 @@ def reapply_night_locus_to_proc_dir(
         from psf_sidecar_guard import guarded_psf_sidecar_write  # noqa: PLC0415
 
         guarded_psf_sidecar_write(fp, df, before)
+        n_ok_written[str(fp)] = int(ok.sum())
         entry = {
             "frame": fp.name,
             "source": source,
@@ -384,7 +422,7 @@ def reapply_night_locus_to_proc_dir(
         }
     else:
         summary["offset_spread"] = {"n": 0}
-    return summary
+    return summary, n_ok_written
 
 
 def _count_psf_fit_ok_in_sidecar(sidecar: Path) -> int:
@@ -399,13 +437,14 @@ def finalize_night_locus_for_inv_psf_frame_01(
     frame_records: Sequence[dict[str, Any]] | None = None,
     *,
     n_sigma: float | None = None,
+    tables: dict[str, pd.DataFrame] | None = None,
 ) -> dict[str, Any]:
     """Night-k + frame-a_f SET on all procs, then refresh ``n_ok`` for INV-PSF-FRAME-01.
 
     Per-frame PSF merge leaves ``psf_fit_ok`` closed until the night locus exists;
-    this must run before ``finalize_epsf_frame_job``.
+    this must run before ``finalize_epsf_frame_job``. ``tables``: see ``fit_night_locus_from_proc_dir``.
     """
-    summary = reapply_night_locus_to_proc_dir(proc_dir, n_sigma=n_sigma)
+    summary, n_ok_written = _reapply_night_locus(proc_dir, n_sigma=n_sigma, night_locus=None, tables=tables)
     recs = [r for r in (frame_records or []) if isinstance(r, dict)]
     if recs:
         from proc_frame_store import proc_csv_path_for_aligned_fits
@@ -418,7 +457,10 @@ def finalize_night_locus_for_inv_psf_frame_01(
                 continue
             sidecar = proc_csv_path_for_aligned_fits(root / fn)
             if sidecar.is_file():
-                rec["n_ok"] = _count_psf_fit_ok_in_sidecar(sidecar)
+                # G09-27: the psf_fit_ok count the locus pass just wrote to this file; a file it did not
+                # rewrite (no PSF columns) is counted from disk
+                n_ok = n_ok_written.get(str(sidecar))
+                rec["n_ok"] = n_ok if n_ok is not None else _count_psf_fit_ok_in_sidecar(sidecar)
                 refreshed += 1
         summary["n_ok_refreshed_records"] = refreshed
     return summary
@@ -436,6 +478,9 @@ __all__ = [
     "locus_residual_sigma",
     "chi2_ok_from_locus",
     "fit_night_locus_from_proc_dir",
+    "LOCUS_PROC_COLUMNS",
+    "locus_columns_of",
+    "locus_table_key",
     "reapply_night_locus_to_proc_dir",
     "finalize_night_locus_for_inv_psf_frame_01",
 ]

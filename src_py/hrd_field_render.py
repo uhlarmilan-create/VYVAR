@@ -25,6 +25,8 @@ import numpy as np
 import pandas as pd
 from scipy.interpolate import PchipInterpolator
 
+from stats_core import MAD_TO_SIGMA
+
 FieldMode = Literal["inverted", "vivid", "physical"]
 FIELD_MODES: tuple[FieldMode, ...] = ("inverted", "vivid", "physical")
 
@@ -98,7 +100,7 @@ def field_luminance(data: np.ndarray) -> np.ndarray:
     d = np.asarray(data, dtype=float)
     ok = np.isfinite(d)
     sky = float(np.median(d[ok]))
-    sigma = 1.4826 * float(np.median(np.abs(d[ok] - sky))) or 1.0
+    sigma = MAD_TO_SIGMA * float(np.median(np.abs(d[ok] - sky))) or 1.0
     x = np.where(ok, (d - sky) / sigma, 0.0)
     top = max(float(np.percentile(x[ok], _TOP_PERCENTILE)), 10.0)
     return np.clip(np.arcsinh(np.clip(x, 0.0, None) / _ASINH_SOFT_SIGMA) / np.arcsinh(top / _ASINH_SOFT_SIGMA), 0.0, 1.0)

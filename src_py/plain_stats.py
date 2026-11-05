@@ -11,6 +11,8 @@ from typing import Any
 
 import numpy as np
 
+from stats_core import MAD_TO_SIGMA, median_mad
+
 
 def plain_mean_med_std(
     data: Any,
@@ -50,7 +52,8 @@ def sky_mad_sigma_adu(
     *,
     mask: Any | None = None,
 ) -> tuple[float, float]:
-    """Sky median and noise sigma (ADU) = (median, 1.4826 * MAD) of the unmasked pixels.
+    """Sky median and noise sigma (ADU) = (median, MAD_TO_SIGMA x MAD) of the unmasked finite pixels
+    (``stats_core.median_mad``); (NaN, NaN) when there are none.
 
     No clipping. Stars are a minority of pixels, so median and MAD describe the sky.
     (DAO-NOISE-2026-10: the former version took the MAD of the pixels below the median
@@ -62,9 +65,5 @@ def sky_mad_sigma_adu(
         arr = arr[~m] if m.shape == arr.shape else arr.ravel()
     else:
         arr = arr.ravel()
-    arr = arr[np.isfinite(arr)]
-    if arr.size == 0:
-        return float("nan"), float("nan")
-    med = float(np.median(arr))
-    mad = float(np.median(np.abs(arr - med)))
-    return med, 1.4826 * mad if math.isfinite(mad) and mad >= 0.0 else float("nan")
+    med, mad = median_mad(arr)
+    return med, MAD_TO_SIGMA * mad if math.isfinite(mad) and mad >= 0.0 else float("nan")

@@ -32,7 +32,7 @@ from photometry_defs import (  # noqa: F401
     TIME_BASE_COL,
     TIME_BASE_JD_FALLBACK,
 )
-from pipeline_constants import BKG_SCALE_R_CLAMP_HI, BKG_SCALE_R_CLAMP_LO, MAD_CONSISTENCY  # noqa: F401
+from pipeline_constants import BKG_SCALE_R_CLAMP_HI, BKG_SCALE_R_CLAMP_LO  # noqa: F401
 from mag_constants import MAG_ERR_SCALE
 from aperture_policy import fwhm_from_header_vy_fwhm
 from optics import frame_plate_scale

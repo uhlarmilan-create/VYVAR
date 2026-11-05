@@ -24,7 +24,7 @@ from astropy.coordinates import SkyCoord
 from astropy.wcs import WCS
 from astropy.wcs import FITSFixedWarning
 import pandas as pd
-from stats_core import coerce_bool, coerce_bool_series
+from stats_core import MAD_TO_SIGMA, coerce_bool, coerce_bool_series
 from config import AppConfig
 from catalog_match_trust import export_catalog_match_mode_from_internal
 from catalog_db import query_local_exoplanet, query_local_gaia, query_local_vsx
@@ -1180,7 +1180,7 @@ def _dao_convolved_background_rms_adu(
     if v.size < 64:
         return float("nan"), float(kernel.rel_err)
     med = float(np.median(v))
-    rms = 1.4826 * float(np.median(np.abs(v - med)))
+    rms = MAD_TO_SIGMA * float(np.median(np.abs(v - med)))
     return float(rms), float(kernel.rel_err)
 
 

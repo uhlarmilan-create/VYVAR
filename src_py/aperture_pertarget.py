@@ -35,7 +35,7 @@ import time
 
 import numpy as np
 import pandas as pd
-from stats_core import coerce_bool_series
+from stats_core import MAD_TO_SIGMA, coerce_bool_series
 from photometry_defs import DEFAULT_APERTURE_F_GRID, blend_k_column, flux_k_column  # LAYER-2026-10: moved there
 # COMP-CEIL-FIELDK-2026-10: the k rule and its bootstrap count live in the lower module (shared with the field k)
 from comp_rms_loo import BRIGHT_K_BOOT, k_within_one_se, ks_within_one_se
@@ -595,7 +595,7 @@ def comp_loo_scatter(comp_flux: Mapping[str, np.ndarray]) -> float:
         if int(good.sum()) < 5:
             continue
         d = -2.5 * np.log10(F[j, good]) + 2.5 * np.log10(np.sum(rest[:, good], axis=0))
-        out.append(1.4826 * float(np.median(np.abs(d - np.median(d)))))
+        out.append(MAD_TO_SIGMA * float(np.median(np.abs(d - np.median(d)))))
     return float(np.median(out)) if out else float("nan")
 
 

@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import numpy as np
 
+from stats_core import MAD_TO_SIGMA
+
 
 
 def sky_median_mask(*, values: np.ndarray, min_pix: int = 1) -> float:
@@ -75,7 +77,7 @@ def sky_source_mask(data: np.ndarray, fwhm_px: float, *, valid: np.ndarray | Non
     if v.size == 0:
         return np.zeros(d.shape, dtype=bool)
     med = float(np.median(v))
-    sig = 1.4826 * float(np.median(np.abs(v - med)))
+    sig = MAD_TO_SIGMA * float(np.median(np.abs(v - med)))
     if not (np.isfinite(sig) and sig > 0):
         return np.zeros(d.shape, dtype=bool)
     seg = detect_sources(np.where(ok, d - med, 0.0), SKY_SRC_NSIGMA * sig, n_pixels=SKY_SRC_NPIXELS)

@@ -699,13 +699,14 @@ def test_g09_22_neighbour_reach_covers_the_worst_seeing_fit_box():
 def test_coverage_faint_point_counts_as_measured_upper_limit():
     import pandas as pd
 
+    from mag_constants import MAG_ERR_SCALE
     from variability_field import limit_magnitudes
 
     f = pd.Series([10000.0, -50.0, 30.0])
     var = pd.Series([100.0 ** 2, 100.0 ** 2, 100.0 ** 2])
     m, e, below = limit_magnitudes(f, var)
     assert list(below) == [False, True, True]
-    assert np.isfinite(m).all() and m[1] == m[2] == -2.5 * np.log10(100.0) and abs(e[1] - 1.0857) < 1e-9
+    assert np.isfinite(m).all() and m[1] == m[2] == -2.5 * np.log10(100.0) and abs(e[1] - MAG_ERR_SCALE) < 1e-15  # v11 26a: exact 2.5 / ln 10
 
 
 def test_g10_03_empty_sky_noise_only_on_frame_data():

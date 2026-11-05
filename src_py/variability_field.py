@@ -61,7 +61,8 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-from stats_core import coerce_bool_series, fit_scatter_noise_model
+from mag_constants import MAG_ERR_SCALE
+from stats_core import MAD_TO_SIGMA, coerce_bool_series, fit_scatter_noise_model
 from ccd_noise import limit_magnitudes  # LC-BELOW-LIMIT-2026-11: the one rule lives there
 from frame_footprint import _frame_footprints, _inside_all  # LAYER-2026-10: moved there
 from catalog_crossmatch import _catalog_check  # LAYER-2026-10: moved there
@@ -186,7 +187,7 @@ class _MagWindows:
             return float("nan"), float("nan")
         v = self.val[sel]
         md = float(np.median(v))
-        return md, 1.4826 * float(np.median(np.abs(v - md)))
+        return md, MAD_TO_SIGMA * float(np.median(np.abs(v - md)))
 
 
 def _robust_z_by_mag(val: np.ndarray, mag: np.ndarray, use: np.ndarray, half: float = 0.5, nmin: int = 15) -> np.ndarray:
@@ -323,7 +324,7 @@ def _var_frame_table(*, cfg, files, kplan, meta, per_frame_dir, phot, ps, rows, 
     info["n_frames"] = cnt.reindex(info.index)
     info["n_below_limit"] = D.groupby("catalog_id")["below_limit"].sum().reindex(info.index).fillna(0).astype(int)
     info["e_med"] = S.median(axis=1)
-    info["snr_med"] = 1.0857 / info["e_med"]
+    info["snr_med"] = MAG_ERR_SCALE / info["e_med"]
 
     # gates: SNR, footprint, neighbour light
     snr_min = float(cfg.snr_min)
@@ -399,10 +400,10 @@ def _var_frame_zero_point(*, M, S, info, meta):
     R = M.sub(E, axis=1)
     R = R.sub(R.median(axis=1), axis=0)
     # error of the frame zero point E, a MEDIAN over the reference stars: sqrt(pi/2) sigma / sqrt(n) (G10-29)
-    sigE = math.sqrt(math.pi / 2.0) * 1.4826 * R.loc[ref].abs().median(axis=0) / math.sqrt(max(len(ref), 1))
+    sigE = math.sqrt(math.pi / 2.0) * MAD_TO_SIGMA * R.loc[ref].abs().median(axis=0) / math.sqrt(max(len(ref), 1))
     meta["n_ref"] = int(len(ref))
 
-    info["s"] = 1.4826 * R.abs().median(axis=1)
+    info["s"] = MAD_TO_SIGMA * R.abs().median(axis=1)
     info["e"] = np.sqrt(S.pow(2).add(sigE.pow(2), axis=1)).median(axis=1)
     info["eta"] = [_eta(R.loc[c].to_numpy(float)) for c in info.index]
     q = R.quantile([0.05, 0.95], axis=1).T
@@ -424,7 +425,7 @@ def scatter_index_center_scale(lq: np.ndarray) -> tuple[float, float]:
     (median, 1.4826 x MAD), NaN ignored. G10-48: shared by the z_s index and the plotted candidate limit."""
     lq = np.asarray(lq, dtype=np.float64)
     md = float(np.nanmedian(lq))
-    return md, 1.4826 * float(np.nanmedian(np.abs(lq - md)))
+    return md, MAD_TO_SIGMA * float(np.nanmedian(np.abs(lq - md)))
 
 
 def _var_indices(*, E, M, R, cfg, frame, info, meta, ref, use):
@@ -467,7 +468,7 @@ def _var_indices(*, E, M, R, cfg, frame, info, meta, ref, use):
 
     def _zs_ze(cid: str, rr: np.ndarray) -> tuple[float, float]:
         ok = np.isfinite(rr)
-        s2 = 1.4826 * float(np.nanmedian(np.abs(rr[ok] - np.nanmedian(rr[ok]))))
+        s2 = MAD_TO_SIGMA * float(np.nanmedian(np.abs(rr[ok] - np.nanmedian(rr[ok]))))
         zs2 = (math.log(max(s2, 1e-9) / float(info.at[cid, "s_exp"])) - md) / sc if sc > 0 else np.nan
         e2 = _eta(rr)
         m2, sc2 = _li_windows.stats(float(info.at[cid, "mag"]))

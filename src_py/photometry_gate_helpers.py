@@ -8,7 +8,8 @@ import logging
 import math
 import numpy as np
 
-from pipeline_constants import BKG_SCALE_R_CLAMP_HI, BKG_SCALE_R_CLAMP_LO, MAD_CONSISTENCY
+from pipeline_constants import BKG_SCALE_R_CLAMP_HI, BKG_SCALE_R_CLAMP_LO
+from stats_core import robust_sigma
 from photometry_defs import ERR_BKG_SOURCE_EMPIRICAL, ERR_BKG_SOURCE_HOWELL_FALLBACK
 
 if TYPE_CHECKING:
@@ -23,16 +24,10 @@ def _clamp_err_empty_apertures_min(n: int) -> int:
 
 
 def _robust_scatter_mad(values: np.ndarray) -> float:
-    """Plain MAD scatter, 1.4826 x MAD, no clipping (Labbe et al. 2003 empty apertures)."""
-    arr = np.asarray(values, dtype=np.float64)
-    arr = arr[np.isfinite(arr)]
-    if arr.size < 3:
-        return float("nan")
-    med = float(np.median(arr))
-    mad = float(np.median(np.abs(arr - med)))
-    if mad <= 0:
-        return 0.0
-    return mad / MAD_CONSISTENCY
+    """Plain MAD scatter, MAD_TO_SIGMA x MAD (``stats_core.robust_sigma``), no clipping (Labbe et al. 2003 empty
+    apertures). Degenerate policy (G07-32 per-caller policy): n < 3 returns NaN; MAD == 0 returns 0.0.
+    CONST-ONE-2026-11: x 1.4826, formerly / 0.6745."""
+    return robust_sigma(values, min_points=3)
 
 
 def _build_star_exclusion_mask(

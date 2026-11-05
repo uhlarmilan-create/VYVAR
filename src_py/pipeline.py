@@ -61,7 +61,9 @@ class AstroPipeline:
         """
         ap = Path(archive_path)
         # Accept both draft root (.../draft_xxx) and direct non_calibrated path (.../draft_xxx/non_calibrated).
-        ap_root = ap.parent if ap.name.casefold() == "non_calibrated" else ap
+        from draft_provenance import draft_root_of_import_path  # noqa: PLC0415
+
+        ap_root = draft_root_of_import_path(ap)
         LOGGER.info("Archive calibration: %s", ap)
         # Support Draft structure: <archive>/Raw/lights and optional <archive>/non_calibrated/lights.
         # Both sources are calibrated/passthrough-written into the single target: <archive>/calibrated/lights.

@@ -15,8 +15,8 @@ import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from pathlib import Path, PurePath
+from typing import TYPE_CHECKING, Any, TypeVar
 
 if TYPE_CHECKING:  # annotation only: the manifest store must not import the importer (LAYER-2026-10)
     from importer import SmartImportPlan
@@ -44,16 +44,24 @@ def derive_scanning_id(metadata: dict[str, Any]) -> int:
     return val if val > 0 else 1
 
 
+_PathT = TypeVar("_PathT", bound=PurePath)
+
+
+def draft_root_of_import_path(archive_path: _PathT) -> _PathT:
+    """The draft root of an import archive path: the parent of a ``non_calibrated`` folder (any case), else
+    the path itself. Pure path rule - no expanduser, no resolve, no ``lights`` / ``calibrated`` stripping
+    (``draft_archive_root`` adds those). G12-19: the one implementation of the ``non_calibrated`` rule."""
+    return archive_path.parent if archive_path.name.casefold() == "non_calibrated" else archive_path
+
+
 def draft_archive_root(archive_path: Path | str) -> Path:
     """Normalize draft archive root (parent when path is ``non_calibrated/``)."""
     ap = Path(archive_path).expanduser().resolve()
-    if ap.name.casefold() == "non_calibrated":
-        return ap.parent
     if ap.name.casefold() == "lights":
         return ap.parent.parent
     if ap.name.casefold() == "calibrated":
         return ap.parent
-    return ap
+    return draft_root_of_import_path(ap)  # the non_calibrated rule
 
 
 def resolve_draft_archive_root_from_row(row: dict[str, Any]) -> Path | None:

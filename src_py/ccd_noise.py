@@ -35,6 +35,8 @@ from typing import Any
 
 import numpy as np
 
+from mag_constants import MAG_ERR_SCALE
+
 #: variance of the sky estimator relative to the mean of n_sky pixels (see module docstring)
 SKY_ESTIMATOR_VARIANCE_FACTOR: dict[str, float] = {"mean": 1.0, "median": math.pi / 2.0}
 
@@ -136,4 +138,4 @@ def limit_magnitudes(flux: Any, var: Any) -> tuple[Any, Any, Any]:
     and the target light curves (LC-BELOW-LIMIT-2026-11)."""
     sig = np.sqrt(np.clip(var, 0, None))
     use = np.maximum(flux, sig)
-    return -2.5 * np.log10(use), 1.0857 * sig / use, flux < sig
+    return -2.5 * np.log10(use), MAG_ERR_SCALE * sig / use, flux < sig

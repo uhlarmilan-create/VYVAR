@@ -49,8 +49,11 @@ def guarded_psf_sidecar_write(
     sidecar_path: Path,
     after: pd.DataFrame,
     before: pd.DataFrame,
-) -> None:
-    """Write sidecar; INV-EXPORT-READ-ONLY-01 restores if non-psf columns change."""
+) -> pd.DataFrame:
+    """Write sidecar; INV-EXPORT-READ-ONLY-01 restores if non-psf columns change.
+
+    Returns the written file as read back for the check (G09-27: callers reuse it instead of reading the
+    file again)."""
     from proc_frame_store import _vyvar_df_to_csv
 
     pre_bytes = sidecar_path.read_bytes() if sidecar_path.is_file() else None
@@ -65,6 +68,7 @@ def guarded_psf_sidecar_write(
         if pre_bytes is not None:
             sidecar_path.write_bytes(pre_bytes)
         raise
+    return on_disk
 
 
 # --- moved from epsf_psf_merge (LAYER-2026-10) ---

@@ -26,6 +26,8 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from stats_core import MAD_TO_SIGMA
+
 MAX_ORDER = 3
 MIN_STARS_PER_COEF = 10
 #: An order is accepted only when it lowers BIC by more than this (Kass & Raftery 1995:
@@ -109,7 +111,7 @@ def _robust_poly(x: np.ndarray, y: np.ndarray, order: int) -> tuple[np.ndarray, 
     A = np.vander(x, order + 1, increasing=True)
     p0, *_ = np.linalg.lstsq(A, y, rcond=None)
     r0 = y - A @ p0
-    scale = 1.4826 * float(np.median(np.abs(r0 - np.median(r0))))
+    scale = MAD_TO_SIGMA * float(np.median(np.abs(r0 - np.median(r0))))
     if not (scale > 0):
         return p0, r0, np.zeros((order + 1, order + 1))
     res = least_squares(lambda p: A @ p - y, p0, loss="soft_l1", f_scale=scale)
@@ -142,7 +144,7 @@ def fit_colour_term(colour: np.ndarray, delta: np.ndarray, *, max_order: int = M
         if n < MIN_STARS_PER_COEF * (order + 1):
             break
         p, r, cv = _robust_poly(x, d, order)
-        s = 1.4826 * float(np.median(np.abs(r - np.median(r))))
+        s = MAD_TO_SIGMA * float(np.median(np.abs(r - np.median(r))))
         if not (s > 0):
             continue
         # Gaussian likelihood with the robust scale; k = order + 1 parameters
@@ -160,7 +162,7 @@ def fit_colour_term(colour: np.ndarray, delta: np.ndarray, *, max_order: int = M
         coeffs=[float(v) for v in p[1:]],
         c_ref=c_ref,
         zero_point=float(p[0]),
-        rms=float(1.4826 * np.median(np.abs(r - np.median(r)))),
+        rms=float(MAD_TO_SIGMA * np.median(np.abs(r - np.median(r)))),
         n=n,
         c_min=float(np.min(c)),
         c_max=float(np.max(c)),

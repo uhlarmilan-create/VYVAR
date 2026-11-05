@@ -30,6 +30,7 @@ from astropy.io import fits
 
 from database import VyvarDatabase
 from infolog import log_event
+from stats_core import MAD_TO_SIGMA, mad
 
 logger = logging.getLogger(__name__)
 
@@ -355,13 +356,11 @@ def _local_pair_median(a: np.ndarray, half: int) -> np.ndarray:
 
 
 def _robust_sigma(x: np.ndarray) -> float:
-    """1.4826 x MAD; NaN when there is no measurable noise (empty, or 0). A noise below the float32
-    resolution of a ratio is rounding, not pixel noise, so the result is at least float32 eps."""
-    x = np.asarray(x)
-    x = x[np.isfinite(x)]
-    if x.size == 0:
-        return float("nan")
-    s_ = 1.4826 * float(np.median(np.abs(x - np.median(x))))
+    """MAD_TO_SIGMA x MAD (``stats_core.mad``, in the input's precision) of the finite values.
+
+    Degenerate policy (G07-32 per-caller policy): NaN when there is no measurable noise (empty, or 0). A noise
+    below the float32 resolution of a ratio is rounding, not pixel noise, so the result is at least float32 eps."""
+    s_ = MAD_TO_SIGMA * mad(x)
     if not np.isfinite(s_) or s_ <= 0:
         return float("nan")
     return max(s_, float(np.finfo(np.float32).eps))

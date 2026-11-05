@@ -55,9 +55,9 @@ from infolog import log_event
 from pipeline_constants import (
     N_STARS_DIAG_K,
     SAT_LIMIT_CONTAINER_CLIP_ADU,
-    _N_STARS_DIAG_MAD_TO_SIGMA,
 )
 from plain_stats import plain_mean_med_std
+from stats_core import MAD_TO_SIGMA, mad as _mad
 from utils import (
     set_float_image_data_in_place,
     DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
@@ -2203,7 +2203,7 @@ def _fit_subtract_preprocess_sky_surface(
         return arr.copy(), skip
     resid = work - float(bg_median) - pass1[0]
     sky_res = resid[mask]
-    sig = 1.4826 * float(np.median(np.abs(sky_res - np.median(sky_res)))) if sky_res.size else 0.0
+    sig = MAD_TO_SIGMA * float(np.median(np.abs(sky_res - np.median(sky_res)))) if sky_res.size else 0.0
     n_src_px = 0
     if sig > 0 and math.isfinite(sig):
         seg = detect_sources(np.where(finite, resid, 0.0), SKY_MASK_NSIGMA * sig, npixels=SKY_MASK_NPIXELS)
@@ -2879,12 +2879,10 @@ def _n_stars_diag_frame_label(src: Any) -> str:
 
 
 def _n_stars_mad(values: np.ndarray) -> float:
-    arr = np.asarray(values, dtype=np.float64)
-    arr = arr[np.isfinite(arr)]
-    if arr.size == 0:
-        return 0.0
-    med = float(np.median(arr))
-    return float(np.median(np.abs(arr - med)))
+    """Raw MAD (``stats_core.mad``) of the finite star counts; 0.0 without finite values (G07-32 per-caller
+    policy: the caller treats 0.0 as "no spread" and falls back to all rows)."""
+    m = _mad(np.asarray(values, dtype=np.float64))
+    return m if math.isfinite(m) else 0.0
 
 
 def plan_n_stars_diagnostic(
@@ -2931,7 +2929,7 @@ def plan_n_stars_diagnostic(
         empty["median"] = med
         empty["used_all_rows_mad"] = used_all
         return empty
-    sig = float(mad * _N_STARS_DIAG_MAD_TO_SIGMA)
+    sig = float(mad * MAD_TO_SIGMA)
     lo = med - kk * sig
     hi = med + kk * sig
     frames: list[dict[str, Any]] = []

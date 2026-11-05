@@ -39,7 +39,8 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-from stats_core import coerce_bool
+from mag_constants import MAG_ERR_SCALE
+from stats_core import MAD_TO_SIGMA, coerce_bool
 
 from gaia_catalog_id import read_vyvar_csv
 
@@ -121,7 +122,7 @@ def _detect_one(args: tuple) -> pd.DataFrame:
     sky = float(np.median(vals))
     # G02-28: the pixel noise of a RESAMPLED aligned frame from the robust spread of its sky pixels; the
     # neighbour-difference estimator sees the interpolation correlation and put the 5-sigma threshold near 4 sigma
-    sig = 1.4826 * float(np.median(np.abs(vals - sky)))
+    sig = MAD_TO_SIGMA * float(np.median(np.abs(vals - sky)))
     if not (math.isfinite(sig) and sig > 0):
         return pd.DataFrame()
     tbl = DAOStarFinder(fwhm=float(fwhm), threshold=DETECT_NSIGMA * sig, n_brightest=None,
@@ -425,7 +426,7 @@ def run_field_transients(
             meta["status"] = f"empty-sky noise unknown: < {EMPTY_SKY_MIN_VALID} empty apertures on a frame's data"
             _write_meta(phot, meta)
             return meta
-        sig_sky = 1.4826 * np.nanmedian(np.abs(Fe - np.nanmedian(Fe, axis=1, keepdims=True)), axis=1)
+        sig_sky = MAD_TO_SIGMA * np.nanmedian(np.abs(Fe - np.nanmedian(Fe, axis=1, keepdims=True)), axis=1)
         meta["empty_sky_noise_ratio"] = float(np.nanmedian(sig_sky / np.nanmedian(Fm[:, len(xy):, 1], axis=1)))
         Fm = Fm[:, : len(xy)]
         Ev = E.reindex(frame.index).to_numpy(float)
@@ -529,7 +530,7 @@ def run_field_transients(
                          "in_galaxy": bool(gname) and gdist <= max(gsemi, GALAXY_CORE_ARCSEC),
                          "candidate": not reasons, "reject_reason": "; ".join(reasons)})
             if not reasons:
-                rows[-1]["_lc"] = pd.DataFrame({"time": np.nan, "mag": mag, "err": 1.0857 * eF / np.where(F > 0, F, np.nan),
+                rows[-1]["_lc"] = pd.DataFrame({"time": np.nan, "mag": mag, "err": MAG_ERR_SCALE * eF / np.where(F > 0, F, np.nan),
                                                 "snr": snr, "fwhm": fwhm, "airmass": frame["airmass"].to_numpy(float)})
     T = pd.DataFrame(rows)
     if not T.empty:
@@ -676,7 +677,7 @@ def dark_hot_pixel(dark: dict[str, Any] | None, mats: list[np.ndarray], xy: np.n
         med = float(np.median(dk))
         dark["binned"] = dk
         dark["med"] = med
-        dark["sig"] = 1.4826 * float(np.median(np.abs(dk - med))) or 1.0
+        dark["sig"] = MAD_TO_SIGMA * float(np.median(np.abs(dk - med))) or 1.0
     dk = dark["binned"]
     xd, yd = _apply(np.linalg.inv(mats[int(t_ref)]), xy)
     xi, yi = int(round(xd)), int(round(yd))

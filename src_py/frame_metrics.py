@@ -30,12 +30,13 @@ from typing import Any
 
 import numpy as np
 
+from stats_core import MAD_TO_SIGMA
+
 DETECT_NSIGMA = 5.0
 N_FWHM0_PEAKS = 50
 N_FIT_STARS = 60
 N_STARS_KEEP = 150
 SAT_FRACTION_OF_MAX = 0.8
-MAD_TO_SIGMA = 1.4826
 GAUSS_FWHM = 2.0 * math.sqrt(2.0 * math.log(2.0))
 #: A point spread function narrower than 1 px FWHM is not an optical image of a star
 #: (hot pixel, cosmic ray hit). For a Gaussian of FWHM F the 4 neighbours of the peak

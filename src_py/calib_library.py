@@ -20,6 +20,7 @@ import numpy as np
 from astropy.io import fits
 
 from infolog import log_event
+from stats_core import MAD_TO_SIGMA
 
 LOGGER = logging.getLogger(__name__)
 
@@ -795,9 +796,6 @@ class OffsetEstimate:
     sigma_adu: float | None = None
 
 
-#: robust sigma from the median absolute deviation (Gaussian)
-MAD_SIGMA = 1.4826
-
 PEDESTAL_INTERCEPT = "INTERCEPT"
 PEDESTAL_SHORTEST_DARK = "SHORTEST_DARK"
 
@@ -833,7 +831,7 @@ def dark_median_level(path: str | Path) -> tuple[float, float, float] | None:
         if arr.size == 0:
             return None
         med = float(np.median(arr))
-        se = math.sqrt(math.pi / 2.0) * MAD_SIGMA * float(np.median(np.abs(arr - med))) / math.sqrt(arr.size)
+        se = math.sqrt(math.pi / 2.0) * MAD_TO_SIGMA * float(np.median(np.abs(arr - med))) / math.sqrt(arr.size)
         return med, ex, se
     except (OSError, TypeError, ValueError):
         return None

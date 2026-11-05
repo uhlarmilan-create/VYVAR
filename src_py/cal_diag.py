@@ -16,6 +16,7 @@ import calib_library as cl
 from calibration import DarkResampleMode, get_processed_master
 from fits_suffixes import list_fits_files
 from infolog import log_event
+from stats_core import MAD_TO_SIGMA, mad
 
 LOGGER = logging.getLogger(__name__)
 
@@ -25,7 +26,6 @@ CAL_PED_CONSISTENCY_REL = 0.05
 CAL_CONV_SUM_SCALE = 0.85
 CAL_SKY_HARD_SIGMA = 5.0
 CAL_SKY_SAT_WARN_FRAC = 0.90
-CAL_MAD_SIGMA = cl.MAD_SIGMA
 CAL_DARK_CURRENT_NEGLIGIBLE_FRAC = 0.05
 
 CalDiagConvention = Literal["SUM", "MEAN", "NONE", "PASSTHROUGH"]
@@ -142,13 +142,11 @@ def resolv_limit_adu(*, sigma_p: float, block_factor: int) -> float:
 
 
 def _mad_sigma_r(arr: np.ndarray) -> float:
-    d = np.asarray(arr, dtype=np.float64)
-    finite = d[np.isfinite(d)]
-    if finite.size == 0:
-        return 0.0
-    med = float(np.median(finite))
-    mad = float(np.median(np.abs(finite - med)))
-    return CAL_MAD_SIGMA * mad
+    """MAD_TO_SIGMA x MAD (``stats_core.mad``) of the finite values.
+
+    Degenerate policy (G07-32 per-caller policy): 0.0 without finite values (no measured spread)."""
+    m = mad(np.asarray(arr, dtype=np.float64))
+    return MAD_TO_SIGMA * m if math.isfinite(m) else 0.0
 
 
 def derive_pedestal_from_masters(

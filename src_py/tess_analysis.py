@@ -55,6 +55,7 @@ if TYPE_CHECKING:
 
 import numpy as np
 
+from mag_constants import MAG_ERR_SCALE
 from stats_core import flux_to_mag
 
 LOGGER = logging.getLogger(__name__)
@@ -647,7 +648,7 @@ def sector_light_curve(
     ok = np.isfinite(f_ap) & (f_ap > 0) & np.isfinite(e_ap)
     t, f_ap, e_ap = t[ok], f_ap[ok], e_ap[ok]
     m = flux_to_mag(f_ap)  # f_ap > 0 and finite here
-    e = 1.0857 * e_ap / f_ap
+    e = MAG_ERR_SCALE * e_ap / f_ap
     seg = _segments(t)
     for s in np.unique(seg):
         k = seg == s

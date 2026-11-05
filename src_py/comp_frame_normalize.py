@@ -13,7 +13,7 @@ import math
 import numpy as np
 import pandas as pd
 
-_MAD_SIGMA_SCALE = 1.4826
+from stats_core import MAD_TO_SIGMA, mad
 
 
 def _dedupe_score_series(df: pd.DataFrame, flux_col: str) -> pd.Series:
@@ -137,15 +137,17 @@ def assign_relative_flux(
 
 
 def mad_sigma_or_std(values: np.ndarray) -> float:
-    """1.4826*MAD after dropping non-finite; n<3 or MAD==0 falls back to std or inf."""
+    """MAD_TO_SIGMA x MAD (``stats_core.mad``) of the finite values.
+
+    Degenerate policy (weights; G07-32 per-caller policy): n < 3 or MAD == 0 falls back to the standard
+    deviation, and a zero / undefined spread returns inf (zero weight, never a division by zero)."""
     v = np.asarray(values, dtype=np.float64)
     v = v[np.isfinite(v)]
     if int(v.size) < 3:
         return float(np.std(v)) if int(v.size) > 0 else float("inf")
-    med = float(np.median(v))
-    mad = float(np.median(np.abs(v - med)))
-    if mad > 0:
-        return float(_MAD_SIGMA_SCALE * mad)
+    m = mad(v)
+    if m > 0:
+        return float(MAD_TO_SIGMA * m)
     std = float(np.std(v))
     return std if std > 0 else float("inf")
 
@@ -160,7 +162,7 @@ def robust_comp_rms(
     Definition (differential photometry, zero-clipping policy 2026-08-12):
     1. Input: frame-to-frame relative flux ``f_i = raw_i / norm_ref_i``.
     2. Keep every finite positive ``f_i`` (no flux-fraction drop, no sigma-clip).
-    3. ``comp_rms = 1.4826 * median(|f_i - median(f)|)``.
+    3. ``comp_rms = MAD_TO_SIGMA * median(|f_i - median(f)|)``.
 
     ``clip_sigma`` / ``min_flux_frac`` are accepted for call-site compatibility and ignored.
     Units match the historical gate (~0.01-0.05 = 1-5% fractional flux scatter).

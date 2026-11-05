@@ -201,10 +201,7 @@ def compute_lc_precision_p2p(mag: np.ndarray, flags: Sequence[str]) -> float:
     if len(fl) != m.size:
         raise ValueError(f"flags length {len(fl)} != light-curve length {m.size}")
     keep = m[np.isfinite(m) & np.array([f == "normal" for f in fl], dtype=bool)]
-    if keep.size < 3:
-        return float("nan")
-    d = np.diff(keep)
-    return float(1.4826 * np.median(np.abs(d - np.median(d))) / math.sqrt(2.0))
+    return robust_p2p_scatter(keep, min_points=3)  # CONST-ONE-2026-11: the one p2p (stats_core)
 
 
 def compute_lc_rms_ooe(

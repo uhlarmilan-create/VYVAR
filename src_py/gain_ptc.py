@@ -36,13 +36,14 @@ from typing import Any
 
 import numpy as np
 
+from stats_core import MAD_TO_SIGMA, mad
+
 #: Pairs above this fraction of the saturation level are left out (non-linearity near full well).
 MAX_LEVEL_FRACTION = 0.7
 #: Two frames form a pair when their mean levels differ by at most this fraction.
 PAIR_LEVEL_TOL = 0.05
 #: Central part of the frame used (fraction of width / height) - avoids vignetting and edge glow.
 ROI_FRACTION = 0.5
-MAD_TO_SIGMA = 1.4826
 #: EMVA 1288 R4.0 eq. 51: local slopes of the photon transfer within this fraction of the global slope.
 LOCAL_SLOPE_TOL = 0.03
 #: EMVA 1288 linearity range (fraction of saturation) for the mean-vs-exposure check.
@@ -104,10 +105,11 @@ def _roi(a: np.ndarray) -> np.ndarray:
 
 
 def _mad_sigma(d: np.ndarray) -> float:
-    d = d[np.isfinite(d)]
-    if d.size == 0:
-        return float("nan")
-    return float(MAD_TO_SIGMA * np.median(np.abs(d - np.median(d))))
+    """MAD_TO_SIGMA x MAD (``stats_core.mad``) of the finite pixels of a difference image.
+
+    Degenerate policy (G07-32 per-caller policy): NaN without finite pixels; a single pixel or a zero MAD
+    gives 0.0."""
+    return float(MAD_TO_SIGMA * mad(d))
 
 
 def pair_variance(f1: np.ndarray, f2: np.ndarray, dark: np.ndarray | float = 0.0) -> tuple[float, float]:

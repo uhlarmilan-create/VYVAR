@@ -1,7 +1,9 @@
-"""Shared scalar stats helpers (flux-to-mag, MAD variants live at call sites).
+"""Shared scalar stats helpers (flux-to-mag, the one MAD core and MAD -> sigma constant).
 
 Bodies here are the bit-identical survivors of CONSOLIDATE-01C C-2 merges.
-Do not add a second MAD flavour under the same name.
+CONST-ONE-2026-11: ``MAD_TO_SIGMA`` is the only MAD -> sigma factor of VYVAR and :func:`median_mad` / :func:`mad`
+the one MAD computation; callers with their own degenerate-sample policy (zero MAD, small n) wrap these and name
+the policy in their docstring. Keep this module light (numpy only at import): every module imports it.
 """
 from __future__ import annotations
 
@@ -79,27 +81,52 @@ def coerce_bool_series(series: Any, default: bool = False) -> Any:
     return s.map(lambda v: coerce_bool(v, default)).astype(bool)
 
 
-#: Consistency factor of the MAD for a Gaussian: sigma = 1.4826 x MAD (Rousseeuw & Croux 1993; Sokolovsky et al.
-#: 2017, MNRAS 464, 274, Sect. 2.3 eq. 6).
+#: CONST-ONE-2026-11: the one MAD -> sigma consistency factor of VYVAR, sigma = MAD_TO_SIGMA x MAD.
+#: 1 / Phi^-1(3/4) = 1.482602... for a Gaussian (Rousseeuw & Croux 1993, JASA 88, 1273; Sokolovsky et al. 2017,
+#: MNRAS 464, 274, Sect. 2.3 eq. 6), kept at the 5-digit 1.4826 (1.5e-6 relative below the exact value; the value
+#: every MAD-based VYVAR output has used). A mathematical constant, rig-independent; it assumes a Gaussian core of
+#: the distribution (for other shapes 1.4826 MAD is a robust scale, not the standard deviation).
 MAD_TO_SIGMA = 1.4826
 
 
+def median_mad(values: Any) -> tuple[float, float]:
+    """(median, MAD) of the finite values - the one MAD computation (CONST-ONE-2026-11), unscaled, no clipping.
+
+    MAD = median |x - median x|. Non-finite values are dropped; (NaN, NaN) when none is left. The arithmetic runs
+    in the input's floating precision (float32 stays float32); a non-float input is taken as float64.
+    """
+    v = np.asarray(values)
+    if v.dtype.kind != "f":
+        v = v.astype(np.float64)
+    v = v[np.isfinite(v)]
+    if v.size == 0:
+        return float("nan"), float("nan")
+    med = np.median(v)
+    return float(med), float(np.median(np.abs(v - med)))
+
+
+def mad(values: Any) -> float:
+    """Raw MAD (median absolute deviation from the median) of the finite values; NaN when there are none
+    (:func:`median_mad`)."""
+    return median_mad(values)[1]
+
+
 def robust_sigma(values: Any, *, min_points: int = 2) -> float:
-    """Robust scale of a sample: 1.4826 x MAD (median absolute deviation from the median), no clipping.
+    """Robust scale of a sample: MAD_TO_SIGMA x MAD (median absolute deviation from the median), no clipping.
 
     Equals the standard deviation for Gaussian data; one wild value moves it by at most one rank (breakdown
     50 %), where it inflates a standard deviation without bound. Non-finite values are dropped; NaN with fewer
-    than ``min_points`` (at least 2) finite values.
+    than ``min_points`` (at least 2) finite values; a zero MAD returns 0.0.
     """
     v = np.asarray(values, dtype=np.float64).ravel()
     v = v[np.isfinite(v)]
     if v.size < max(2, int(min_points)):
         return float("nan")
-    return float(MAD_TO_SIGMA * np.median(np.abs(v - np.median(v))))
+    return float(MAD_TO_SIGMA * mad(v))
 
 
 def robust_p2p_scatter(values: Any, *, min_points: int) -> float:
-    """Robust point-to-point scatter of one series in time order: 1.4826 MAD(diff) / sqrt(2), no clipping.
+    """Robust point-to-point scatter of one series in time order: MAD_TO_SIGMA MAD(diff) / sqrt(2), no clipping.
 
     The von Neumann (1941) / Abbe successive-difference estimator of the white-noise sigma (insensitive to slow
     trends), with the standard deviation of the differences replaced by its MAD estimate (Rousseeuw & Croux 1993:

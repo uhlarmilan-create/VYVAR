@@ -37,12 +37,9 @@ import pandas as pd
 
 from fits_suffixes import path_suffix_is_fits
 from mag_constants import MAG_ERR_SCALE
+from stats_core import MAD_TO_SIGMA, median_mad, robust_sigma
 
 LOGGER = logging.getLogger(__name__)
-
-_MAD_CONSISTENCY = 0.6745
-# Explicit 1.4826 used in LC-FLAG-ERR-01 product formula (= 1/0.6745).
-_MAD_TO_SIGMA = 1.4826
 
 FLAG_NORMAL = "normal"
 FLAG_SATURATED = "saturated"
@@ -87,14 +84,12 @@ _WINDOW_K_MAX = 12
 
 
 def mad_sigma(values: np.ndarray) -> float:
-    """Robust sigma = 1.4826 * MAD; floor for empty/degenerate samples."""
-    v = np.asarray(values, dtype=float)
-    v = v[np.isfinite(v)]
-    if v.size < 2:
-        return 1e-12
-    med = float(np.median(v))
-    mad = float(np.median(np.abs(v - med)))
-    return max(mad / _MAD_CONSISTENCY, 1e-12)
+    """Robust sigma = MAD_TO_SIGMA x MAD (``stats_core.robust_sigma``) of the finite values.
+
+    Degenerate policy (z-score divisor; G07-32 per-caller policy): fewer than 2 finite values or a zero MAD
+    return the floor 1e-12 (never a division by zero). CONST-ONE-2026-11: x 1.4826, formerly / 0.6745."""
+    s = robust_sigma(values)
+    return max(s, 1e-12) if math.isfinite(s) else 1e-12
 
 
 def high_err_mask(
@@ -152,9 +147,8 @@ def high_err_mask(
     fin_r = res[np.isfinite(res)]
     if fin_r.size < 3:
         return out, ratio
-    med = float(np.median(fin_r))
-    mad = float(np.median(np.abs(fin_r - med)))
-    thr = med + float(n_sigma) * _MAD_TO_SIGMA * mad
+    med, mad = median_mad(fin_r)
+    thr = med + float(n_sigma) * MAD_TO_SIGMA * mad
     good = np.isfinite(res)
     ratio[good] = np.exp(res[good])
     out[good] = res[good] > thr
