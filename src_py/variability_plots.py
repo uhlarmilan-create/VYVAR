@@ -111,10 +111,12 @@ def hockey_png(field: pd.DataFrame, meta: dict[str, Any], out: Path, title: str 
 
 
 def field_png(masterstar: Path, cand: pd.DataFrame, out: Path) -> Path | None:
-    """Inverted MASTERSTAR (dark stars on white sky) with candidates only, N/E arrows."""
+    """Inverted MASTERSTAR (dark stars on white sky) with candidates only, North up / East left with an
+    N / E compass (SKY-ORIENT-2026-11: image and markers through :mod:`sky_display_orient`)."""
     from astropy.io import fits  # noqa: PLC0415
     from astropy.visualization import ZScaleInterval  # noqa: PLC0415
-    from astropy.wcs import WCS  # noqa: PLC0415
+
+    from sky_display_orient import display_transform, draw_compass_mpl  # noqa: PLC0415
 
     plt = _mpl()
     p = Path(masterstar)
@@ -122,32 +124,20 @@ def field_png(masterstar: Path, cand: pd.DataFrame, out: Path) -> Path | None:
         return None
     with fits.open(p, memmap=False) as h:
         img = np.asarray(h[0].data, dtype=float)
-        hdr = h[0].header
+        orient = display_transform(h[0].header, img.shape)
     lo, hi = ZScaleInterval().get_limits(img[np.isfinite(img)])
-    ny, nx = img.shape
+    ny, nx = orient.out_shape
     fig = plt.figure(figsize=(8, 8 * ny / nx), dpi=110)
     ax = fig.add_axes([0, 0, 1, 1])
-    ax.imshow(np.clip((img - lo) / max(hi - lo, 1e-9), 0, 1), cmap="gray_r", origin="lower")
+    ax.imshow(orient.mpl_image(np.clip((img - lo) / max(hi - lo, 1e-9), 0, 1)), cmap="gray_r", origin="lower")
     rad = 0.012 * nx
     for _, r in cand.iterrows():
-        x, y = float(r["x"]), float(r["y"])
+        x, y = (float(t) for t in orient.apply_xy_mpl(float(r["x"]), float(r["y"])))
         ax.add_patch(plt.Circle((x, y), rad, fill=False, ec=C_CAND, lw=2))
         ax.text(x + 1.2 * rad, y + 1.2 * rad, str(r.get("label", "")), color=C_CAND, fontsize=12, weight="bold")
-    try:
-        w = WCS(hdr)
-        if w.has_celestial:
-            x0, y0 = 0.08 * nx, 0.10 * ny
-            ra0, de0 = w.all_pix2world(x0, y0, 0)
-            L = 0.06 * nx
-            for lab, (dra, dde) in (("N", (0.0, 1.0)), ("E", (1.0, 0.0))):
-                scale = abs(w.proj_plane_pixel_scales()[0].value)
-                x1, y1 = w.all_world2pix(ra0 + dra * L * scale / max(math.cos(math.radians(float(de0))), 1e-6), de0 + dde * L * scale, 0)
-                ax.annotate("", xy=(float(x1), float(y1)), xytext=(x0, y0), arrowprops=dict(arrowstyle="->", color="#1B1F24", lw=1.5))
-                ax.text(float(x1), float(y1), lab, fontsize=11, color="#1B1F24")
-    except Exception:  # noqa: BLE001
-        pass
-    ax.set_xlim(0, nx)
-    ax.set_ylim(0, ny)
+    draw_compass_mpl(ax, orient, anchor=(0.93, 0.88), color="#1B1F24")
+    ax.set_xlim(-0.5, nx - 0.5)
+    ax.set_ylim(-0.5, ny - 0.5)
     ax.set_axis_off()
     out = Path(out)
     fig.savefig(out)

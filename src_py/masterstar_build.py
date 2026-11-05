@@ -964,7 +964,7 @@ def _ms_detect_and_match(
     _detect_kw["photometric_gain"] = float(photometric_gain_read_noise(hdr, _cfg_ms, _eq_ms).gain)
     df_out, det_meta = detect_stars_and_match_catalog(data, hdr, **_detect_kw)
     # FRAME-DEPTH-2026-10 step 2: the frame reaches fainter than the main Gaia DB covers this field
-    # -> fetch the field (+-1 deg) down to the frame limit into the main DB and match again.
+    # -> fetch the field cone (GAIA-TOPUP-ADQL-2026-11) down to the frame limit into the main DB and match again.
     # Offline the run continues with the local DB; the limitation is logged and reported.
     _gaia_topup: dict[str, Any] = {"status": "not_needed"}
     _fd0 = det_meta.get("frame_depth") or {}

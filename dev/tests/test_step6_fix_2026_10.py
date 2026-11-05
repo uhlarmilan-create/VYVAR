@@ -319,8 +319,10 @@ def test_check_manifest_centres_compares_each_setup_with_its_own_masterstar(tmp_
     assert "R_30_2\tMISMATCH" in out and "V_60_1\tMISMATCH" not in out
 
 
-# ------------------------------------------------------------------ 5. the observing site is never auto-selected
-def test_autodetect_fills_camera_and_telescope_never_the_site(tmp_path: Path) -> None:
+# ------------------------------------------------------------------ 5. camera / telescope auto-detect
+# S6-FIX-SITE-MANUAL-2026-10 ("the site is never auto-selected") is SUPERSEDED by RIG-AUTOSELECT-2026-11 (Milan
+# 2026-11-05): the site is selected from the header now - tested in test_v12_rig_2026_11.py.
+def test_autodetect_fills_camera_and_telescope(tmp_path: Path) -> None:
     import numpy as np
     from astropy.io import fits
 
@@ -334,10 +336,8 @@ def test_autodetect_fills_camera_and_telescope_never_the_site(tmp_path: Path) ->
     tel = [{"ID": 1, "TELESCOPENAME": "Newton 200", "ALIAS": "a", "DIAMETER": 200.0, "FOCAL": 800.0}]
     rep = oa.autodetect_from_source(src, equipments=[], telescopes=tel)
     assert rep.telescope.matched_id == 1
-    assert not hasattr(rep, "location") and not hasattr(oa, "detect_location")
-    assert "locations" not in inspect.signature(oa.autodetect_from_source).parameters
-    app = (SRC / "app.py").read_text(encoding="utf-8")
-    assert "_rep.location" not in app and '_rig_set(_RIG_LOCATION' not in app
+    # no DB sites given: the header site is reported, nothing selected
+    assert rep.location.matched_id is None and rep.location.header_site[:2] == (50.112, 14.698)
     # the run keeps the header site handling
     import param_resolver
 

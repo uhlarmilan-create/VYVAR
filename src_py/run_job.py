@@ -8,7 +8,9 @@ the run.
 
 Files in the job directory:
   job.json          - serialisable NightRunParams fields
-  run_status.json   - state running|done|failed, pid, process, message, timestamps
+  run_status.json   - state running|done|failed, pid, process, message, timestamps; while running
+                      also phase, phase_index, phase_count(_final), frame_i, frame_n, file, pct
+                      (V12-STATUS, ``status_progress_writer``)
   result.pkl        - pickled NightRunResult (best effort, for the GUI session state)
   run_stdout.log    - stdout/stderr of the child process
 
@@ -53,6 +55,14 @@ _STATUS_LOCK_TIMEOUT_S = 10.0
 #: the "starting" status to the child's pid written after Popen; process start takes < 1 s, slow
 #: machines and virus scanners a few seconds).
 SPAWN_TIMEOUT_S = 60.0
+
+#: The GUI job monitor reads ``run_status.json`` every this many seconds (app.py fragment).
+MONITOR_POLL_S = 2.0
+#: V12-STATUS: per-frame progress is written at most this often - half the monitor poll, so every
+#: poll finds a frame counter at most half a poll old, while a phase of thousands of frames does not
+#: take the status lock thousands of times. A UI refresh rate, not a science constant. A new phase,
+#: a status line without a frame counter and the last frame of a phase are always written.
+FRAME_STATUS_MIN_INTERVAL_S = MONITOR_POLL_S / 2
 
 LOGGER = logging.getLogger(__name__)
 
@@ -306,6 +316,33 @@ def fail_job(job_dir: Path | str, exc: BaseException, preflight_log: str | None)
                  errors=[f"{type(exc).__name__}: {exc}"], preflight_log=preflight_log, finished_utc=_now())
 
 
+def status_progress_writer(job_dir: Path | str, label: str) -> Any:
+    """V12-STATUS: the ``NightRunParams.progress_cb`` of a job (GUI child and CLI): every
+    ``night_run.RunProgress`` goes into ``run_status.json`` (phase k/M, frame i/N, file, pct, message);
+    per-frame steps of one phase at most every :data:`FRAME_STATUS_MIN_INTERVAL_S` seconds."""
+    job_dir = Path(job_dir)
+    last = {"t": float("-inf"), "phase_index": None}
+
+    def _write(ev: Any) -> None:
+        now = time.monotonic()
+        if (
+            ev.frame_i is not None
+            and ev.phase_index == last["phase_index"]
+            and int(ev.frame_i) < int(ev.frame_n or 0)
+            and now - last["t"] < FRAME_STATUS_MIN_INTERVAL_S
+        ):
+            return
+        try:
+            write_status(job_dir, state="running", process=label, **ev.as_status())
+        except Exception as exc:  # noqa: BLE001 - progress must never stop the run
+            LOGGER.warning("run_job: status update of %s failed: %s", job_dir, exc)
+            return
+        last["t"] = now
+        last["phase_index"] = ev.phase_index
+
+    return _write
+
+
 def launch_job(params: Any, data_root: Path | str, label: str = "RUN VYVAR") -> Path:
     """Write the job spec and start the child process. Returns the job directory."""
     return spawn_job(data_root, spec=params_to_job(params), module="run_job", label=label, prefix="run")
@@ -393,14 +430,8 @@ def run_job_file(job_path: Path | str) -> int:
     label = (read_status(job_dir) or {}).get("label") or "RUN VYVAR"
     write_status(job_dir, state="running", pid=os.getpid(), message="Running...")
 
-    def _progress(msg: str) -> None:
-        try:
-            write_status(job_dir, state="running", process=label, message=str(msg)[:800])
-        except Exception:  # noqa: BLE001 - progress must never stop the run
-            pass
-
     try:
-        params = job_to_params(job, progress_cb=_progress)
+        params = job_to_params(job, progress_cb=status_progress_writer(job_dir, label))
         result = run_night_pipeline(params)
     except BaseException as exc:  # noqa: BLE001
         from night_run import _write_failure_log  # noqa: PLC0415

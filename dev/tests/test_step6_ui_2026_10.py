@@ -547,7 +547,7 @@ def test_g03_03_twin_cameras_mono_wins_in_every_order():
     t1 = {"ID": 1, "TELESCOPENAME": "Newton 200", "ALIAS": "a", "DIAMETER": 200.0, "FOCAL": 800.0}
     t2 = {"ID": 2, "TELESCOPENAME": "Other", "ALIAS": "b", "DIAMETER": 200.0, "FOCAL": 800.0}
     assert {detect_telescope(ht, list(r)).matched_id for r in itertools.permutations([t1, t2])} == {1}
-    # S6-FIX SITE-MANUAL-2026-10: the site is never auto-detected (detect_location removed)
+    # the site: RIG-AUTOSELECT-2026-11 (test_v12_rig_2026_11.py)
 
 
 # ------------------------------------------------------------------------ G04-34 Settings MASTERSTAR

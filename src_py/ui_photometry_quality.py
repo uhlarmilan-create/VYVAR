@@ -127,6 +127,11 @@ def render_measurement_quality(setup_dir: str | Path) -> None:
     left, right = st.columns([1.15, 1])
     with left:
         st.markdown("**Field: which stars are measurable**")
+        # SKY-ORIENT-2026-11: the field is shown North up / East left by the MASTERSTAR display transform
+        from sky_display_orient import compass_plotly_annotations, orient_from_fits  # noqa: PLC0415
+
+        ms_fits = Path(setup_dir) / "MASTERSTAR.fits"
+        orient = orient_from_fits(ms_fits) if ms_fits.is_file() else None
         fig = go.Figure()
         for z, (label, colour) in ZONES.items():
             sub = q.stars[q.stars["zone"] == z]
@@ -135,13 +140,25 @@ def render_measurement_quality(setup_dir: str | Path) -> None:
             hover = sub.get("name", pd.Series("", index=sub.index)).fillna("").astype(str)
             if "mag" in sub:
                 hover = hover + sub["mag"].map(lambda m: f"  G {m:.2f}" if pd.notna(m) else "")
+            sx, sy = sub["x"].to_numpy(float), sub["y"].to_numpy(float)
+            if orient is not None:
+                sx, sy = orient.apply_xy(sx, sy)
             fig.add_trace(go.Scattergl(
-                x=sub["x"], y=sub["y"], mode="markers", name=f"{label} ({len(sub)})",
+                x=sx, y=sy, mode="markers", name=f"{label} ({len(sub)})",
                 marker=dict(size=4 if z in ("unknown", "noise") else 6, color=colour,
                             line=dict(width=0)), text=hover, hovertemplate="%{text}<extra></extra>"))
-        fig.update_yaxes(autorange="reversed", scaleanchor="x", scaleratio=1, title="y [px]", showgrid=False)
-        fig.update_xaxes(title="x [px]", showgrid=False)
-        fig.update_layout(height=470, margin=dict(l=10, r=10, t=10, b=10),
+        if orient is not None:
+            h_, w_ = orient.out_shape
+            fig.update_yaxes(range=[h_ - 0.5, -0.5], scaleanchor="x", scaleratio=1, showticklabels=False, showgrid=False)
+            fig.update_xaxes(range=[-0.5, w_ - 0.5], showticklabels=False, showgrid=False)
+            ann = compass_plotly_annotations(orient)
+        else:  # no MASTERSTAR image: pixel axes, the orientation is not known
+            fig.update_yaxes(autorange="reversed", scaleanchor="x", scaleratio=1, title="y [px]", showgrid=False)
+            fig.update_xaxes(title="x [px]", showgrid=False)
+            from sky_display_orient import NO_WCS_NOTE  # noqa: PLC0415
+
+            ann = [dict(text=NO_WCS_NOTE, xref="paper", yref="paper", x=0.01, y=0.99, showarrow=False)]
+        fig.update_layout(height=470, margin=dict(l=10, r=10, t=10, b=10), annotations=ann,
                           legend=dict(orientation="h", yanchor="bottom", y=1.0, x=0))
         st.plotly_chart(fig, width="stretch", key="vyvar_mq_field")
     with right:

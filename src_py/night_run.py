@@ -18,6 +18,7 @@ import copy
 import json
 import logging
 import math
+import re
 import sys
 import time
 from dataclasses import dataclass, field
@@ -38,6 +39,49 @@ LOGGER = logging.getLogger(__name__)
 _DEFAULT_MASTERSTAR_SELECTION_PCT = 10.0
 
 
+@dataclass(frozen=True)
+class RunProgress:
+    """V12-STATUS: one progress event of a run - the record the GUI status bar and the job's
+    ``run_status.json`` show (GUI child and CLI alike, ``run_job.status_progress_writer``).
+
+    ``phase_index`` / ``phase_count``: phase k of M, M = the phases of this run's stage plan
+    (:func:`night_run_stage_plan`, refined when the run decides: RAM QC after calibration, the setups
+    after discovery). ``phase_count_final`` is False while such a decision is still open (M is then
+    the number of phases already certain to run). ``frame_i`` / ``frame_n``: progress inside a
+    per-frame phase (None otherwise); ``file``: the FITS name the per-frame message names."""
+
+    message: str
+    phase: str = ""
+    phase_index: int = 0
+    phase_count: int = 0
+    phase_count_final: bool = False
+    frame_i: int | None = None
+    frame_n: int | None = None
+    file: str = ""
+
+    @property
+    def pct(self) -> int | None:
+        """Percent done within the phase (frame i of N); None for a phase without a frame count."""
+        if self.frame_i is None or not self.frame_n:
+            return None
+        return max(0, min(100, int(100 * int(self.frame_i) / int(self.frame_n))))
+
+    def as_status(self) -> dict[str, Any]:
+        """The ``run_status.json`` fields (every key always written, so a phase without frames
+        clears the previous phase's frame counter)."""
+        return {
+            "message": str(self.message)[:800],
+            "phase": self.phase,
+            "phase_index": int(self.phase_index),
+            "phase_count": int(self.phase_count),
+            "phase_count_final": bool(self.phase_count_final),
+            "frame_i": self.frame_i,
+            "frame_n": self.frame_n,
+            "file": self.file,
+            "pct": self.pct,
+        }
+
+
 @dataclass
 class NightRunParams:
     """Input parameters for a headless night pipeline run.
@@ -55,7 +99,8 @@ class NightRunParams:
     # Draft rig.location_id when resolving without an explicit UI/CLI site
     # (precedence: explicit location_id > manifest_location_id > config).
     manifest_location_id: int | None = None
-    progress_cb: Callable[[str], None] | None = None
+    #: V12-STATUS: structured progress (phase k/M, frame i/N, file); see :class:`RunProgress`.
+    progress_cb: Callable[[RunProgress], None] | None = None
     dry_run: bool = False
     pre_calibrated_mode: bool = False
     #: CAL-2026-10: masters next to the LIGHTs ("lights", default) or from the
@@ -421,7 +466,8 @@ class RunPreconditions:
 
 def check_run_preconditions(cfg: AppConfig, params: NightRunParams, db: Any) -> RunPreconditions:
     """G12-15 / G12-16: what RUN VYVAR needs before anything is imported - the source folder, the
-    camera and telescope rows, the observing site and (not for a dry run) the Gaia DR3 database. The
+    camera and telescope rows, the observing site, RIG-GUARD-2026-11 the selection against the light headers
+    (:func:`rig_header_problems`) and (not for a dry run) the Gaia DR3 database. The
     GUI runs it before it starts the job, ``run_night_pipeline`` before the scan (CLI exit code 2).
     ``cfg`` is not changed."""
     from observer_location import resolve_observer_location_for_run  # noqa: PLC0415
@@ -451,11 +497,49 @@ def check_run_preconditions(cfg: AppConfig, params: NightRunParams, db: Any) -> 
         )
     except ValueError as exc:
         problems.append(str(exc))
+    if site is not None and db.location_altitude_m(site.location_id) is None:
+        # RIG-ADD-2026-11: a site added from a header without elevation has none - never 0 m silently
+        problems.append(f"Observing site {site.name or site.location_id} (LOCATION.ID={site.location_id}) has no "
+                        "elevation - enter it in Database Explorer > Sites")
+    if not problems:
+        problems += rig_header_problems(cfg, params, db, site)
     if not params.dry_run:
         gaia = gaia_db_problem(cfg)
         if gaia:
             problems.append(gaia)
     return RunPreconditions(problems=problems, site=site)
+
+
+def rig_header_problems(cfg: AppConfig, params: NightRunParams, db: Any, site: Any | None) -> list[str]:
+    """RIG-GUARD-2026-11: the selected camera / telescope / site against a sample light header of the source
+    (``optics_autodetect.rig_header_mismatches``: another DB row matches the frames with high confidence
+    and the selected one does not, or the header site lies beyond the same-site tolerance), and (not for a
+    dry run) whether the selected camera's gain and read noise resolve for that header - the run's own
+    authority (``rig_photometry.photometric_gain_read_noise``), so a camera row without them (e.g. added
+    from a header) stops here instead of at MASTERSTAR. No light frame within the bounded search
+    (SAMPLE-BOUNDED-2026-11) -> a problem that says so (the frames cannot be checked)."""
+    from optics_autodetect import no_light_message, rig_header_mismatches, sample_light_header  # noqa: PLC0415
+
+    stats: dict[str, Any] = {}
+    hdr, path = sample_light_header(params.source_dir, stats=stats)
+    if hdr is None:  # SAMPLE-BOUNDED-2026-11: said, not skipped - the frames cannot be checked
+        return [no_light_message(params.source_dir, stats) + " - the camera / telescope / site cannot be "
+                "checked against the frames"]
+    eq_rows, tel_rows = db.autodetect_candidates(
+        equipment_id=int(params.equipment_id), telescope_id=int(params.telescope_id)
+    )
+    out = rig_header_mismatches(
+        hdr, equipment_id=int(params.equipment_id), telescope_id=int(params.telescope_id),
+        equipments=eq_rows, telescopes=tel_rows, site=site, header_path=path,
+    )
+    if not params.dry_run:
+        from rig_photometry import photometric_gain_read_noise  # noqa: PLC0415
+
+        try:
+            photometric_gain_read_noise(hdr, cfg, int(params.equipment_id), noise_terms=False)
+        except ValueError as exc:
+            out.append(str(exc))
+    return out
 
 
 def _write_failure_log(cfg: Any | None, *, step: str, exc: BaseException, db: Any = None) -> str | None:
@@ -524,36 +608,124 @@ def _masterstar_candidate_path_for_job(
     return p
 
 
-def _make_progress_cb(
-    user_cb: Callable[[str], None] | None,
-) -> Callable[[int, int, str], None]:
-    def _inner(i: int, total: int, msg: str) -> None:
-        line = f"[{i}/{max(total, 1)}] {msg}"
-        LOGGER.info("[NightRun] %s", line)
-        if user_cb is not None:
-            user_cb(line)
+# V12-STATUS: the phase names of a night run (one spelling for the stage calls and the stage plan).
+PH_SCAN = "Scan source"
+PH_IMPORT = "Import session"
+PH_CALIBRATION = "Calibration"
+PH_RAM_QC = "Frame quality check (RAM QC)"
+PH_FRAME_QC = "Frame QC per channel"
+PH_MS_REF = "MASTERSTAR reference frame per channel"
+PH_PREPROCESS = "Preprocess (calibrated -> processed)"
+PH_PLATESOLVE = "Plate solve + alignment + MASTERSTAR"
+PH_DISCOVER = "Discover observation groups"
 
-    return _inner
+
+def ph_photometry(setup: str) -> str:
+    return f"Photometry - {setup}"
+
+
+def ph_epsf(setup: str) -> str:
+    return f"ePSF photometry - {setup}"
+
+
+def night_run_stage_plan(pre_calibrated: bool) -> list[tuple[str, bool]]:
+    """V12-STATUS: the phases ``run_night_pipeline`` runs up to the setup discovery, in order, as
+    (name, certain). Pre-calibrated runs skip calibration and always run RAM QC; a calibrated run
+    runs RAM QC only when calibration gave no FWHM (PERF-10), decided after calibration (not
+    certain). The photometry / ePSF phases per setup follow from the discovery
+    (``run_night_photometry`` sets them)."""
+    plan = [(PH_SCAN, True), (PH_IMPORT, True)]
+    if pre_calibrated:
+        plan.append((PH_RAM_QC, True))
+    else:
+        plan += [(PH_CALIBRATION, True), (PH_RAM_QC, False)]
+    plan += [(PH_FRAME_QC, True), (PH_MS_REF, True), (PH_PREPROCESS, True), (PH_PLATESOLVE, True),
+             (PH_DISCOVER, True)]
+    return plan
+
+
+_FITS_NAME_RE = re.compile(r"[^\s/\\]+\.(?:fits?|fts)(?:\.fz)?\b", re.IGNORECASE)
+
+
+def _fits_name_in(msg: str) -> str:
+    """The FITS file name a per-frame message names (``"Calibrating x.fits"``), '' when none."""
+    hits = _FITS_NAME_RE.findall(str(msg))
+    return hits[-1] if hits else ""
 
 
 class _RunStages:
     """G12-34: the one status / stage / timing helper of a run (``run_night_pipeline`` and the
-    photometry slice it calls): a stage is started once, every timing writes ``[PHASE] <label> done``."""
+    photometry slice it calls): a stage is started once, every timing writes ``[PHASE] <label> done``.
 
-    def __init__(self, timings: dict[str, float], progress_cb: Callable[[str], None] | None) -> None:
+    V12-STATUS: it also keeps the run's stage plan (phase k of M) and sends every status line, phase
+    start and per-frame step as a :class:`RunProgress` to the run's ``progress_cb``."""
+
+    def __init__(self, timings: dict[str, float], progress_cb: Callable[[RunProgress], None] | None) -> None:
         self.timings = timings
         self._cb = progress_cb
         self.current = "start"
+        #: (phase name, certain to run); phases [0, _k) have started, _k - 1 is the current one
+        self._plan: list[tuple[str, bool]] = []
+        self._plan_final = False
+        self._k = 0
+
+    def set_plan(self, upcoming: list[tuple[str, bool]], *, final: bool) -> None:
+        """The phases still to run after the current one (replaces the previous upcoming plan).
+        ``final``: no later decision adds phases (uncertain entries still may be left out)."""
+        self._plan = self._plan[: self._k] + [(str(n), bool(c)) for n, c in upcoming]
+        self._plan_final = bool(final)
+
+    @property
+    def phase_count(self) -> int:
+        return self._k + sum(1 for _n, c in self._plan[self._k:] if c)
+
+    @property
+    def phase_count_final(self) -> bool:
+        return self._plan_final and all(c for _n, c in self._plan[self._k:])
+
+    def _event(self, message: str, **frame: Any) -> RunProgress:
+        return RunProgress(
+            message=str(message), phase=self.current if self._k else "", phase_index=self._k,
+            phase_count=self.phase_count, phase_count_final=self.phase_count_final, **frame,
+        )
 
     def progress(self, msg: str) -> None:
         LOGGER.info("[NightRun] %s", msg)
         if self._cb is not None:
-            self._cb(msg)
+            self._cb(self._event(msg))
+
+    def frame(self, i: int, total: int, msg: str) -> None:
+        """One step of a per-frame phase (the ``progress_cb(i, total, msg)`` of the frame loops)."""
+        n = max(int(total), 1)
+        line = f"[{i}/{n}] {msg}"
+        LOGGER.info("[NightRun] %s", line)
+        if self._cb is not None:
+            self._cb(self._event(line, frame_i=int(i), frame_n=n, file=_fits_name_in(msg)))
+
+    def _advance(self, name: str) -> None:
+        rest = self._plan[self._k:]
+        names = [n for n, _c in rest]
+        if name in names:
+            j = names.index(name)
+            not_run = [n for n, c in rest[:j] if c]
+            if not_run:
+                LOGGER.info("[NightRun] planned phase(s) not run: %s", ", ".join(not_run))
+            self._plan = self._plan[: self._k] + [(name, True)] + rest[j + 1:]
+        else:
+            if self._plan:
+                from infolog import log_event  # noqa: PLC0415
+
+                LOGGER.warning("[NightRun] phase %r is not in the run's stage plan %s", name, names)
+                log_event(f"WARNING: phase {name!r} is not in the run's stage plan {names} "
+                          "(status bar phase count corrected)")
+            self._plan.insert(self._k, (name, True))
+        self._k += 1
 
     def stage(self, name: str) -> None:
         """Status line + infolog milestone for one named pipeline process."""
         from infolog import log_phase_boundary  # noqa: PLC0415
 
+        self._advance(name)
         self.current = name
         self.progress(name)
         log_phase_boundary(name, status="start")
@@ -906,13 +1078,40 @@ def _collect_photometry_metrics(output_dir: Path) -> tuple[int, float]:
     return n_lc, med
 
 
+def _photometry_setup_inputs(p: dict[str, Any]) -> dict[str, Any]:
+    """The input paths of one photometry setup (``find_photometry_setups`` entry) and the ones missing."""
+    ms_fits = Path(p["masterstar_fits"]) if p.get("masterstar_fits") else None
+    og_dir = Path(p["obs_group_dir"]) if p.get("obs_group_dir") else None
+    ms_csv = (og_dir / "masterstars_full_match.csv") if og_dir is not None else None
+    vt_csv = (og_dir / "variable_targets.csv") if og_dir is not None else None
+    pf_dir = Path(p["per_frame_csv_dir"]) if p.get("per_frame_csv_dir") else None
+    dt_dir = pf_dir  # G03-34: the per-frame CSVs live next to the aligned frames (one key)
+    out_d = Path(p["photometry_dir"]) if p.get("photometry_dir") else None
+
+    missing: list[str] = []
+    if ms_fits is None or not ms_fits.exists():
+        missing.append("MASTERSTAR.fits")
+    if ms_csv is None or not ms_csv.exists():
+        missing.append("masterstars_full_match.csv")
+    if vt_csv is None or not vt_csv.exists():
+        missing.append("variable_targets.csv")
+    if pf_dir is None or not pf_dir.exists():
+        missing.append("per-frame CSV directory")
+    if dt_dir is None or not dt_dir.exists():
+        missing.append("detrended_aligned directory")
+    if out_d is None:
+        missing.append("output_dir")
+    return {"ms_fits": ms_fits, "og_dir": og_dir, "ms_csv": ms_csv, "vt_csv": vt_csv, "pf_dir": pf_dir,
+            "dt_dir": dt_dir, "out_d": out_d, "missing": missing}
+
+
 def run_night_photometry(
     *,
     cfg: AppConfig,
     pipeline: AstroPipeline,
     draft_id: int | None,
     draft_dir_override: Path | None = None,
-    progress_cb: Callable[[str], None] | None = None,
+    progress_cb: Callable[[RunProgress], None] | None = None,
     timings: dict[str, float] | None = None,
     write_pdfs: bool = True,
     existing_draft: bool = False,
@@ -966,7 +1165,7 @@ def run_night_photometry(
     if changed_keys:
         _p(f"INV-CFG-SOURCE-01 changed_keys={changed_keys}")
 
-    _stage("Discover observation groups")
+    _stage(PH_DISCOVER)
     t0 = time.time()
     all_setups = find_photometry_setups(phot_cfg, draft_id, draft_dir_override=draft_dir)
     _t("discover_obs_groups", t0)
@@ -1012,34 +1211,27 @@ def run_night_photometry(
     completed: list[str] = []
     last_out: Path | None = None
 
+    setup_inputs = {str(nm): _photometry_setup_inputs(all_setups.get(str(nm)) or {}) for nm in run_groups}
+    do_epsf = resolve_epsf_run(epsf, phot_cfg)
+    # V12-STATUS: the photometry phases of this run (setups with every input), so the status bar's
+    # phase count is the run's own plan from here on
+    _phot_plan: list[tuple[str, bool]] = []
     for nm in run_groups:
-        p = all_setups.get(str(nm)) or {}
-        ms_fits = Path(p["masterstar_fits"]) if p.get("masterstar_fits") else None
-        og_dir = Path(p["obs_group_dir"]) if p.get("obs_group_dir") else None
-        ms_csv = (og_dir / "masterstars_full_match.csv") if og_dir is not None else None
-        vt_csv = (og_dir / "variable_targets.csv") if og_dir is not None else None
-        pf_dir = Path(p["per_frame_csv_dir"]) if p.get("per_frame_csv_dir") else None
-        dt_dir = pf_dir  # G03-34: the per-frame CSVs live next to the aligned frames (one key)
-        out_d = Path(p["photometry_dir"]) if p.get("photometry_dir") else None
+        if not setup_inputs[str(nm)]["missing"]:
+            _phot_plan.append((ph_photometry(nm), True))
+            if do_epsf:
+                _phot_plan.append((ph_epsf(nm), True))
+    stages.set_plan(_phot_plan, final=True)
 
-        missing: list[str] = []
-        if ms_fits is None or not ms_fits.exists():
-            missing.append("MASTERSTAR.fits")
-        if ms_csv is None or not ms_csv.exists():
-            missing.append("masterstars_full_match.csv")
-        if vt_csv is None or not vt_csv.exists():
-            missing.append("variable_targets.csv")
-        if pf_dir is None or not pf_dir.exists():
-            missing.append("per-frame CSV directory")
-        if dt_dir is None or not dt_dir.exists():
-            missing.append("detrended_aligned directory")
-        if out_d is None:
-            missing.append("output_dir")
-        if missing:
-            phot_errors.append(f"{nm}: missing {', '.join(missing)}")
+    for nm in run_groups:
+        si = setup_inputs[str(nm)]
+        ms_fits, og_dir, ms_csv, vt_csv = si["ms_fits"], si["og_dir"], si["ms_csv"], si["vt_csv"]
+        pf_dir, dt_dir, out_d = si["pf_dir"], si["dt_dir"], si["out_d"]
+        if si["missing"]:
+            phot_errors.append(f"{nm}: missing {', '.join(si['missing'])}")
             continue
 
-        _stage(f"Photometry - {nm}")
+        _stage(ph_photometry(nm))
         t0 = time.time()
         try:
             phot_result = run_full_photometry_pipeline(
@@ -1092,11 +1284,10 @@ def run_night_photometry(
         if math.isfinite(med_rms):
             lc_rms_values.append(med_rms)
 
-        do_epsf = resolve_epsf_run(epsf, phot_cfg)
         if do_epsf:
             from epsf_stage import EpsfStagePaths, run_epsf_stage
 
-            _stage(f"ePSF photometry - {nm}")
+            _stage(ph_epsf(nm))
             t0 = time.time()
             try:
                 epsf_out = run_epsf_stage(
@@ -1227,7 +1418,7 @@ def _nr_import(*, _p, _stage, _t, cfg, eq_id, params, pipeline, plan, tel_id, si
         _p(calibration_mode_report_line(CALIBRATION_MODE_PRE))
 
     # Import - the observing site of this run (product rule SITE-UI-01) goes into the run's own cfg.
-    _stage("Import session")
+    _stage(PH_IMPORT)
     from observer_location import apply_resolved_observer_location_to_config  # noqa: PLC0415
 
     _resolved_site = site
@@ -1320,7 +1511,7 @@ def _nr_calibrate(
         _cal_out: dict[str, Any] = {"pre_calibrated_skip_calibration": True}
         timings["calibration"] = 0.0
     else:
-        _stage("Calibration")
+        _stage(PH_CALIBRATION)
         t0 = time.time()
         _cal_out = pipeline.quick_calibrate_last_import(
             archive_path=ap,
@@ -1411,7 +1602,7 @@ def _nr_frame_qc(
         and int(qsum.get("n_successful_fwhm") or 0) > 0
     )
     if not _perf10_ok:
-        _stage("Frame quality check (RAM QC)")
+        _stage(PH_RAM_QC)
         t0 = time.time()
         qsum = run_draft_ram_calibration_qc_to_obs_files(
             db=pipeline.db,
@@ -1443,7 +1634,7 @@ def _nr_frame_qc(
     # Frame QC per channel (frame_qc.py, QC-PER-GROUP-2026-10): per observation
     # group FWHM / elongation limits (median + k*1.4826*MAD, one pass), rejections written
     # to the manifest (IS_REJECTED + reason) and frame_qc.json, best frame per group.
-    _stage("Frame QC per channel")
+    _stage(PH_FRAME_QC)
     t0 = time.time()
     from frame_qc import run_frame_qc
 
@@ -1453,6 +1644,8 @@ def _nr_frame_qc(
         ap_root,
         k=float(cfg.auto_fwhm_k_factor),
         reject=bool(cfg.auto_fwhm_enabled),
+        # MASTERSTAR-TRAIL-2026-11: the trail test reads the calibrated light (as MASTERSTAR does)
+        image_path_for=lambda p: _masterstar_candidate_path_for_job(ap_root, p, draft_id=draft_id, db=pipeline.db),
     )
     _t("frame_qc", t0)
     # Rejections are in IS_REJECTED; preprocess applies no extra pooled FWHM cap.
@@ -1468,7 +1661,7 @@ def _nr_frame_qc(
 
     # MASTERSTAR source = best frame of each group (frame_qc.json). A single-group
     # draft also stores it as the draft MASTERSTAR source path (read by MASTERSTAR QA).
-    _stage("MASTERSTAR reference frame per channel")
+    _stage(PH_MS_REF)
     t0 = time.time()
     from pipeline_astrometry import draft_is_multi_group_obs
 
@@ -1579,12 +1772,12 @@ def _nr_preprocess_and_platesolve(
         cfg_changed_keys=result.cfg_changed_keys,
     )
 
-    _stage("Preprocess (calibrated -> processed)")
+    _stage(PH_PREPROCESS)
     t0 = time.time()
     _night_run_preprocess(pending=job_ms, ap=ap, pipeline=pipeline, progress_cb=prog_cb)
     _t("preprocess", t0)
 
-    _stage("Plate solve + alignment + MASTERSTAR")
+    _stage(PH_PLATESOLVE)
     t0 = time.time()
     ps_out = _night_run_platesolve(
         pending=job_ms,
@@ -1649,7 +1842,7 @@ def run_night_pipeline(params: NightRunParams, cfg: AppConfig | None = None) -> 
     stages = _RunStages(timings, params.progress_cb)
     _p, _stage, _t = stages.progress, stages.stage, stages.done
 
-    prog_cb = _make_progress_cb(params.progress_cb)
+    prog_cb = stages.frame
 
     pipeline = None
     fatal: BaseException | None = None
@@ -1704,7 +1897,8 @@ def run_night_pipeline(params: NightRunParams, cfg: AppConfig | None = None) -> 
             result.phase_timings = timings
             return result
 
-        _stage("Scan source")
+        stages.set_plan(night_run_stage_plan(bool(params.pre_calibrated_mode)), final=False)
+        _stage(PH_SCAN)
         lights_bad, plan = _nr_scan_source(
             _t=_t,
             cfg=cfg,
@@ -1917,14 +2111,24 @@ def main(argv: list[str] | None = None) -> int:
             masters_from=str(getattr(args, "masters_from", "lights") or "lights"),
         )
         # S6-FIX RUN-LOCK-2026-10: one run per data directory, like the GUI's jobs (run_job.spawn_job)
-        from run_job import JobBusyError, fail_job, finish_job, params_to_job, register_external_job  # noqa: PLC0415
+        from run_job import (  # noqa: PLC0415
+            JobBusyError,
+            fail_job,
+            finish_job,
+            params_to_job,
+            register_external_job,
+            status_progress_writer,
+        )
 
+        _cli_label = "Night run (CLI)"
         try:
-            job_dir = register_external_job(cfg.data_root, spec=params_to_job(params), label="Night run (CLI)",
+            job_dir = register_external_job(cfg.data_root, spec=params_to_job(params), label=_cli_label,
                                             prefix="cli")
         except JobBusyError as exc:
             print(f"ERROR: not started - {exc}", file=sys.stderr)
             return 2
+        # V12-STATUS: the CLI run reports its phase / frame progress like the GUI job (status bar)
+        params.progress_cb = status_progress_writer(job_dir, _cli_label)
         try:
             result = run_night_pipeline(params, cfg=cfg)
         except BaseException as exc:

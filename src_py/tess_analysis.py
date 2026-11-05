@@ -655,8 +655,19 @@ def sector_light_curve(
         m[k] -= np.median(m[k])
     sec = TessSector(sector, cad, int(t.size), float(t.min()) if t.size else float("nan"),
                      float(t.max()) if t.size else float("nan"), float(contam), int(mask.sum()), float(sigma))
-    aux = {"t": t, "m": m, "e": e, "cube": flux[ok] - bkg[ok, None, None], "mask": mask, "xy": xy, "sigma": sigma, "median": med}
+    aux = {"t": t, "m": m, "e": e, "cube": flux[ok] - bkg[ok, None, None], "mask": mask, "xy": xy, "sigma": sigma, "median": med,
+           "wcs_header": _cutout_wcs_header(tpf)}
     return sec, aux
+
+
+def _cutout_wcs_header(tpf: Any) -> str | None:
+    """SKY-ORIENT-2026-11: the celestial WCS of the TessCut cutout as a FITS header string, so the pixel map is
+    shown North up / East left (display only); None (map says "orientation unknown (no WCS)") when absent."""
+    try:
+        return str(tpf.wcs.celestial.to_header_string())
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.warning("[TESS] cutout WCS not available, pixel map orientation unknown: %s", exc)
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -939,6 +950,7 @@ def run_tess(
         except Exception as exc:  # noqa: BLE001
             LOGGER.debug("[TESS] S/N failed: %s", exc)
         plots["amp_map"], plots["mask"], plots["xy"] = amp, aux0["mask"], aux0["xy"]
+        plots["wcs_header"] = aux0.get("wcs_header")
     verdict(res, TESS_CONTAM_MAX)
     try:
         _plots(res, plots, out_dir, vyvar_lc)
@@ -965,6 +977,7 @@ def _write_plot_data(res: TessAnalysis, plots: dict[str, Any], out_dir: Path) ->
             "mask": np.asarray(plots["mask"], bool).astype(int).tolist(),
             "stars": {str(k): [float(v[0]), float(v[1])] for k, v in plots["xy"].items()},
             "target_likelihood": res.target_likelihood if math.isfinite(res.target_likelihood) else None,
+            "wcs_header": plots.get("wcs_header"),
         }
         (out_dir / "pixel_map.json").write_text(json.dumps(pix), encoding="utf-8")
 
@@ -998,12 +1011,20 @@ def _plots(res: TessAnalysis, plots: dict[str, Any], out_dir: Path, vyvar_lc: tu
         ax.invert_yaxis(); ax.set_xlabel(f"phase (P = {P:.6f} d)"); ax.set_ylabel("dmag"); ax.legend(fontsize=8)
         fig.tight_layout(); p = out_dir / "phased.png"; fig.savefig(p, dpi=110); plt.close(fig)
     if "amp_map" in plots:
+        from sky_display_orient import display_transform, draw_compass_mpl, header_from_string  # noqa: PLC0415
+
+        amp_map = np.asarray(plots["amp_map"], float)
+        orient = display_transform(header_from_string(plots.get("wcs_header")), amp_map.shape)
         fig, ax = plt.subplots(figsize=(5, 5))
-        ax.imshow(plots["amp_map"], origin="lower", cmap="Greys")
+        ax.imshow(orient.mpl_image(amp_map), origin="lower", cmap="Greys")
         my, mx = np.where(plots["mask"])
-        ax.plot(mx, my, "s", mfc="none", mec="#1F5FBF", ms=12)
+        ax.plot(*orient.apply_xy_mpl(mx, my), "s", mfc="none", mec="#1F5FBF", ms=12)
         for sid, (x, y) in plots["xy"].items():
             c = "#D9480F" if sid == res.catalog_id else "#5A6370"
-            ax.plot(x, y, "o", c=c, ms=5 if sid == res.catalog_id else 3)
+            ax.plot(*orient.apply_xy_mpl(x, y), "o", c=c, ms=5 if sid == res.catalog_id else 3)
+        h_, w_ = orient.out_shape
+        ax.set_xlim(-0.5, w_ - 0.5)
+        ax.set_ylim(-0.5, h_ - 0.5)
+        draw_compass_mpl(ax, orient, anchor=(0.88, 0.84), length_pt=16.0, fontsize=9.0)
         ax.set_title(f"amplitude per pixel; target L = {res.target_likelihood:.2f}", fontsize=9)
         fig.tight_layout(); p = out_dir / "pixel_map.png"; fig.savefig(p, dpi=110); plt.close(fig)

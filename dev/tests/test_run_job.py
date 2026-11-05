@@ -19,7 +19,7 @@ def _params(tmp_path: Path) -> night_run.NightRunParams:
         telescope_id=4,
         location_id=5,
         masters_from="library",
-        progress_cb=lambda m: None,
+        progress_cb=lambda ev: None,
     )
 
 
@@ -50,7 +50,7 @@ def test_child_runner_writes_status_and_result(tmp_path, monkeypatch):
     seen = {}
 
     def fake_run(params):
-        params.progress_cb("Step 3: Calibration")
+        params.progress_cb(night_run.RunProgress(message="Step 3: Calibration"))  # V12-STATUS: structured events
         seen["status_mid"] = run_job.read_status(tmp_path)
         seen["params"] = params
         return night_run.NightRunResult(success=True, draft_id=523, completed_setups=["g_120_4"])

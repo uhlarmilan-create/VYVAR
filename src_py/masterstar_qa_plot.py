@@ -168,9 +168,12 @@ def load_masterstar_qa(setup_dir: Path) -> dict[str, Any]:
             inb = np.isfinite(gx) & np.isfinite(gy) & (gx >= 0) & (gy >= 0) & (gx < w0) & (gy < h0)
             gaia_xy = np.column_stack([gx[inb], gy[inb]])
 
+    from sky_display_orient import display_transform  # noqa: PLC0415
+
     fin = np.isfinite(xs) & np.isfinite(ys)
     return {
         "image": raw,
+        "orient": display_transform(wcs, raw.shape),
         "fits_name": fits_path.name,
         "solve": solve,
         "frame": frame,
@@ -185,6 +188,7 @@ def load_masterstar_qa(setup_dir: Path) -> dict[str, Any]:
 def render_masterstar_overlay(
     image: np.ndarray,
     *,
+    orient: Any,
     matched_xy: np.ndarray,
     unmatched_xy: np.ndarray,
     gaia_xy: np.ndarray,
@@ -197,10 +201,16 @@ def render_masterstar_overlay(
 
     Matched DAO = green circle, DAO without Gaia = orange circle, Gaia = blue square.
     ``detail`` shows a 3x enlarged window of 1/8 of the frame width around the centre.
+    SKY-ORIENT-2026-11: the image and every marker go through the same lossless display transform
+    ``orient`` (:mod:`sky_display_orient`, North up / East left) before the crop; an N / E compass is drawn.
     Returns (JPEG bytes, caption).
     """
     from PIL import Image, ImageDraw
 
+    from sky_display_orient import draw_compass_pil  # noqa: PLC0415
+
+    image = orient.apply_image(image)
+    matched_xy, unmatched_xy, gaia_xy = (orient.apply_xy_array(a) for a in (matched_xy, unmatched_xy, gaia_xy))
     h0, w0 = image.shape
     if detail:
         cw = max(64, w0 // 8)
@@ -243,6 +253,8 @@ def render_masterstar_overlay(
             draw.ellipse([px - r, py - r, px + r, py + r], outline=(16, 140, 70), width=lw)
         for px, py in _pts(unmatched_xy):
             draw.ellipse([px - r - 1, py - r - 1, px + r + 1, py + r + 1], outline=(220, 90, 0), width=2)
+    draw_compass_pil(im, orient)
+    caption = f"{caption} {orient.note}."
     buf = io.BytesIO()
     im.save(buf, format="JPEG", quality=88)
     return buf.getvalue(), caption

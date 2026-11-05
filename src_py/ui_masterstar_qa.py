@@ -149,6 +149,7 @@ def render_masterstar_qa(*, draft_dir: Path | None) -> None:
     )
     img, cap = render_masterstar_overlay(
         qa["image"],
+        orient=qa["orient"],
         matched_xy=qa["matched_xy"],
         unmatched_xy=qa["unmatched_xy"],
         gaia_xy=qa["gaia_xy"],

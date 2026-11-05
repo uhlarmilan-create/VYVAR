@@ -907,10 +907,15 @@ def smart_import_session(
 
 
 def quicklook_preview_png_bytes(fits_path: str | Path) -> bytes:
-    """Generate an 8-bit stretched preview PNG bytes (ZScale) from a FITS image."""
+    """Generate an 8-bit stretched preview PNG bytes (ZScale) from a FITS image, North up / East left with an
+    N / E compass (SKY-ORIENT-2026-11, :mod:`sky_display_orient`); a frame without a WCS is shown in the
+    FITS-natural view with the note "orientation unknown (no WCS)"."""
+    from sky_display_orient import display_transform, draw_compass_pil  # noqa: PLC0415
+
     fp = Path(fits_path)
     with fits.open(fp, memmap=False) as hdul:
         data = _to_float32_frame(hdul[0].data)
+        orient = display_transform(hdul[0].header, data.shape)
     interval = ZScaleInterval()
     vmin, vmax = interval.get_limits(data)
     scaled = np.clip((data - vmin) / (vmax - vmin + 1e-12), 0, 1)
@@ -922,7 +927,8 @@ def quicklook_preview_png_bytes(fits_path: str | Path) -> bytes:
         from PIL import Image  # type: ignore
         import io
 
-        im = Image.fromarray(img8)
+        im = Image.fromarray(np.ascontiguousarray(orient.apply_image(img8))).convert("RGB")
+        draw_compass_pil(im, orient)
         buf = io.BytesIO()
         im.save(buf, format="PNG")
         return buf.getvalue()

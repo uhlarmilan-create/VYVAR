@@ -221,16 +221,22 @@ def side_figure(df: pd.DataFrame, side_hover: pd.Series | None = None) -> go.Fig
     return fig
 
 
-def image_figure(jpg: Path, data: dict[str, Any], marks: set[str], sel: str | None, *, light: bool, size: tuple[int, int]) -> go.Figure:
+def image_figure(jpg: Path, data: dict[str, Any], marks: set[str], sel: str | None, *, light: bool, size: tuple[int, int],
+                 orient: Any) -> go.Figure:
+    """The field JPEG (already North up / East left, :func:`hrd_field_render.field_image_jpeg`) with the
+    markers mapped by the same display transform ``orient`` (SKY-ORIENT-2026-11). ``size`` = JPEG (w, h)."""
+    from sky_display_orient import compass_plotly_annotations  # noqa: PLC0415
+
     w, h = size
     df, top = data["df"], data["top"]
     src = "data:image/jpeg;base64," + base64.b64encode(Path(jpg).read_bytes()).decode("ascii")
     pts = df[np.isfinite(df["x"]) & np.isfinite(df["y"])]
-    fig = go.Figure(go.Scattergl(x=pts["x"], y=pts["y"], mode="markers", marker=dict(size=10, color="rgba(0,0,0,0)"),
+    pc, pr = orient.apply_xy(pts["x"].to_numpy(float), pts["y"].to_numpy(float))
+    fig = go.Figure(go.Scattergl(x=pc, y=pr, mode="markers", marker=dict(size=10, color="rgba(0,0,0,0)"),
                                  text=_hover_of(data, pts), hovertemplate="%{text}<extra></extra>"))
     if "vsx" in marks:
-        v = pts[pts["vsx_name"].notna()]
-        fig.add_trace(go.Scatter(x=v["x"], y=v["y"], mode="markers", hoverinfo="skip",
+        isv = pts["vsx_name"].notna().to_numpy()
+        fig.add_trace(go.Scatter(x=pc[isv], y=pr[isv], mode="markers", hoverinfo="skip",
                                  marker=dict(size=18, symbol="diamond-open", color="#2563eb" if light else "#4c8dff", line=dict(width=2))))
     ann = []
     if "notable" in marks:
@@ -238,6 +244,7 @@ def image_figure(jpg: Path, data: dict[str, Any], marks: set[str], sel: str | No
             x, y = _num(r.get("x_px")), _num(r.get("y_px"))
             if not (math.isfinite(x) and math.isfinite(y)):
                 continue
+            x, y = (float(t) for t in orient.apply_xy(x, y))
             col = "#c2410c" if light else category_color(r["category"])
             on = r["catalog_id"] == sel
             name = str(r.get("simbad_main_id") or f"Gaia DR3 {r['catalog_id']}")
@@ -247,7 +254,8 @@ def image_figure(jpg: Path, data: dict[str, Any], marks: set[str], sel: str | No
             ann.append(dict(x=x, y=y, text=name.replace("V* ", ""), showarrow=True, arrowhead=0, arrowcolor=col, ax=40, ay=-34,
                             font=dict(color=col, size=13), bgcolor="rgba(255,255,255,0.85)" if light else "rgba(14,17,23,0.8)"))
     fig.update_layout(height=820, margin=dict(l=10, r=10, t=10, b=10), showlegend=False, dragmode="pan",
-                      plot_bgcolor="#ffffff" if light else "#000000", annotations=ann, clickmode="event+select",
+                      plot_bgcolor="#ffffff" if light else "#000000", clickmode="event+select",
+                      annotations=ann + compass_plotly_annotations(orient),
                       xaxis=dict(range=[0, w], visible=False, constrain="domain"),
                       yaxis=dict(range=[h, 0], visible=False, scaleanchor="x", scaleratio=1),
                       images=[dict(source=src, xref="x", yref="y", x=0, y=0, sizex=w, sizey=h, sizing="stretch", layer="below")])
@@ -405,7 +413,11 @@ def render_hrd_tab(photometry_dir: Path, cfg: "AppConfig | None") -> None:
 
     with Image.open(jpg) as im:
         size = im.size
-    iev = st.plotly_chart(image_figure(jpg, data, marks, sel, light=mode == "inverted", size=size), width="stretch",
+    from sky_display_orient import orient_from_fits  # noqa: PLC0415
+
+    orient = orient_from_fits(fits_path)
+    iev = st.plotly_chart(image_figure(jpg, data, marks, sel, light=mode == "inverted", size=size, orient=orient),
+                          width="stretch",
                           config={**_PLOT_CFG, "scrollZoom": True}, on_select="rerun", selection_mode="points", key=f"hrd_img_{og}_{mode}")
     _select(f"hrd_pick_img_{og}_{mode}", _pick_from(iev), sel_key)
     st.caption("Hover any star of the frame for its Gaia data; zoom with the mouse wheel. Catalogue colours are Gaia BP\u2212RP, "
@@ -425,7 +437,10 @@ def _field_jpeg(fits_s: str, cache_s: str, mode: str, stamp: tuple, data: dict[s
     """Field image of one mode, rendered once per MASTERSTAR / star list (file cache)."""
     cache = Path(cache_s)
     cache.mkdir(parents=True, exist_ok=True)
-    tag = hashlib.md5(repr((stamp, round(fwhm_px, 3))).encode()).hexdigest()[:10]
+    from sky_display_orient import ORIENT_VERSION  # noqa: PLC0415
+
+    # the display convention is part of the key: a render cached before SKY-ORIENT-2026-11 is redrawn
+    tag = hashlib.md5(repr((stamp, round(fwhm_px, 3), ORIENT_VERSION)).encode()).hexdigest()[:10]
     out = cache / f"field_{mode}_{tag}.jpg"
     if not out.is_file():
         for old in cache.glob(f"field_{mode}_*.jpg"):

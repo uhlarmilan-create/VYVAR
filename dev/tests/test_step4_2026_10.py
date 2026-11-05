@@ -665,7 +665,8 @@ def test_g10_41_hrd_field_png_north_up_and_markers_follow(tmp_path):
     from astropy.io import fits
     from PIL import Image
 
-    from hrd_analysis import field_annotation_y, fits_first_image_to_png
+    from hrd_analysis import fits_first_image_to_png
+    from sky_display_orient import display_transform
 
     a = np.zeros((40, 30), np.float32)
     a[35, 10] = 1000.0  # star near the top of the FITS image (high y)
@@ -673,7 +674,9 @@ def test_g10_41_hrd_field_png_north_up_and_markers_follow(tmp_path):
     assert fits_first_image_to_png(tmp_path / "m.fits", tmp_path / "m.png")
     g = np.asarray(Image.open(tmp_path / "m.png").convert("L"))
     row = int(np.argmax(g[:, 10]))
-    assert row < 10 and abs(field_annotation_y(35, 1.0, 40) - (row + 0.5)) < 1.0
+    # SKY-ORIENT-2026-11: no WCS -> FITS-natural view; the markers follow the shared display transform
+    _c, r = display_transform(None, a.shape).apply_xy(10, 35)
+    assert row < 10 and float(r) == row
 
 
 def test_g09_40_tess_sources_in_one_band():

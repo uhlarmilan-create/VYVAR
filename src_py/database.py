@@ -2257,17 +2257,95 @@ class VyvarDatabase:
             self._bump_id_counter("draft_id", did)
         return did
 
-    def autodetect_candidates(self) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-        """G14-23: active cameras and telescopes with the columns optics auto-detection matches on."""
+    def autodetect_candidates(
+        self, *, equipment_id: int | None = None, telescope_id: int | None = None
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+        """G14-23: active cameras and telescopes with the columns optics auto-detection matches on.
+        RIG-GUARD-2026-11: ``equipment_id`` / ``telescope_id`` (the run's selection) are included even when
+        hidden, so the guard scores the selected row itself."""
         act = self.sql_expr_active_is_true("ACTIVE")
         eq = [dict(r) for r in self.conn.execute(
             "SELECT ID, CAMERANAME, ALIAS, SENSORTYPE, SENSORSIZE, PIXELSIZE, GAIN_ADU, MODEL_KEY "
-            f"FROM EQUIPMENTS WHERE {act};"
+            f"FROM EQUIPMENTS WHERE {act} OR ID = ?;", (int(equipment_id or 0),),
         ).fetchall()]
         tel = [dict(r) for r in self.conn.execute(
-            f"SELECT ID, TELESCOPENAME, ALIAS, DIAMETER, FOCAL FROM TELESCOPE WHERE {act};"
+            f"SELECT ID, TELESCOPENAME, ALIAS, DIAMETER, FOCAL FROM TELESCOPE WHERE {act} OR ID = ?;",
+            (int(telescope_id or 0),),
         ).fetchall()]
         return eq, tel
+
+    # RIG-ADD-2026-11 (amended 2026-11-05): rows for a rig / site found in a light header (added by "Auto-detect
+    # optics from FITS"). Thin wrappers over insert_*: the name, sensor size, focal length and coordinates are
+    # required (fail loud); a value the header does not state (pixel size, aperture, elevation) stays NULL - never
+    # invented - and is listed for the DB editor (a site without elevation blocks RUN). Gain, read noise,
+    # saturation and ADC bits are never written here (a header GAIN is usually a setting index) - a camera
+    # outside the catalogue stays incomplete and the run preconditions stop until the DB editor completes it.
+    @classmethod
+    def _optional_positive(cls, label: str, value: Any) -> float | None:
+        return None if value is None or value == "" else cls._required_positive(label, value)
+
+    @staticmethod
+    def _required_positive(label: str, value: Any) -> float:
+        try:
+            f = float(value)
+        except (TypeError, ValueError):
+            raise ValueError(f"{label} is required (a positive number).") from None
+        if not (math.isfinite(f) and f > 0):
+            raise ValueError(f"{label} is required (a positive number), got {value!r}.")
+        return f
+
+    def add_equipment_from_header(
+        self, *, camera_name: str, alias: str, sensor_type: str, sensor_size: str, pixel_size: Any
+    ) -> int:
+        from optics import parse_sensor_size  # noqa: PLC0415
+
+        if not str(camera_name or "").strip():
+            raise ValueError("The camera name is required.")
+        if parse_sensor_size(sensor_size) is None:
+            raise ValueError(f"Sensor size {sensor_size!r} is not WIDTH*HEIGHT in pixels.")
+        rid = self.insert_equipment(
+            str(camera_name).strip(), str(alias or "").strip(), str(sensor_type or "").strip(),
+            str(sensor_size).strip(), self._optional_positive("Pixel size (um)", pixel_size),
+        )
+        self._seed_table_defaults()
+        return rid
+
+    def add_telescope_from_header(self, *, telescope_name: str, alias: str, diameter: Any, focal: Any) -> int:
+        if not str(telescope_name or "").strip():
+            raise ValueError("The telescope name is required.")
+        rid = self.insert_telescope(
+            str(telescope_name).strip(), str(alias or "").strip(),
+            self._optional_positive("Aperture (mm)", diameter), self._required_positive("Focal length (mm)", focal),
+        )
+        self._seed_table_defaults()
+        return rid
+
+    def location_altitude_m(self, location_id: int) -> float | None:
+        """``LOCATION.ALTITUDE`` as stored (None when NULL; ``get_observer_location_by_id`` reads NULL as 0)."""
+        row = self.conn.execute("SELECT ALTITUDE FROM LOCATION WHERE ID = ?;", (int(location_id),)).fetchone()
+        if row is None or row[0] is None:
+            return None
+        try:
+            f = float(row[0])
+        except (TypeError, ValueError):
+            return None
+        return f if math.isfinite(f) else None
+
+    def add_location_from_header(self, *, place_name: str, latitude: Any, longitude: Any, altitude: Any) -> int:
+        if not str(place_name or "").strip():
+            raise ValueError("The site name is required.")
+        try:
+            lat, lon = float(latitude), float(longitude)
+            alt = float(altitude) if altitude not in (None, "") else None
+        except (TypeError, ValueError):
+            raise ValueError("Latitude / longitude / elevation must be numbers.") from None
+        if not (-90.0 <= lat <= 90.0 and -180.0 <= lon <= 180.0):
+            raise ValueError(f"Site coordinates out of range: lat={lat}, lon={lon}.")
+        if alt is not None and not math.isfinite(alt):
+            raise ValueError(f"The site elevation (m) is not a number: {altitude!r}.")
+        rid = self.insert_location(str(place_name).strip(), lat, lon, alt)
+        self._seed_table_defaults()
+        return rid
 
     def _ensure_id_counter_table(self) -> None:
         """G12-22: monotonic id high-water marks (``NAME`` -> largest id ever allocated)."""

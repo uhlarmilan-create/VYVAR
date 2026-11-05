@@ -2354,6 +2354,16 @@ class _PhotometryReportBuilder:
             def _f(v: Any, fmt: str) -> str:
                 return format(float(v), fmt) if v is not None else "none"
 
+            def _trail_note(g: dict[str, Any]) -> str:
+                # MASTERSTAR-TRAIL-2026-11: better-ranked frames skipped for a satellite trail
+                checks = [c for c in (g.get("trail_checks") or []) if c.get("tested")]
+                if not checks:
+                    return ""
+                n_trail = sum(1 for c in checks if c.get("has_trail"))
+                if g.get("best_trail_free") is False:
+                    return f"; every kept frame has a satellite trail - the weakest is used ({n_trail} tested)"
+                return f"; satellite-trail test: {n_trail} better-ranked frame(s) skipped" if n_trail else "; no satellite trail"
+
             lines = [
                 f"Frames: {int(gq.get('n_frames') or 0)}, rejected: {int(gq.get('n_rejected') or 0)}"
                 f"; FWHM median {_f(gq.get('fwhm_median'), '.2f')} px (not a rejection criterion)",
@@ -2362,7 +2372,8 @@ class _PhotometryReportBuilder:
                 f"non-uniform (quadrant spread) > {_f(pa, '.3f')} mag; < {MIN_COMMON_STARS} common stars",
                 "MASTERSTAR source: max T/(FWHM*sigma_pix)"
                 + (f" -> {Path(str(gq.get('best_path')).replace(chr(92), '/')).name}" if gq.get("best_path") else "")
-                + (f" (T={float(bt):.3f})" if bt is not None else ""),
+                + (f" (T={float(bt):.3f})" if bt is not None else "")
+                + _trail_note(gq),
             ]
             for ln in lines:
                 y0 -= 0.42 * self.cm
@@ -2490,7 +2501,7 @@ class _PhotometryReportBuilder:
             if (_ms is not None and np.isfinite(pg["x"]) and np.isfinite(pg["r_ap"])
                     and np.isfinite(pg["fwhm_night"])):
                 cut_png = m3.render_cutout(_ms, pg["x"], pg["y"], pg["r_ap"], pg["r_in"], pg["r_out"],
-                                           self.cache_dir / f"m3_cut_{cid}.png",
+                                           self.cache_dir / f"m3_cut_{cid}.png", orient=self._masterstar_orient(),
                                            neighbours=self._pages.field_neighbours(pg["x"], pg["y"], pg["r_out"], exclude_id=cid))
                 if cut_png is not None:
                     c.setFont(self.FONT_REG, 6)
@@ -2904,7 +2915,7 @@ class _PhotometryReportBuilder:
             )
             if not plot_stars.empty:
                 try:
-                    bg_png, from_fits = ensure_clean_field_background_png(
+                    bg_png, _from_fits = ensure_clean_field_background_png(
                         self.platesolve_dir,
                         self.photometry_dir,
                         cache_dir=self.cache_dir,
@@ -2919,7 +2930,6 @@ class _PhotometryReportBuilder:
                             platesolve_dir=self.platesolve_dir,
                             output_path=ann_out,
                             nss_category_enabled=nss_on,
-                            png_from_fits=from_fits,
                             invert=True,
                         )
                         if ann_result is not None and ann_result.is_file():
@@ -3875,6 +3885,14 @@ class _PhotometryReportBuilder:
                 logging.warning("[PDF] MASTERSTAR not readable for the cutouts: %s", exc)
                 self._ms_data_cache = None
         return self._ms_data_cache
+
+    def _masterstar_orient(self) -> Any:
+        """SKY-ORIENT-2026-11: display transform (North up, East left) of the MASTERSTAR, read once per report."""
+        if not hasattr(self, "_ms_orient_cache"):
+            from sky_display_orient import orient_from_fits  # noqa: PLC0415
+
+            self._ms_orient_cache = orient_from_fits(self.platesolve_dir / "MASTERSTAR.fits")
+        return self._ms_orient_cache
 
     def build_pdf(self) -> Path:
 

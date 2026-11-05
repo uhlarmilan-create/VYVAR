@@ -58,7 +58,7 @@ def test_gaia_depth_from_frame_depth_meta(tmp_path) -> None:
 
 def test_overlay_layers_change_the_image(tmp_path) -> None:
     qa = load_masterstar_qa(_bundle(tmp_path))
-    kw = dict(matched_xy=qa["matched_xy"], unmatched_xy=qa["unmatched_xy"], gaia_xy=qa["gaia_xy"])
+    kw = dict(orient=qa["orient"], matched_xy=qa["matched_xy"], unmatched_xy=qa["unmatched_xy"], gaia_xy=qa["gaia_xy"])
     bare, cap = render_masterstar_overlay(qa["image"], show_gaia=False, show_matches=False, **kw)
     full, _ = render_masterstar_overlay(qa["image"], show_gaia=True, show_matches=True, **kw)
     det, cap_d = render_masterstar_overlay(qa["image"], show_gaia=True, show_matches=True, detail=True, **kw)

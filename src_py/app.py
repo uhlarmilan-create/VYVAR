@@ -64,16 +64,9 @@ def _run_vyvar_full_pipeline(
 
     _run_label = "RUN VYVAR (non-cal)" if pre_calibrated_mode else "RUN VYVAR"
 
-    def _update(proces: str, stav: str = "Running...") -> None:
+    def _update(proces: str, stav: str = "Starting...") -> None:
         LOGGER.info(f"[{_run_label}] > {proces}")
-        if footer_placeholder is not None:
-            _vyvar_footer_set(
-                footer_placeholder,
-                running=True,
-                process=f"{_run_label} - {proces}",
-                status_detail=str(stav)[:800],
-                pct=None,
-            )
+        _vyvar_footer_set(footer_placeholder, state="running", process=_run_label, detail=stav, phase=proces)
 
     def _fail(name: str, exc: BaseException) -> bool:
         LOGGER.info(f"[{_run_label}] x Failure in step '{name}': {exc}")
@@ -89,14 +82,7 @@ def _run_vyvar_full_pipeline(
             st.session_state["vyvar_last_preflight_error_message"] = f"{name}: {exc}"
         except Exception as log_exc:  # noqa: BLE001
             LOGGER.debug("run preflight error log write failed: %s", log_exc)
-        if footer_placeholder is not None:
-            _vyvar_footer_set(
-                footer_placeholder,
-                running=False,
-                process=f"{_run_label} - {name}",
-                status_detail=f"Error: {str(exc)[:700]}",
-                pct=None,
-            )
+        _vyvar_footer_set(footer_placeholder, state="failed", process=_run_label, detail=f"FAILED: {name}: {exc}")
         return False
 
     try:
@@ -143,25 +129,21 @@ def _run_vyvar_full_pipeline(
             "applied": False,
         }
         LOGGER.info(f"[{_run_label}] started as a separate process (job {_job_dir.name})")
-        return True
-    except Exception as exc:  # noqa: BLE001
+        # V12-STATUS: rerun so the job monitor (drawn before this handler) follows the new job at once,
+        # like ui_session.start_task_job; before, the status bar stayed on "Running..." until a click
+        st.rerun()
+        return True  # reached only outside a Streamlit script run (bare mode: st.rerun is a no-op)
+    except Exception as exc:  # noqa: BLE001 - st.rerun's control exception is a BaseException
         LOGGER.exception("[RUN VYVAR] unknown step (detail)")
         return _fail("unknown step", exc)
 
 
-def _vyvar_apply_run_result(nr: Any, cfg: AppConfig, footer_placeholder: Any | None, _run_label: str) -> bool:
-    """Write the session state from a finished RUN VYVAR job (same as the old in-process tail)."""
+def _vyvar_apply_run_result(nr: Any, cfg: AppConfig, _run_label: str) -> bool:
+    """Write the session state and the status bar from a finished RUN VYVAR job."""
 
     def _fail(name: str, exc: BaseException) -> bool:
         _vyvar_record_run_failure(cfg, _run_label, name, str(exc))
-        if footer_placeholder is not None:
-            _vyvar_footer_set(
-                footer_placeholder,
-                running=False,
-                process=f"{_run_label} - {name}",
-                status_detail=f"Error: {str(exc)[:700]}",
-                pct=None,
-            )
+        _vyvar_footer_set(None, state="failed", process=_run_label, detail=f"FAILED: {exc}")
         return False
 
     if nr.plan is not None:
@@ -186,15 +168,7 @@ def _vyvar_apply_run_result(nr: Any, cfg: AppConfig, footer_placeholder: Any | N
             "(check the VSX catalog / target selection)"
         )
         LOGGER.info(f"[RUN VYVAR] ! {_zero_msg}")
-        if footer_placeholder is not None:
-            _vyvar_footer_set(
-                footer_placeholder,
-                running=False,
-                process="RUN VYVAR",
-                status_detail=f"Done. ! {_zero_msg}",
-                pct=100,
-                step="",
-            )
+        _vyvar_footer_set(None, state="done", process=_run_label, detail=f"Done. ! {_zero_msg}")
         return True
     if zero_target_setups and _photometry_ran:
         LOGGER.info(
@@ -206,15 +180,7 @@ def _vyvar_apply_run_result(nr: Any, cfg: AppConfig, footer_placeholder: Any | N
         )
     else:
         LOGGER.info("[RUN VYVAR] [OK] Pipeline finished successfully")
-    if footer_placeholder is not None:
-        _vyvar_footer_set(
-            footer_placeholder,
-            running=False,
-            process="RUN VYVAR",
-            status_detail="Done. [OK]",
-            pct=100,
-            step="",
-        )
+    _vyvar_footer_set(None, state="done", process=_run_label, detail="Done. [OK]")
     return True
 
 
@@ -257,71 +223,125 @@ def _vyvar_finish_task_job(job: dict[str, Any], state: str, info: dict[str, Any]
     return False
 
 
-def _vyvar_render_run_job_monitor(cfg: AppConfig, footer_placeholder: Any | None) -> None:
-    """Follow the job of this session in its own process (JOB-2026-10; G14-04: any view, any page).
+#: V12-STATUS: session key of a job of this data directory started elsewhere (another browser
+#: session or tab, the CLI) that this session's status bar follows.
+_WATCHED_JOB_KEY = "vyvar_watched_job"
+
+
+def _vyvar_footer_running(label: str, info: dict[str, Any]) -> dict[str, Any]:
+    """Status bar fields of a running job from its ``run_status.json`` (V12-STATUS): "Phase k/M <name>"
+    (M+ while the run's stage plan can still grow), "frame i/N <file>" in a per-frame phase and the
+    percent done within the phase."""
+    phase = ""
+    k = int(info.get("phase_index") or 0)
+    if k > 0:
+        m = int(info.get("phase_count") or k)
+        phase = f"Phase {k}/{m}{'' if info.get('phase_count_final') else '+'} {info.get('phase') or ''}".strip()
+    frame = ""
+    if info.get("frame_i") is not None and info.get("frame_n"):
+        frame = f"frame {int(info['frame_i'])}/{int(info['frame_n'])} {info.get('file') or ''}".strip()
+    pct = info.get("pct") if frame else None
+    # the per-frame status line repeats the frame counter: the Frame segment carries it
+    detail = "" if frame else str(info.get("message") or "Running...")
+    return {"state": "running", "process": label, "detail": detail, "phase": phase, "frame": frame, "pct": pct}
+
+
+def _vyvar_footer_ended(label: str, state: str, job_dir: str, info: dict[str, Any]) -> dict[str, Any]:
+    """Status bar fields of a job that ended (done / failed / stopped / lost) from its status file."""
+    from run_job import is_stopped  # noqa: PLC0415
+
+    msg = str(info.get("message") or "")
+    if state == "done":
+        return {"state": "done", "process": label, "detail": f"Done. {msg}".strip() if msg != "Done" else "Done."}
+    if is_stopped(job_dir):
+        return {"state": "stopped", "process": label, "detail": "Stopped by user"}
+    if state == "lost":
+        return {"state": "lost", "process": label,
+                "detail": f"LOST: process ended without a result - see {job_dir}/run_stdout.log"}
+    return {"state": "failed", "process": label, "detail": f"FAILED: {msg or f'job ended with state {state}'}"}
+
+
+def _vyvar_render_run_job_monitor(cfg: AppConfig) -> bool:
+    """Follow the job of this data directory in its own process (JOB-2026-10; G14-04: any view, any page).
 
     RUN VYVAR (``kind == "night"``) and the task jobs (``task_jobs``: RUN ePSF, variability search,
-    TESS, catalogue check, HRD lookup, Build masters). Polls ``run_status.json`` every 2 s inside a
-    fragment, so clicks elsewhere never interrupt the job. When it ends the result is applied to the
-    session once and the whole app reruns. A job started by another browser session is shown too
-    (G14-37: it blocks every start button of this data directory).
-    """
-    from run_job import job_state, load_result, read_status, running_job, stop_job  # noqa: PLC0415
+    TESS, catalogue check, HRD lookup, Build masters). Polls ``run_status.json`` every
+    ``run_job.MONITOR_POLL_S`` inside a fragment, so clicks elsewhere never interrupt the job. When it
+    ends the result is applied to the session once and the whole app reruns. A job started by
+    another browser session or the CLI is followed too (G14-37: it blocks every start button of
+    this data directory; V12-STATUS: its status bar, and the buttons come back when it ends).
 
-    if not st.session_state.get("vyvar_active_job"):
-        other = running_job(cfg.data_root)
-        if other is not None:
-            _lbl = (read_status(other) or {}).get("label") or other.name
-            st.info(f"{_lbl} is running (job `{other.name}`, started in another browser session or tab, or from the command line). "
-                    "New runs and jobs start when it has finished.")
-        return
+    Returns True while a job is followed: the fragment then draws the one status bar of the page
+    (V12-STATUS: before, a running job drew a second bar over the app's own)."""
+    from run_job import MONITOR_POLL_S, job_state, load_result, read_status, running_job, stop_job  # noqa: PLC0415
 
-    @st.fragment(run_every=2.0)
-    def _monitor() -> None:
+    def _followed() -> tuple[dict[str, Any] | None, bool]:
         job = st.session_state.get("vyvar_active_job")
+        if job and not job.get("applied"):
+            return job, True
+        return st.session_state.get(_WATCHED_JOB_KEY), False
+
+    own = _followed()[1]
+    if not own:
+        other = running_job(cfg.data_root)
+        w = st.session_state.get(_WATCHED_JOB_KEY)
+        if other is not None and (not w or w.get("job_dir") != str(other)):
+            st.session_state[_WATCHED_JOB_KEY] = {
+                "job_dir": str(other), "label": (read_status(other) or {}).get("label") or other.name,
+            }
+    following = _followed()[0] is not None
+
+    @st.fragment(run_every=MONITOR_POLL_S)
+    def _monitor() -> None:
+        job, own = _followed()
         if not job:
+            _vyvar_render_fixed_footer_into(st.empty())
             return
-        jd = job["job_dir"]
+        jd = str(job["job_dir"])
         label = str(job.get("label") or "RUN VYVAR")
         state = job_state(jd)
         info = read_status(jd) or {}
-        msg = str(info.get("message") or "")
         if state == "running":
-            vyvar_init_footer_state_if_missing()
-            st.session_state["vyvar_footer_state"].update(
-                {"running": True, "process": label, "status_detail": msg[:800]}
-            )
-            _vyvar_render_fixed_footer_into(st.empty())
-            c1, c2 = st.columns([5, 1])
-            c1.info(f"{label} is running in its own process - {msg}")
-            if c2.button("Stop", key="vyvar_stop_active_job"):
-                stop_job(jd)
-                LOGGER.info(f"[{label}] stopped by user")
+            fs = _vyvar_footer_running(label, info)
+            _vyvar_footer_set(st.empty(), **fs)
+            if own:
+                c1, c2 = st.columns([5, 1])
+                c1.info(f"{label} is running in its own process - {fs['phase'] or fs['detail']}")
+                if c2.button("Stop", key="vyvar_stop_active_job"):
+                    stop_job(jd)
+                    LOGGER.info(f"[{label}] stopped by user")
+            else:
+                st.info(f"{label} is running (job `{Path(jd).name}`, started in another browser session or tab, "
+                        "or from the command line). New runs and jobs start when it has finished.")
             return
-        if job.get("applied"):
-            return
+        if not own:
+            _vyvar_footer_set(None, **_vyvar_footer_ended(label, state, jd, info))
+            st.session_state.pop(_WATCHED_JOB_KEY, None)
+            st.rerun(scope="app")
         ok = False
         if str(job.get("kind") or "night") != "night":
             ok = _vyvar_finish_task_job(job, state, info)
-            _vyvar_footer_set(None, running=False, process=label, status_detail=str(job.get("message"))[:800],
-                              pct=100 if ok else None)
+            fs = _vyvar_footer_ended(label, state, jd, info)
+            if fs["state"] in ("done", "failed"):
+                fs = {"state": "done" if ok else "failed", "process": label,
+                      "detail": str(job.get("message")) if ok else f"FAILED: {job.get('message')}"}
+            _vyvar_footer_set(None, **fs)
         else:
             nr = load_result(jd)
             if nr is not None:
-                ok = _vyvar_apply_run_result(nr, cfg, footer_placeholder, label)
+                ok = _vyvar_apply_run_result(nr, cfg, label)
             else:
-                errs = info.get("errors") or [msg or f"job ended with state {state}"]
+                errs = info.get("errors") or [info.get("message") or f"job ended with state {state}"]
                 if state == "lost":
                     errs = [f"process ended without a result - see {jd}/run_stdout.log"]
                 _vyvar_record_run_failure(cfg, label, "Night pipeline", "; ".join(map(str, errs))[:800])
-                _vyvar_footer_set(
-                    None, running=False, process=label, status_detail="Error - see the infolog of the processed field", pct=None
-                )
+                _vyvar_footer_set(None, **_vyvar_footer_ended(label, state, jd, info))
         job.update({"applied": True, "ok": bool(ok)})
         st.session_state["vyvar_active_job"] = job
         st.rerun(scope="app")
 
-    _monitor()
+    if following:
+        _monitor()
     job = st.session_state.get("vyvar_active_job") or {}
     if job.get("applied"):
         if str(job.get("kind") or "night") != "night":
@@ -334,6 +354,7 @@ def _vyvar_render_run_job_monitor(cfg: AppConfig, footer_placeholder: Any | None
                     default="Pipeline stopped. See the infolog_*.txt file in the processed field folder."
                 )
             )
+    return following
 
 
 _VYVAR_FOOTER_CSS = """
@@ -384,89 +405,77 @@ _VYVAR_FOOTER_CSS = """
   font-weight: 600;
   flex-shrink: 0;
 }
+.vyvar-footer-bar .vyvar-ft-pill-done { background: #15803d; color: #fff; padding: 0.1rem 0.5rem;
+  border-radius: 4px; font-size: 0.7rem; font-weight: 600; flex-shrink: 0; }
+.vyvar-footer-bar .vyvar-ft-pill-failed { background: #b91c1c; color: #fff; padding: 0.1rem 0.5rem;
+  border-radius: 4px; font-size: 0.7rem; font-weight: 600; flex-shrink: 0; }
+.vyvar-footer-bar .vyvar-ft-pill-stopped { background: #b45309; color: #fff; padding: 0.1rem 0.5rem;
+  border-radius: 4px; font-size: 0.7rem; font-weight: 600; flex-shrink: 0; }
 section.main > div.block-container { padding-bottom: 3.5rem !important; }
 </style>
 """
 
 
+#: V12-STATUS: status bar pill per state (running shows the percent within the phase when known).
+_FOOTER_PILLS = {
+    "idle": ("vyvar-ft-pill-idle", "Idle"),
+    "running": ("vyvar-ft-pill-run", "RUN"),
+    "done": ("vyvar-ft-pill-done", "DONE"),
+    "failed": ("vyvar-ft-pill-failed", "FAILED"),
+    "stopped": ("vyvar-ft-pill-stopped", "STOPPED"),
+    "lost": ("vyvar-ft-pill-failed", "LOST"),
+}
+
+
 def vyvar_init_footer_state_if_missing() -> None:
     if "vyvar_footer_state" not in st.session_state:
-        st.session_state["vyvar_footer_state"] = {
-            "running": False,
-            "process": "VYVAR",
-            "status_detail": "Ready - start a job on the VARSTREM tab.",
-            "pct": None,
-            "current_file": "",
-            "step": "",
-        }
+        _vyvar_footer_set(None, state="idle", process="VYVAR", detail="Ready - start a job on the VARSTREM tab.")
 
 
 def _vyvar_footer_set(
     footer_placeholder: Any | None,
     *,
-    running: bool,
+    state: str,
     process: str,
-    status_detail: str,
+    detail: str,
+    phase: str = "",
+    frame: str = "",
     pct: int | None = None,
-    current_file: str = "",
-    step: str = "",
 ) -> None:
-    vyvar_init_footer_state_if_missing()
+    """The status bar's state (V12-STATUS): idle | running | done | failed | stopped | lost. The end
+    state of the last job stays until a new job starts."""
+    if state not in _FOOTER_PILLS:
+        raise ValueError(f"unknown status bar state {state!r}")
     st.session_state["vyvar_footer_state"] = {
-        "running": bool(running),
+        "state": state,
         "process": str(process),
-        "status_detail": str(status_detail)[:800],
+        "detail": str(detail)[:800],
+        "phase": str(phase)[:200],
+        "frame": str(frame)[:500],
         "pct": pct,
-        "current_file": str(current_file)[:500],
-        "step": str(step)[:200],
     }
     if footer_placeholder is not None:
         _vyvar_render_fixed_footer_into(footer_placeholder)
 
 
+def _vyvar_footer_html(fs: dict[str, Any]) -> str:
+    state = str(fs.get("state") or "idle")
+    cls, text = _FOOTER_PILLS.get(state, _FOOTER_PILLS["idle"])
+    if state == "running" and fs.get("pct") is not None:
+        text = f"{int(fs['pct'])} %"
+    segs = [f'<span class="{cls}">{html.escape(text)}</span>']
+    for key, val in (("Process", fs.get("process")), ("Phase", fs.get("phase")), ("Frame", fs.get("frame")),
+                     ("Status", fs.get("detail"))):
+        if str(val or "").strip():
+            segs.append(f'<span class="vyvar-ft-seg"><span class="vyvar-ft-k">{key}</span>'
+                        f'<span class="vyvar-ft-v">{html.escape(str(val))}</span></span>')
+    return f'<div class="vyvar-footer-bar" data-testid="vyvar-footer-bar">{"".join(segs)}</div>'
+
+
 def _vyvar_render_fixed_footer_into(placeholder: Any) -> None:
     vyvar_init_footer_state_if_missing()
-    fs = st.session_state["vyvar_footer_state"]
-    running = bool(fs.get("running"))
-    proc = html.escape(str(fs.get("process") or "-"))
-    detail = html.escape(str(fs.get("status_detail") or ""))
-    cfile_raw = str(fs.get("current_file") or "").strip()
-    cfile = html.escape(cfile_raw) if cfile_raw else ""
-    step = html.escape(str(fs.get("step") or ""))
-    pct = fs.get("pct")
-    pct_html = ""
-    if running and pct is not None:
-        try:
-            p = int(pct)
-            pct_html = f'<span class="vyvar-ft-pill-run">{html.escape(str(p))} %</span>'
-        except (TypeError, ValueError):
-            pct_html = '<span class="vyvar-ft-pill-run">...</span>'
-    elif not running:
-        pct_html = '<span class="vyvar-ft-pill-idle">Idle</span>'
-
-    file_seg = ""
-    if cfile:
-        file_seg = (
-            f'<span class="vyvar-ft-seg"><span class="vyvar-ft-k">File</span>'
-            f'<span class="vyvar-ft-v">{cfile}</span></span>'
-        )
-    step_seg = ""
-    if step:
-        step_seg = (
-            f'<span class="vyvar-ft-seg"><span class="vyvar-ft-k">Step</span>'
-            f'<span class="vyvar-ft-v">{step}</span></span>'
-        )
-
-    inner = (
-        f"{pct_html}"
-        f'<span class="vyvar-ft-seg"><span class="vyvar-ft-k">Process</span>'
-        f'<span class="vyvar-ft-v">{proc}</span></span>'
-        f'<span class="vyvar-ft-seg"><span class="vyvar-ft-k">Status</span>'
-        f'<span class="vyvar-ft-v">{detail or "-"}</span></span>'
-        f"{file_seg}{step_seg}"
-    )
     placeholder.markdown(
-        _VYVAR_FOOTER_CSS + f'<div class="vyvar-footer-bar" data-testid="vyvar-footer-bar">{inner}</div>',
+        _VYVAR_FOOTER_CSS + _vyvar_footer_html(st.session_state["vyvar_footer_state"]),
         unsafe_allow_html=True,
     )
 
@@ -516,16 +525,95 @@ _RIG_LOCATION = "vyvar_rig_location"
 _RIG_SOURCE = "vyvar_rig_source_root"
 
 
-def _rig_index(options: list[str], store_key: str) -> int:
-    """Index of the stored selection in ``options`` (0 when it is not there)."""
-    v = st.session_state.get(store_key)
-    return options.index(v) if v in options else 0
+#: the selectbox key of each rig selection
+_RIG_WIDGET = {
+    _RIG_EQUIPMENT: "vyvar_varstrem_equipment",
+    _RIG_TELESCOPE: "vyvar_varstrem_telescope",
+    _RIG_LOCATION: "vyvar_varstrem_location",
+}
+#: RIG-AUTOSELECT-2026-11: {store key: (label, note)} of medium-confidence selections ("unconfirmed - verify")
+_RIG_UNCONFIRMED = "vyvar_rig_unconfirmed"
+#: RIG-ADD-2026-11: the "Added to DB" lines of the last auto-detect press
+_RIG_ADDED = "vyvar_rig_added"
+_AUTODETECT_REPORT = "vyvar_autodetect_report"
 
 
-def _rig_set(store_key: str, widget_key: str, value: str) -> None:
-    """Auto-detect: set the stored selection; the widget is rebuilt from it on the rerun."""
+def _rig_select(store_key: str, value: str) -> None:
+    """Select ``value`` in a rig selector. Streamlit 1.66 identifies a keyed selectbox by its key alone, so a
+    changed ``index=`` never reaches a browser that already shows the widget; the widget's own key is
+    assigned instead (from a callback, i.e. before the widget renders), which the server sends to the
+    browser. The store key keeps the selection across view switches (G14-06)."""
     st.session_state[store_key] = value
-    st.session_state.pop(widget_key, None)
+    st.session_state[_RIG_WIDGET[store_key]] = value
+
+
+def _rig_widget_prepare(store_key: str, options: list[str]) -> None:
+    """Before a rig selectbox renders: its key carries the selection (no ``index=``). After a view switch
+    Streamlit has dropped the widget state - restored from the store key (G14-06); a value that is no longer
+    offered (row hidden / deleted) gives way to the stored selection, else the first option."""
+    wk = _RIG_WIDGET[store_key]
+    cur = st.session_state.get(wk)
+    if cur in options:
+        return
+    stored = st.session_state.get(store_key)
+    st.session_state[wk] = stored if stored in options else options[0]
+
+
+def _rig_unconfirmed_note(store_key: str, value: str) -> None:
+    """RIG-AUTOSELECT-2026-11: the visible "unconfirmed - verify" mark of a medium-confidence selection,
+    shown while that selection stands."""
+    hit = (st.session_state.get(_RIG_UNCONFIRMED) or {}).get(store_key)
+    if hit and hit[0] == value:
+        st.warning(f"Unconfirmed - verify: {hit[1]}")
+
+
+def _rig_apply_autodetect(rep: Any, *, eq_labels: list[str], tel_labels: list[str], loc_labels: list[str]) -> None:
+    """RIG-AUTOSELECT-2026-11: put an auto-detect result into the selectors - high confidence -> selected,
+    medium -> selected and marked "unconfirmed - verify", low / none -> the current selection is kept. The
+    site is selected when the header site lies within the same-site tolerance of exactly one DB site
+    (supersedes S6-FIX SITE-MANUAL-2026-10)."""
+    st.session_state[_AUTODETECT_REPORT] = rep
+    unconfirmed: dict[str, tuple[str, str]] = {}
+    if rep.header_path is not None:
+        for store_key, det, labels in (
+            (_RIG_EQUIPMENT, rep.equipment, eq_labels),
+            (_RIG_TELESCOPE, rep.telescope, tel_labels),
+            (_RIG_LOCATION, rep.location, loc_labels),
+        ):
+            band = det.band()
+            if band not in ("high", "medium") or det.label not in labels:
+                continue
+            _rig_select(store_key, det.label)
+            if band == "medium":
+                unconfirmed[store_key] = (det.label, f"auto-detect confidence {det.confidence:.0%} ("
+                                          + "; ".join(det.reasons) + ")")
+    st.session_state[_RIG_UNCONFIRMED] = unconfirmed
+
+
+def _rig_autodetect_cb(db: Any, database_path: str) -> None:
+    """on_click of "Auto-detect optics from FITS" (runs before the selectors render): detect, add to the DB what
+    the header states and the DB lacks (RIG-ADD-2026-11, amended: no extra confirmation step), select."""
+    from optics_autodetect import (  # noqa: PLC0415
+        add_header_rig_to_db,
+        autodetect_from_source,
+        equipment_label,
+        location_label,
+        telescope_label,
+    )
+
+    source_root = str(st.session_state.get("vyvar_varstrem_source") or st.session_state.get(_RIG_SOURCE) or "")
+    eq_rows, tel_rows = db.autodetect_candidates()  # G14-23
+    rep = autodetect_from_source(
+        source_root, equipments=eq_rows, telescopes=tel_rows,
+        locations=get_observer_locations(database_path, active_only=True),
+    )
+    st.session_state[_RIG_ADDED] = add_header_rig_to_db(db, database_path, rep)
+    _rig_apply_autodetect(
+        rep,
+        eq_labels=[equipment_label(r) for r in db.get_equipments(active_only=True)],
+        tel_labels=[telescope_label(r) for r in db.get_telescopes(active_only=True)],
+        loc_labels=[location_label(r) for r in get_observer_locations(database_path, active_only=True)],
+    )
 
 
 def render_live_view(
@@ -543,12 +631,10 @@ def render_live_view(
 
     equipments = pipeline.db.get_equipments(active_only=True)
     telescopes = pipeline.db.get_telescopes(active_only=True)
-    equipment_options = {
-        f"{item['ID']}: {item['CAMERANAME']} ({item['ALIAS']})": int(item["ID"]) for item in equipments
-    }
-    telescope_options = {
-        f"{item['ID']}: {item['TELESCOPENAME']} ({item['ALIAS']})": int(item["ID"]) for item in telescopes
-    }
+    from optics_autodetect import equipment_label, location_label, telescope_label  # noqa: PLC0415
+
+    equipment_options = {equipment_label(item): int(item["ID"]) for item in equipments}
+    telescope_options = {telescope_label(item): int(item["ID"]) for item in telescopes}
     eq_labels = list(equipment_options.keys())
     tel_labels = list(telescope_options.keys())
 
@@ -565,7 +651,8 @@ def render_live_view(
     _def_eq_lbl = _label_for_id(equipment_options, pipeline.db.get_default_id("EQUIPMENTS"))
     _def_tel_lbl = _label_for_id(telescope_options, pipeline.db.get_default_id("TELESCOPE"))
     # G14-06: the selection lives in non-widget keys (_RIG_*), so a view switch (which drops the state
-    # of widgets that are not rendered) does not reset it; the widgets take index/value from them.
+    # of widgets that are not rendered) does not reset it; the widget keys are restored from them
+    # (_rig_widget_prepare) - RIG-AUTOSELECT-2026-11: no index=, the widget key carries the value.
     if _def_eq_lbl and _RIG_EQUIPMENT not in st.session_state:
         st.session_state[_RIG_EQUIPMENT] = _def_eq_lbl
     if _def_tel_lbl and _RIG_TELESCOPE not in st.session_state:
@@ -585,54 +672,47 @@ def render_live_view(
             "Matching or generic (no set) library entries are used per DB rules."
         )
 
-        # Phase 3: fingerprint camera + telescope from a sample FITS header and auto-fill the
-        # selectors (overriding the IS_DEFAULT baseline). The user can still override. The site is
-        # never auto-selected (S6-FIX SITE-MANUAL-2026-10): the user picks it below.
-        if st.button(
-            "[test] Auto-detect optics from FITS",
-            help="Reads a sample light frame and matches camera / telescope by "
-            "INSTRUME, sensor dimensions, GAIN and FOCALLEN/APTDIA. The site is always your choice below.",
-        ):
-            from optics_autodetect import autodetect_from_source
-
-            _eq_rows, _tel_rows = pipeline.db.autodetect_candidates()  # G14-23
-            _rep = autodetect_from_source(source_root, equipments=_eq_rows, telescopes=_tel_rows)
-            if _rep.header_path is None:
-                st.warning("Auto-detect: no readable light FITS found under the source directory.")
-            else:
-                if _rep.equipment.ok and _rep.equipment.label in equipment_options:
-                    _rig_set(_RIG_EQUIPMENT, "vyvar_varstrem_equipment", _rep.equipment.label)
-                if _rep.telescope.ok and _rep.telescope.label in telescope_options:
-                    _rig_set(_RIG_TELESCOPE, "vyvar_varstrem_telescope", _rep.telescope.label)
-                st.session_state["vyvar_autodetect_report"] = _rep
-            st.rerun()
+        # Phase 3 / RIG-AUTOSELECT-2026-11: fingerprint camera, telescope and site from a sample light
+        # header and set the selectors (the callback runs before they render). The user can override.
+        locations = get_observer_locations(str(cfg.database_path), active_only=True)
+        location_options = {location_label(item): int(item["id"]) for item in locations}
+        loc_labels = list(location_options.keys())
+        st.button(
+            "Auto-detect optics from FITS",
+            on_click=_rig_autodetect_cb,
+            args=(pipeline.db, str(cfg.database_path)),
+            help="Reads a sample light frame and matches camera / telescope by INSTRUME, sensor dimensions, "
+            "GAIN and FOCALLEN/APTDIA, and the site by SITELAT/SITELONG. Found in the DB: high confidence -> "
+            "selected, medium -> selected but marked unconfirmed. Stated in the header but not in the DB -> "
+            "added to the DB from the header values and selected (gain / read noise never from the header).",
+        )
+        _added = st.session_state.get(_RIG_ADDED) or []
+        if _added:
+            st.info("Added to DB (edit in Database Explorer):\n" + "\n".join(f"- {t}" for t in _added))
 
         col_scan_eq, col_scan_tel = st.columns(2)
         with col_scan_eq:
             eq_placeholder = "(no camera in DB)" if not eq_labels else eq_labels[0]
             _eq_opts = eq_labels if eq_labels else [eq_placeholder]
+            _rig_widget_prepare(_RIG_EQUIPMENT, _eq_opts)
             import_equipment_label = st.selectbox(
                 "Equipment (library)",
                 options=_eq_opts,
-                index=_rig_index(_eq_opts, _RIG_EQUIPMENT),
-                key="vyvar_varstrem_equipment",
+                key=_RIG_WIDGET[_RIG_EQUIPMENT],
             )
             st.session_state[_RIG_EQUIPMENT] = import_equipment_label
+            _rig_unconfirmed_note(_RIG_EQUIPMENT, import_equipment_label)
         with col_scan_tel:
             tel_placeholder = "(no telescope in DB)" if not tel_labels else tel_labels[0]
             _tel_opts = tel_labels if tel_labels else [tel_placeholder]
+            _rig_widget_prepare(_RIG_TELESCOPE, _tel_opts)
             import_telescope_label = st.selectbox(
                 "Telescope (library)",
                 options=_tel_opts,
-                index=_rig_index(_tel_opts, _RIG_TELESCOPE),
-                key="vyvar_varstrem_telescope",
+                key=_RIG_WIDGET[_RIG_TELESCOPE],
             )
             st.session_state[_RIG_TELESCOPE] = import_telescope_label
-        locations = get_observer_locations(str(cfg.database_path), active_only=True)
-        location_options = {
-            f"{item['id']}: {item['name']}": int(item["id"]) for item in locations
-        }
-        loc_labels = list(location_options.keys())
+            _rig_unconfirmed_note(_RIG_TELESCOPE, import_telescope_label)
         loc_placeholder = "No locations defined"
         if loc_labels:
             # SITE-UI-01: site of this session (default: IS_DEFAULT) else none.
@@ -651,11 +731,11 @@ def render_live_view(
             if _RIG_LOCATION not in st.session_state:
                 st.session_state[_RIG_LOCATION] = loc_labels[_loc_default_idx]
         _loc_opts = loc_labels if loc_labels else [loc_placeholder]
+        _rig_widget_prepare(_RIG_LOCATION, _loc_opts)
         import_location_label = st.selectbox(
             "Location (observatory)",
             options=_loc_opts,
-            index=_rig_index(_loc_opts, _RIG_LOCATION),
-            key="vyvar_varstrem_location",
+            key=_RIG_WIDGET[_RIG_LOCATION],
             disabled=not loc_labels,
             help=(
                 "Observer site for BJD, airmass, and lunar context. "
@@ -665,10 +745,13 @@ def render_live_view(
         )
         if loc_labels:
             st.session_state[_RIG_LOCATION] = import_location_label
+            _rig_unconfirmed_note(_RIG_LOCATION, import_location_label)
 
         # Phase 3: show the last auto-detect result (match + confidence + evidence).
-        _ad_rep = st.session_state.get("vyvar_autodetect_report")
-        if _ad_rep is not None:
+        _ad_rep = st.session_state.get(_AUTODETECT_REPORT)
+        if _ad_rep is not None and _ad_rep.header_path is None:
+            st.warning(f"Auto-detect: {_ad_rep.no_light or 'no light frame found'} - selectors kept.")
+        elif _ad_rep is not None:
             _band_icon = {"high": "[OK]", "medium": "[yellow]", "low": "[orange]", "none": "o"}
 
             def _ad_line(_title: str, _det: Any) -> str:
@@ -682,19 +765,28 @@ def render_live_view(
                     f"(confidence {_det.confidence:.0%}, {_det.band()}) - {_ev}"
                 )
 
+            def _site_line(_det: Any) -> str:
+                _why = "; ".join(_det.reasons) if _det.reasons else "-"
+                if _det.matched_id is not None:
+                    return f"[OK] **Location:** {_det.label} - {_why}"
+                return f"o **Location:** selector kept - {_why}"
+
             with st.container(border=True):
                 st.caption(f"[search] Auto-detect from `{Path(_ad_rep.header_path).name}`")
                 st.markdown(_ad_line("Equipment", _ad_rep.equipment))
                 st.markdown(_ad_line("Telescope", _ad_rep.telescope))
+                st.markdown(_site_line(_ad_rep.location))
                 st.caption(
-                    "**high** confidence -> auto-filled (overrides default); "
-                    "**medium** -> pre-filled but **unconfirmed - verify**; "
-                    "**low/none** -> default kept and surfaced below for confirmation. "
-                    "You can override any selector above."
+                    "**high** confidence -> selected; **medium** -> selected but marked "
+                    "**unconfirmed - verify**; not in the DB but stated in the header -> added and selected; "
+                    "otherwise your selection is kept. The site is selected "
+                    "when the header site lies within the same-site tolerance of one DB site. "
+                    "You can override any selector above; RUN is blocked while the selection contradicts "
+                    "the light headers."
                 )
-
-            # Phase 4: poor-FITS prompt - surface ONLY the unresolved gaps, pre-filled
-            # from the current (default) selection. The resolver then runs downstream.
+        if _ad_rep is not None and _ad_rep.header_path is not None:
+            # Phase 4: poor-FITS prompt - surface ONLY the unresolved gaps with the current selection
+            # (which RUN uses as it is).
             if _ad_rep.unresolved:
                 _prefill = {
                     "Equipment (camera)": import_equipment_label,
@@ -705,20 +797,23 @@ def render_live_view(
                 with st.container(border=True):
                     st.warning(
                         f"! Poor FITS: {len(_ad_rep.unresolved)} field(s) are not in the header "
-                        "and were not auto-detected. Confirm or override the pre-filled defaults "
+                        "and were not auto-detected. Confirm or override the current selection "
                         "in the selectors above before running."
                     )
                     for _gap in _ad_rep.unresolved:
                         _fld = _gap.get("field", "")
                         st.markdown(
-                            f"- **{_fld}** -> pre-filled: `{_prefill.get(_fld, _gap.get('fallback', '-'))}`  \n"
+                            f"- **{_fld}** -> selected: `{_prefill.get(_fld, _gap.get('fallback', '-'))}`  \n"
                             f"  <small>{_gap.get('detail', '')}</small>",
                             unsafe_allow_html=True,
                         )
                     st.caption(
-                        "These pre-fills feed the import; the unified resolver "
-                        "(header/solve -> DB -> config, site = processed field -> header -> flagged config) "
-                        "then applies them per draft."
+                        "RUN uses exactly the camera, telescope and site selected above for every frame of "
+                        "the source: the camera row gives gain / read noise (its profile at the header gain "
+                        "setting, unless the header states e-/ADU) and pixel size, the telescope row the "
+                        "focal length (the header only when the DB has none), the selected site BJD and "
+                        "airmass (a header site farther than the same-site tolerance blocks RUN). Calibration masters are paired by "
+                        "this camera and telescope."
                     )
 
         # SITE-UI-01: selection is the run site; do not rewrite config.json on render.
@@ -932,9 +1027,12 @@ def main() -> None:
 
     vyvar_init_footer_state_if_missing()
     vyvar_footer_ph = st.empty()
-    st.session_state["vyvar_ui_rerender_footer"] = lambda: _vyvar_render_fixed_footer_into(vyvar_footer_ph)
-    _vyvar_render_fixed_footer_into(vyvar_footer_ph)
-    _vyvar_render_run_job_monitor(cfg, vyvar_footer_ph)
+    # V12-STATUS: one status bar per page - the job monitor's fragment draws it while a job is
+    # followed, else the app's placeholder (vyvar_footer_ph is None then)
+    if _vyvar_render_run_job_monitor(cfg):
+        vyvar_footer_ph = None
+    else:
+        _vyvar_render_fixed_footer_into(vyvar_footer_ph)
 
     page = st.sidebar.radio(
         "Navigation",
@@ -1033,7 +1131,8 @@ def main() -> None:
 
         ui_settings.render_settings_dashboard(cfg, draft_dir=active_draft(cfg.archive_root).draft_dir)
 
-    _vyvar_render_fixed_footer_into(vyvar_footer_ph)
+    if vyvar_footer_ph is not None:
+        _vyvar_render_fixed_footer_into(vyvar_footer_ph)
 
 
 if __name__ == "__main__":

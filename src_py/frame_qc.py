@@ -32,7 +32,7 @@ import json
 import math
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Callable, Sequence
 
 import numpy as np
 
@@ -41,7 +41,7 @@ from infolog import log_event
 from stats_core import MAD_TO_SIGMA, median_mad
 FRAME_QC_JSON = "frame_qc.json"
 QC_STARS_JSON = Path("qc") / "qc_stars.json"
-SPEC = "QC-PER-GROUP-2026-10 / QC-METRICS-2026-10"
+SPEC = "QC-PER-GROUP-2026-10 / QC-METRICS-2026-10 / MASTERSTAR-TRAIL-2026-11"
 
 #: Below this many measured frames the spread of a group cannot be estimated; no limit.
 MIN_FRAMES_FOR_LIMIT = 5
@@ -89,6 +89,12 @@ class GroupQC:
     best_noise: float | None = None
     best_transparency: float | None = None
     best_depth: float | None = None
+    #: kept frames, best first (the MASTERSTAR ranking: max T/(FWHM*sigma_pix)); MASTERSTAR-TRAIL-2026-11
+    ranked_paths: list[str] = field(default_factory=list)
+    #: trail tests of the ranked frames walked to find the MASTERSTAR source (trail_detect.TrailCheck dicts)
+    trail_checks: list[dict[str, Any]] = field(default_factory=list)
+    #: False when every tested frame has a trail (best = the weakest trail), None when not tested
+    best_trail_free: bool | None = None
     rejected: dict[str, str] = field(default_factory=dict)  # FILE_PATH -> reason
     frames: dict[str, dict[str, Any]] = field(default_factory=dict)  # FILE_PATH -> dzp, patchy, n_common
 
@@ -290,15 +296,76 @@ def transparency_vs_reference(
 # ---------------------------------------------------------------------------
 # evaluation
 # ---------------------------------------------------------------------------
+def _first_trail_free(
+    g: GroupQC,
+    keys: list[tuple[float, str]],
+    fw: dict[str, float | None],
+    trail_check: Callable[[str, float, str | None, float | None], Any],
+) -> tuple[float, str]:
+    """Walk the ranked kept frames; the first one without a trail is the MASTERSTAR source.
+
+    Each candidate is compared with a reference frame of the group (frame QC's provisional reference,
+    or the next-ranked frame when the candidate is that reference): lines present in both are fixed on
+    the sky or the detector, a satellite trail is in one frame only."""
+    weakest: tuple[float, tuple[float, str]] | None = None
+    ranked = [k[1] for k in keys]
+    for key in keys:
+        p = key[1]
+        f = fw.get(p)
+        ref = g.reference_path if g.reference_path and g.reference_path != p else None
+        if ref is None:
+            ref = next((q for q in ranked if q != p and (fw.get(q) or 0) > 0), None)
+        rf = fw.get(ref) if ref else None
+        res = trail_check(p, float(f), ref, (float(rf) if rf else None)) if f is not None and f > 0 else None
+        if res is None:
+            g.trail_checks.append({"path": p, "tested": False})
+            continue
+        rec = {"path": p, "tested": True, **res.to_dict()}
+        g.trail_checks.append(rec)
+        if not res.has_trail:
+            g.best_trail_free = True
+            if len(g.trail_checks) > 1:
+                log_event(
+                    f"[FRAME-QC] {g.group_key}: MASTERSTAR source {Path(str(p).replace(chr(92), '/')).name} "
+                    f"- {sum(1 for c in g.trail_checks if c.get('has_trail'))} better-ranked frame(s) skipped "
+                    f"for a satellite trail"
+                )
+            return key
+        log_event(
+            f"[FRAME-QC] {g.group_key}: {Path(str(p).replace(chr(92), '/')).name} has a satellite trail "
+            f"(line Z {res.z_max:.1f} >= {res.z_min_required:g}, angle {res.angle_deg:.1f} deg, "
+            f"amplitude {res.amplitude_sigma:.2f} sigma) - not used as MASTERSTAR source"
+        )
+        z = float(res.z_max) if res.z_max is not None else math.inf
+        if weakest is None or z < weakest[0]:
+            weakest = (z, key)
+    if weakest is None:
+        # no frame could be tested (images unreadable): keep the plain ranking, say so
+        log_event(f"[FRAME-QC] WARNING {g.group_key}: trail test not possible on any kept frame - "
+                  "MASTERSTAR source by rank only")
+        return keys[0]
+    g.best_trail_free = False
+    log_event(f"[FRAME-QC] WARNING {g.group_key}: every kept frame has a satellite trail - MASTERSTAR "
+              f"source = the weakest trail ({Path(str(weakest[1][1]).replace(chr(92), '/')).name}, "
+              f"Z {weakest[0]:.1f})")
+    return weakest[1]
+
+
 def evaluate_frame_qc(
     rows: Sequence[dict[str, Any]],
     *,
     k: float,
     reject: bool = True,
     stars: dict[str, tuple[np.ndarray, tuple[int, int] | None]] | None = None,
+    trail_check: Callable[[str, float, str | None, float | None], Any] | None = None,
 ) -> dict[str, GroupQC]:
     """Per-group transparency, rejections and best frame. ``stars``: FILE_PATH ->
-    (star list, crop shape); without it transparency is not evaluated."""
+    (star list, crop shape); without it transparency is not evaluated.
+
+    ``trail_check(path, fwhm_px, reference_path, reference_fwhm_px)`` -> :class:`trail_detect.TrailCheck`
+    (or None when the image cannot be read): the best frame is the best-ranked kept frame WITHOUT a satellite trail
+    (MASTERSTAR-TRAIL-2026-11); frames are tested in rank order until one is clean. When every kept
+    frame has a trail the one with the weakest trail is used and the group says so."""
     by: dict[str, list[dict[str, Any]]] = {}
     for r in rows:
         by.setdefault(group_key_of(r), []).append(r)
@@ -373,7 +440,7 @@ def evaluate_frame_qc(
 
         for p, fr in g.frames.items():
             fr["transparency"] = _t(p)
-        best: tuple[float, str] | None = None
+        keys: list[tuple[float, str]] = []
         for p in paths:
             if p in g.rejected:
                 continue
@@ -385,8 +452,12 @@ def evaluate_frame_qc(
             else:
                 d = depth_score(fw[p], sig[p], 1.0 if t is None else t)
                 key = (d if d is not None else -1.0, p)
-            if best is None or key > best:
-                best = key
+            keys.append(key)
+        keys.sort(reverse=True)
+        g.ranked_paths = [p for _k, p in keys]
+        best: tuple[float, str] | None = keys[0] if keys else None
+        if best is not None and trail_check is not None:
+            best = _first_trail_free(g, keys, fw, trail_check)
         if best is not None:
             p = best[1]
             g.best_path, g.best_fwhm, g.best_sky, g.best_noise = p, fw[p], sky[p], sig[p]
@@ -406,7 +477,8 @@ def write_frame_qc(ap_root: Path | str, groups: dict[str, GroupQC], *, k: float,
         "reject_enabled": bool(reject),
         "rule": "per group, one pass: reject no FWHM | elongation, dZP, non-uniformity > max(med+k*1.4826*MAD, "
                 f"floor {ELONG_FLOOR} / {DZP_FLOOR_MAG} mag / {PATCHY_FLOOR_MAG} mag) | "
-                f"< {MIN_COMMON_STARS} common stars; best: max T/(FWHM*sigma_pix)",
+                f"< {MIN_COMMON_STARS} common stars; best: max T/(FWHM*sigma_pix) without a satellite trail "
+                "(median Radon transform, MASTERSTAR-TRAIL-2026-11)",
         "groups": {gk: g.to_dict() for gk, g in groups.items()},
     }
     p.write_text(json.dumps(doc, indent=2, ensure_ascii=True), encoding="utf-8")
@@ -439,15 +511,68 @@ def best_path_for_setup(ap_root: Path | str, setup_name: str | None) -> str | No
     return None
 
 
-def run_frame_qc(db: Any, draft_id: int, ap_root: Path | str, *, k: float, reject: bool = True) -> dict[str, GroupQC]:
-    """Evaluate the draft, persist the decision (manifest + frame_qc.json), log it."""
+def fits_trail_check(
+    image_path_for: Callable[[str], str] | None = None,
+) -> Callable[[str, float, str | None, float | None], Any]:
+    """``trail_check`` for :func:`evaluate_frame_qc` reading the frames' FITS (``image_path_for`` maps
+    the manifest FILE_PATH to the file to test, e.g. the calibrated light); None when unreadable.
+    Reference line planes are computed once per reference frame."""
+    from astropy.io import fits  # noqa: PLC0415
+
+    from trail_detect import detect_trail, line_plane, trail_bin_px  # noqa: PLC0415
+
+    planes: dict[tuple[str, int], Any] = {}
+
+    def _read(path: str) -> np.ndarray | None:
+        target = (image_path_for(path) if image_path_for is not None else path) or path
+        try:
+            data = fits.getdata(str(target))
+        except (OSError, ValueError, TypeError) as exc:
+            log_event(f"[FRAME-QC] trail test: cannot read {target} ({type(exc).__name__}: {exc})")
+            return None
+        if data is None or np.ndim(data) != 2:
+            log_event(f"[FRAME-QC] trail test: {target} is not a 2-D image")
+            return None
+        return np.asarray(data, dtype=np.float64)
+
+    def _check(path: str, fwhm_px: float, ref_path: str | None, ref_fwhm: float | None) -> Any:
+        data = _read(path)
+        if data is None:
+            return None
+        ref_plane = None
+        if ref_path:
+            # the reference plane must have the candidate's binning: cached per (frame, bin size)
+            key = (ref_path, trail_bin_px(float(fwhm_px)))
+            if key not in planes:
+                rd = _read(ref_path)
+                planes[key] = line_plane(rd, float(fwhm_px)) if rd is not None and rd.shape == data.shape else None
+            ref_plane = planes[key]
+        return detect_trail(data, float(fwhm_px), reference=ref_plane)
+
+    return _check
+
+
+def run_frame_qc(
+    db: Any,
+    draft_id: int,
+    ap_root: Path | str,
+    *,
+    k: float,
+    reject: bool = True,
+    image_path_for: Callable[[str], str] | None = None,
+) -> dict[str, GroupQC]:
+    """Evaluate the draft, persist the decision (manifest + frame_qc.json), log it.
+
+    The MASTERSTAR source of each group is the best-ranked kept frame without a satellite trail
+    (MASTERSTAR-TRAIL-2026-11); ``image_path_for`` maps a manifest FILE_PATH to the image tested."""
     from draft_provenance import set_manifest_light_qc_decisions  # noqa: PLC0415
 
     rows = db.fetch_draft_light_rows_for_quality(int(draft_id)) or []
     _all = load_qc_stars(ap_root)
     stars = {str(r.get("FILE_PATH") or ""): _all[str(r.get("FILE_PATH") or "")]
              for r in rows if str(r.get("FILE_PATH") or "") in _all}
-    groups = evaluate_frame_qc(rows, k=float(k), reject=reject, stars=stars or None)
+    groups = evaluate_frame_qc(rows, k=float(k), reject=reject, stars=stars or None,
+                               trail_check=fits_trail_check(image_path_for))
     decisions: dict[str, str | None] = {}
     for r in rows:
         path = str(r.get("FILE_PATH") or "")
@@ -463,6 +588,7 @@ def run_frame_qc(db: Any, draft_id: int, ap_root: Path | str, *, k: float, rejec
             f"dZP limit={None if g.dzp_limit is None else round(g.dzp_limit, 3)} "
             f"patchy limit={None if g.patchy_limit is None else round(g.patchy_limit, 3)} "
             f"best={Path(str(g.best_path).replace(chr(92), '/')).name if g.best_path else '-'} "
-            f"(FWHM={g.best_fwhm}, sigma={g.best_noise}, T={g.best_transparency})"
+            f"(FWHM={g.best_fwhm}, sigma={g.best_noise}, T={g.best_transparency}, "
+            f"trail-free={g.best_trail_free}, frames trail-tested={sum(1 for c in g.trail_checks if c.get('tested'))})"
         )
     return groups

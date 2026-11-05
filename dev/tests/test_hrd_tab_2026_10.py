@@ -73,7 +73,10 @@ def test_figures_and_table() -> None:
     jpg = Path(__file__).parent / "_tmp_hrd_field.jpg"
     Image.fromarray(np.zeros((40, 60, 3), np.uint8)).save(jpg)
     try:
-        f = image_figure(jpg, data, {"notable", "vsx"}, "2", light=True, size=(60, 40))
+        from sky_display_orient import display_transform
+
+        f = image_figure(jpg, data, {"notable", "vsx"}, "2", light=True, size=(60, 40),
+                         orient=display_transform(None, (40, 60)))
         assert f.layout.images[0].source.startswith("data:image/jpeg;base64,") and len(f.data) == 3
     finally:
         jpg.unlink()

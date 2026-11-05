@@ -1161,13 +1161,18 @@ def fits_first_image_to_png(
     lo_pct: float = 5.0,
     hi_pct: float = 99.5,
 ) -> bool:
-    """Render primary HDU to 8-bit RGB PNG (percentile stretch)."""
+    """Render primary HDU to 8-bit RGB PNG (percentile stretch), North up / East left (SKY-ORIENT-2026-11:
+    the lossless display transform of :mod:`sky_display_orient`; :func:`annotate_field_image` maps the markers
+    with the same transform and draws the compass)."""
     try:
         from astropy.io import fits
         from PIL import Image
 
+        from sky_display_orient import display_transform  # noqa: PLC0415
+
         with fits.open(fits_path, memmap=False) as hdul:
             data = np.asarray(hdul[0].data, dtype=np.float64)
+            orient = display_transform(hdul[0].header, data.shape)
         if data.size == 0:
             return False
         ok = np.isfinite(data)
@@ -1183,9 +1188,7 @@ def fits_first_image_to_png(
         scaled = np.clip((data - lo) / (hi - lo), 0.0, 1.0)
         gray = (scaled * 255.0).astype(np.uint8)
         gray[~ok] = 0
-        # G10-41: FITS row 0 is the bottom of the image (origin="lower", as every other field map of VYVAR);
-        # a PNG starts at the top row, so the rows are flipped (field_annotation_y maps the markers)
-        img = Image.fromarray(np.ascontiguousarray(np.flipud(gray)), mode="L").convert("RGB")
+        img = Image.fromarray(np.ascontiguousarray(orient.apply_image(gray)), mode="L").convert("RGB")
         png_path = Path(png_path)
         png_path.parent.mkdir(parents=True, exist_ok=True)
         img.save(str(png_path))
@@ -1220,56 +1223,6 @@ def ensure_clean_field_background_png(
     # fallback had no use; without a MASTERSTAR image the HRD is drawn without the field background.
     logger.info("HRD: no MASTERSTAR image under %s - field background not drawn", platesolve_dir)
     return None, False
-
-
-def _resolve_masterstar_naxis(platesolve_dir: Path | None) -> tuple[int, int] | None:
-    """Read MASTERSTAR FITS NAXIS1/NAXIS2 from platesolve directory."""
-    fits_path = _resolve_masterstar_fits_path(platesolve_dir)
-    if fits_path is None:
-        return None
-    try:
-        from astropy.io import fits
-
-        with fits.open(str(fits_path), memmap=False) as hdul:
-            hdr = hdul[0].header
-            n1 = int(hdr.get("NAXIS1") or 0)
-            n2 = int(hdr.get("NAXIS2") or 0)
-        if n1 > 0 and n2 > 0:
-            return n1, n2
-    except Exception:  # noqa: BLE001
-        logger.debug("Could not read NAXIS from %s", fits_path, exc_info=True)
-    return None
-
-
-def _field_png_is_fits_derived(png_path: Path) -> bool:
-    return Path(png_path).name == "hrd_field_from_fits.png"
-
-
-def field_annotation_y(y_fits: float, scale_y: float, png_h: int) -> float:
-    """PNG row of a FITS y (0-based, row 0 at the bottom) on the flipped field PNG (G10-41)."""
-    return float(png_h) - (float(y_fits) + 0.5) * float(scale_y)
-
-
-def field_annotation_pixel_scale(
-    platesolve_dir: Path | None,
-    png_w: int,
-    png_h: int,
-    *,
-    png_from_fits: bool,
-) -> tuple[float, float, bool]:
-    """Return (scale_x, scale_y, ok_to_draw). Never draw when ok_to_draw is False."""
-    naxis = _resolve_masterstar_naxis(platesolve_dir)
-    if naxis is not None:
-        nx, ny = naxis
-        if nx > 0 and ny > 0:
-            return png_w / float(nx), png_h / float(ny), True
-    if png_from_fits:
-        return 1.0, 1.0, True
-    log_event(
-        "HRD annotation skipped: background PNG size unknown vs MASTERSTAR FITS "
-        "(no MASTERSTAR*.fits and PNG not FITS-derived)"
-    )
-    return 1.0, 1.0, False
 
 
 def _category_short_label(category: str, *, nss_enabled: bool) -> str:
@@ -1313,24 +1266,31 @@ def annotate_field_image(
     platesolve_dir: Path | None = None,
     output_path: Path | None = None,
     nss_category_enabled: bool = False,
-    png_from_fits: bool = False,
     invert: bool = False,
 ) -> Path | None:
-    """Mark interesting stars on a field PNG/JPEG. Returns None when alignment is unknown.
+    """Mark interesting stars on the field PNG of :func:`fits_first_image_to_png` (the MASTERSTAR of
+    ``platesolve_dir``). Returns None when the MASTERSTAR (and so the image geometry) is unknown.
 
-    ``invert`` (HRD-PAGE-2026-10, Milan): black stars on a white sky as on the other PDF
-    field maps; marker / legend colours are switched to dark tones."""
+    SKY-ORIENT-2026-11: markers go through the same display transform as the image (North up, East left)
+    and an N / E compass is drawn. ``invert`` (HRD-PAGE-2026-10, Milan): black stars on a white sky as on
+    the other PDF field maps; marker / legend colours are switched to dark tones."""
     from PIL import Image, ImageDraw, ImageOps
+
+    from sky_display_orient import draw_compass_pil, orient_from_fits  # noqa: PLC0415
 
     field_image_path = Path(field_image_path)
     if not field_image_path.is_file():
         return None
-    if not png_from_fits:
-        png_from_fits = _field_png_is_fits_derived(field_image_path)
+    ms_fits = _resolve_masterstar_fits_path(platesolve_dir)
+    if ms_fits is None:
+        log_event("HRD annotation skipped: no MASTERSTAR FITS - field image geometry unknown")
+        return None
+    orient = orient_from_fits(ms_fits)
 
     img = Image.open(str(field_image_path)).convert("RGB")
     if invert:
         img = ImageOps.invert(img)
+    draw_compass_pil(img, orient)
     draw = ImageDraw.Draw(img)
 
     category_colors: dict[str, tuple[int, int, int]] = {
@@ -1354,11 +1314,8 @@ def annotate_field_image(
         }
 
     w, h = img.size
-    sx, sy, ok = field_annotation_pixel_scale(
-        platesolve_dir, w, h, png_from_fits=png_from_fits
-    )
-    if not ok:
-        return None
+    disp_h, disp_w = orient.out_shape
+    sx, sy = w / float(disp_w), h / float(disp_h)
 
     radius = max(12, int(round(w / 150)))
     font_size = max(10, int(round(w / 120)))
@@ -1383,8 +1340,8 @@ def annotate_field_image(
         y_raw = _f(r.get("y"))
         if x_raw is None or y_raw is None:
             continue
-        x = x_raw * sx
-        y = field_annotation_y(y_raw, sy, h)
+        c, rr = orient.apply_xy(x_raw, y_raw)
+        x, y = (float(c) + 0.5) * sx, (float(rr) + 0.5) * sy  # pixel centre on the PNG
         if not (radius < x < w - radius and radius < y < h - radius):
             continue
         cat_raw = str(star.get("category", "")).strip()

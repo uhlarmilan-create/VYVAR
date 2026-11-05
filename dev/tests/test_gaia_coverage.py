@@ -100,7 +100,7 @@ def test_existing_db_registered_as_all_sky_to_its_depth(tmp_path: Path) -> None:
 
 def test_topup_fetches_field_box_and_records_depth(tmp_path: Path) -> None:
     db = _old_db(tmp_path / "gaia.db")
-    sky = _Sky()
+    sky = _Sky(n=400_000)  # dense enough that the field cone alone (GAIA-TOPUP-ADQL-2026-11) has stars
     center = SkyCoord(359.6 * u.deg, 50.0 * u.deg)  # field across RA 0
     res = gc.ensure_field_depth(db, center=center, radius_deg=0.5, g_needed=18.6, fetch=sky)
     assert res["status"] == "ok"
@@ -108,14 +108,14 @@ def test_topup_fetches_field_box_and_records_depth(tmp_path: Path) -> None:
     adql = sky.calls[0]
     assert "phot_g_mean_mag > 15.0000" in adql and "phot_g_mean_mag <= 18.6000" in adql
     assert adql.count("ra >= ") == 2, "RA 0 crossing split into two intervals"
-    box = gc.field_box(center, 0.5, margin_deg=gc.TOPUP_MARGIN_DEG)
-    assert box[2] == pytest.approx(48.5) and box[3] == pytest.approx(51.5), "+-1 deg around the field edges"
+    box = gc.field_box(center, 0.5)
+    assert box[2] == pytest.approx(49.5) and box[3] == pytest.approx(50.5), "the field cone only (GAIA-TOPUP-ADQL-2026-11)"
     n_expected = len(sky(adql))
     assert res["n_fetched"] == n_expected and res["n_new"] == n_expected > 0
     assert _count(db, "g_mag > 15.0") == n_expected
     # the next field inside the box is covered: no second archive call
     res2 = gc.ensure_field_depth(
-        db, center=SkyCoord(0.2 * u.deg, 50.3 * u.deg), radius_deg=0.4, g_needed=18.0, fetch=sky
+        db, center=SkyCoord(359.7 * u.deg, 50.1 * u.deg), radius_deg=0.3, g_needed=18.0, fetch=sky
     )
     assert res2["status"] == "covered" and len(sky.calls) == 2  # (+1 call above for n_expected)
     # a field outside the box still has the base depth only

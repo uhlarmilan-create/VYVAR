@@ -5269,6 +5269,8 @@ still pass removed parameters (not production).
 
 ## FRAME-DEPTH-2026-10 (Milan 2026-10-14) - IMPLEMENTED (step 1 limit + depth, step 2 coverage + online top-up, one depth)
 
+SUPERSEDED in part by GAIA-TOPUP-ADQL-2026-11 (2026-11-05): the top-up fetches the field cone, no +-1 deg margin.
+
 **Rule.** The faint limit of the DAO <-> Gaia matching phase comes from the MASTERSTAR itself, no
 static magnitude parameter:
 1. Plate solve (astrosolve, bright stars only), identity on the local Gaia DB.
@@ -7439,6 +7441,9 @@ Amends Phase 3 autodetect. "Auto-detect optics from FITS" fills camera and teles
 header-based site handling (SITELAT / SITELONG, `param_resolver.resolve_site`) is unchanged; the poor-FITS notice
 still says when the headers carry no site.
 
+SUPERSEDED by RIG-AUTOSELECT-2026-11 (Milan 2026-11-05: the site is selected from the header when it matches a DB
+site).
+
 ## S6-FIX-CLIB-READONLY-2026-10 - the Calibration Library view only reads (Milan 2026-10-31)
 
 The library folder is created at app start / data-dir bootstrap (`AppConfig.ensure_base_dirs` in `app.main`) and by
@@ -8186,3 +8191,191 @@ literature (cited bands with known colours only) / off).
 - Output bytes unchanged: proc CSVs, epsf_frames_manifest.json, invariant records and locus summary identical to
   04801fb on 60 v10_527 proc CSVs (A/B harness) and in dev/tests/test_v11_io_2026_11.py. Writes per CSV stay 2
   (merge, locus): one write needs every merged frame in memory before the night locus (not done).
+
+## GAIA-TOPUP-ADQL-2026-11 - the online Gaia top-up works: plain ADQL, field cone only, rejected != offline (v12, 2026-11-05, Milan approved)
+
+- Finding (Milan PC, 4h Cyg N1/N2 2026-11-05): every online top-up failed with "Error 200: Cannot parse query"; the
+  main Gaia DB records `online_topups: 0`, i.e. no top-up ever succeeded on Milan's PC. Cause: the SELECT list of
+  `gaiadr3.gaia_source` (GAIA_SOURCE_SELECT, top-up and the --full-source builder) used `NULLIF`, which is not an ADQL
+  2.0 / 2.1 function (IVOA ADQL REC 2008 sec. 2.3; REC 2023). The DB itself was built from `gaia_source_lite`, whose
+  list has no NULLIF, so the build never hit it. Confirmed offline with the ADQL grammar of queryparser (AIP):
+  QuerySyntaxError at NULLIF, line 9 col 38; the archive is not reachable from the dev machine or the PC shell.
+- Fix 1: `g_flux_error_rel = phot_g_mean_flux_error / phot_g_mean_flux` (plain division). Safe: every query with this
+  list filters on `phot_g_mean_mag`, which Gaia defines only for a positive G flux. Guard test: every archive query
+  (top-up, builder full / lite, COUNT) calls only ADQL 2.0 / 2.1 functions; optional parse with queryparser.
+- Fix 2: a job in phase ERROR raises `gaia_tap_job.TapJobRejected` (subclass of TapJobFailed) carrying the archive's
+  reason with the echoed query replaced by '<query>' (before: cut at 300 characters, inside the echoed query, so the
+  reason was never visible). The top-up returns status `query_rejected` and does NOT mark the archive unavailable
+  (before: "offline", and the hold then skipped the second channel's top-up with "unavailable a moment ago").
+- Fix 3 (Milan 2026-11-05: "only what we need there"): the top-up box is the field catalogue cone of the solved
+  frame - the same cone the field catalogue of the run is cut from - without the +-1 deg margin. In the Cygnus field
+  the old box was 2.4 x 3.0 deg (~6 deg2 at G 17.5-20.6, millions of rows); now ~0.95 x 0.95 deg. `TOPUP_MARGIN_DEG`
+  and `field_box(margin_deg=)` removed. Each field fetches its own cone; INSERT OR IGNORE keeps overlaps single.
+- Supersedes the "+-1 degree around the field edges" margin of FRAME-DEPTH-2026-10 (step 2).
+
+## STATUS-BAR-2026-11 - RUN VYVAR status bar: phase k/M, frame i/N, end state (v12 status, 2026-11-05, Milan approved)
+
+- Root cause of the frozen bar: on the RUN click the job monitor runs before the button handler (main draws it
+  first), finds no job and registers no polling fragment; the handler started the job without a rerun, so the bar
+  stayed on "Running..." until an unrelated click. Fix: `_run_vyvar_full_pipeline` reruns after it stores the job
+  (as `ui_session.start_task_job` does). A running job also drew a second bar from the fragment; now one renderer
+  per page: the monitor fragment draws the bar while a job is followed, else the app's placeholder.
+- Structured progress in the shared path (GUI child and CLI): `NightRunParams.progress_cb` receives
+  `night_run.RunProgress` (message, phase, phase_index k, phase_count M, phase_count_final, frame_i, frame_n, file,
+  pct) from `_RunStages` (the per-frame `_make_progress_cb` removed; `_RunStages.frame` is the one copy).
+  `run_job.status_progress_writer` writes them into run_status.json (message kept); the CLI night run uses it too,
+  so a CLI run shows in the GUI.
+- M (Milan: "phase k/M + % within the phase", no phase weights): the run's own stage plan
+  (`night_run_stage_plan`, phase-name constants shared with the stage calls), refined where the run decides:
+  RAM QC after calibration (PERF-10), photometry / ePSF per setup after discovery (setups with every input).
+  Until the last decision the bar shows "M+" (M = phases certain so far). A planned phase that the outcome skips
+  (ePSF of a 0-target setup) drops out of M; a phase missing from the plan is counted with a WARNING (log + infolog).
+- % within the phase = frame i / N of a per-frame phase; phases without a frame count show none.
+  Per-frame status writes are throttled to `FRAME_STATUS_MIN_INTERVAL_S = MONITOR_POLL_S / 2` (1 s for the 2 s
+  monitor poll): a UI refresh rate, not a science constant; phase starts, status lines and the last frame of a
+  phase are always written. A failed status write is a WARNING (was silently ignored).
+- End states stay until the next job: DONE / FAILED: <reason> / STOPPED / LOST (pill + text; was "Idle").
+  Jobs started in another browser session or from the CLI are followed by the same fragment (bar + start buttons
+  free again when they end; before, the buttons stayed off until a click). No output file changes.
+- Supersedes the footer fields running / status_detail / current_file / step (app.py) and the string-only
+  progress_cb of NightRunParams. Test: dev/tests/test_v12_status_2026_11.py.
+
+## RIG-AUTOSELECT-2026-11 - "Auto-detect optics from FITS" really sets the selectors, site included (v12 rig, 2026-11-05, Milan approved)
+
+- Supersedes S6-FIX-SITE-MANUAL-2026-10. Milan: "sometimes we must change something as it matures; VYVAR is special
+  because we test different setups; a normal user has one set."
+- Root cause of the stale selectors: Streamlit 1.66 identifies a keyed selectbox by its key alone, so the old
+  `index=` + pop of the widget key never reached a browser that already showed the widget (no set_value), and the
+  browser sent its old value back. The button now runs as an on_click callback (`app._rig_autodetect_cb`, before the
+  selectors render) and assigns the widget keys themselves (`_rig_select`); the selectboxes have no `index=`;
+  `_rig_widget_prepare` restores a widget key from the `vyvar_rig_*` store after a view switch (G14-06).
+- Bands (`optics_autodetect`): high (>= 0.80) -> selected; medium (0.50..0.80) -> selected and marked "Unconfirmed -
+  verify" under the selector while it stands; low / none -> the current selection is kept. Site: selected when the
+  header site (`param_resolver.header_site_reading`: SITELAT/SITELONG, OBSLAT/OBSLONG, OBSGEO-B/L) lies within the
+  SITE-MATCH-2026-11 tolerance of exactly one active LOCATION row; no site in the header, no row or more than one row
+  within it -> selector kept and the panel says why. Button label "[test] Auto-detect ..." -> "Auto-detect optics
+  from FITS"; the panel text says what RUN really uses (the selected rows; resolver sentence corrected).
+- AMENDED 2026-11-05 16:21 (Milan): the site is mandatory (no run without one; no site-less mode); on opening the GUI
+  the Location selector preselects the DB default site (LOCATION IS_DEFAULT, via `cfg.observer_location_id`); a
+  later user choice survives view switches (verified, test added). Not in the DB but in the header -> added and
+  selected (RIG-ADD-2026-11 amended) instead of "selector kept". A wrong manual choice is the user's problem;
+  RIG-GUARD-2026-11 still blocks only when the header itself contradicts the selection.
+
+## SITE-MATCH-2026-11 - when a header site is a DB site (v12 rig, 2026-11-05, Milan approved)
+
+- Tolerance = `SITE_SAME_RADIUS_M` (1000 m) + the ground length of the header's own rounding (half the last decimal
+  the SITELAT / SITELONG cards state, read from the card text). 1000 m: one LOCATION row is one observing site (domes,
+  a garden pier; capture-program coordinates scatter by tens to hundreds of metres); 1 km moves the barycentric
+  light time by <= 1 km / c = 3.3 us and the zenith distance by 1 km / R_earth = 0.009 deg (airmass <= 1.3e-3 at
+  70 deg, < 0.3 mmag at k = 0.2), far below the timing and extinction budget, while one observer's separate sites
+  (Jirny - Dablice ~ 15 km) stay distinct. Distance: great circle on the IAU nominal Earth radius
+  (astropy `R_earth`). Used by the site auto-select and the RIG-GUARD site check. Lives in `param_resolver`
+  (`SITE_SAME_RADIUS_M`, `site_distance_m`, `site_match_tolerance_m`).
+- Follow-up 2026-11-05 (architect): `resolve_site`'s draft-vs-header cross-check warning uses this rule too
+  (distance > tolerance); its former `abs(dlat) > 0.01 or abs(dlon) > 0.01` deg box is SUPERSEDED by
+  SITE-MATCH-2026-11.
+
+## RIG-GUARD-2026-11 - RUN is blocked when the selection contradicts the light headers (v12 rig, 2026-11-05, Milan approved)
+
+- `night_run.check_run_preconditions` -> `rig_header_problems` (GUI `_run_button_blockers` and the CLI run share it):
+  a sample light header of the source (`optics_autodetect.sample_light_header`, remembered per folder while the file
+  is unchanged) is scored against every camera / telescope row (`score_equipment` / `score_telescope`, the detector
+  scores; the selected row is scored even when hidden). Another row at high confidence while the selected one is
+  not -> a precondition problem naming both rows and the evidence. Site: the header site farther than the
+  SITE-MATCH-2026-11 tolerance from the selected site -> problem. Missing header facts or no light header are no
+  contradiction. Not for a dry run: the selected camera's gain and read noise must resolve for that header through
+  the run's own authority (`rig_photometry.photometric_gain_read_noise`) - an incomplete camera row now stops at the
+  preconditions instead of at MASTERSTAR.
+- No override switch: a frame set with a wrong site in its headers is run by adding / selecting the matching site
+  (or correcting the headers).
+- Follow-up 2026-11-05 (architect): still no override (pending Milan); each blocker message ends with "To resolve:"
+  and the exact steps - select the matching row (Auto-detect / selector / CLI --camera, --telescope, --site id),
+  add the header site to the DB, or correct the DB row / the named FITS keywords.
+
+## RIG-ADD-2026-11 - add a camera / telescope / site found in the header to the DB (v12 rig, 2026-11-05, Milan approved)
+
+- After auto-detect, for a camera / telescope with no match (band none) or a header site with no DB site within the
+  tolerance, an explicit button opens an st.form pre-filled from the header (`optics_autodetect.header_rig_prefill`):
+  camera INSTRUME, sensor NAXIS x binning, native pixel (`header_native_pixel_um_mean`), SENSOR; telescope TELESCOP,
+  FOCALLEN, APTDIA; site OBSERVAT, SITELAT, SITELONG, SITEELEV (name / elevation entered when missing). Confirm ->
+  thin DB wrappers (`add_equipment_from_header`, `add_telescope_from_header`, `add_location_from_header` over
+  insert_*, fail loud on missing name / geometry) and the new row is selected. Never automatic.
+- Gain, read noise, saturation and ADC bits are never taken from the header (a header GAIN is usually the driver's
+  setting index). A camera whose INSTRUME matches the model catalogue (`camera_profile.match_catalog_models`) is
+  added through `add_equipment_from_catalog` (readout mode: the one matching the frame size, else the first);
+  otherwise it is added incomplete and RIG-GUARD-2026-11's gain / read-noise check blocks RUN until Database
+  Explorer > Cameras completes it.
+- AMENDED 2026-11-05 16:21 (Milan: "When I press the button, things are set from the FITS header info, and if needed
+  they are ADDED to the DB (telescope, camera, location)"). SUPERSEDED: the separate "Add ... to the DB" button and
+  its st.form confirmation step (removed: one code path). Now ONE press of "Auto-detect optics from FITS"
+  (`optics_autodetect.add_header_rig_to_db`): a camera / telescope with no DB match (band none, not a tie) and a
+  header site with no DB site within the SITE-MATCH tolerance are added from the header values and selected; names
+  INSTRUME / TELESCOP / OBSERVAT, else generated ("Camera 14208x10656 3.76um", "Telescope f=600 mm",
+  "SITE 49.2000 16.6000"). A row with the same name and geometry is selected instead of added (second press adds
+  nothing). Values the header does not state stay NULL, never invented: pixel size, aperture (scintillation left out
+  with its existing note), elevation (new run precondition: a selected site without elevation blocks RUN with
+  "has no elevation - enter it in Database Explorer > Sites"). A summary "Added to DB (edit in Database Explorer)"
+  under the button lists each added row with its values. Camera: exactly one catalogue model for INSTRUME ->
+  `add_equipment_from_catalog`; otherwise added incomplete, RUN blocked by the RIG-GUARD gain / read-noise check.
+
+## SITE-SEXA-2026-11 - one header site reader, sexagesimal and LAT-OBS / LONG-OBS (v12 rig follow-up, 2026-11-05, architect approved)
+
+- `param_resolver.header_site_reading` is the one reader (resolve_site, auto-detect, run guard). Keyword families:
+  lat SITELAT, OBSLAT, LAT-OBS, OBSGEO-B; lon SITELONG, OBSLONG, LONG-OBS, OBSGEO-L; elev SITEELEV, OBSELEV,
+  ALT-OBS, OBSGEO-H, ALTITUDE. Values: decimal or sexagesimal text (`parse_angle_deg`: "+50 05 30", "50:05:30",
+  "-14 41 53.7", "50d05m30s", trailing N/S/E/W; only the last component may have decimals; contradictory signs
+  are no value). Before, a sexagesimal SITELAT (MaxIm DL style) was read as "no site".
+- The rounding term of SITE-MATCH-2026-11 is half the last stated digit in the unit of the last component (e.g.
+  whole arcseconds: 0.5" = 15 m in latitude), taken from the card text.
+
+
+## SAMPLE-BOUNDED-2026-11 - the sample light header search is bounded (v12 rig follow-up, 2026-11-05, architect approved)
+
+- `optics_autodetect.find_sample_light_header` (auto-detect and the RIG-GUARD run check, which runs on every GUI
+  render) searches breadth-first, folders named like light / object / science first at every level, and stops at
+  the first frame with IMAGETYP LIGHT / OBJECT / SCIENCE. Bounds: `SAMPLE_SCAN_MAX_HEADERS` = 400 headers (the
+  former bound) and `SAMPLE_SCAN_MAX_DIRS` = 400 folders. Before, the whole source tree was listed and sorted
+  first (the default source is the Archive root).
+- No light frame within the bound: the auto-detect panel and the run preconditions say so (folders / headers
+  searched, whether the bound stopped the search); the run is blocked because the frames cannot be checked.
+
+## SKY-ORIENT-2026-11 - every displayed sky image North up, East left (v12 orient, 2026-11-05, Milan approved)
+
+- Standard sky-chart convention (AAVSO VSP charts; SAOImage DS9 "Align to WCS"; CD / PC matrix per Calabretta &
+  Greisen 2002, A&A 395, 1077). One helper, `src_py/sky_display_orient.py`: `display_transform(wcs | header, shape)`
+  picks one of the 8 lossless pixel-grid symmetries (transpose / row / column flips, never a resample) so that
+  North is within 45 deg of up and East is LEFT, from the full WCS at the frame centre; the parity (sign of the
+  pixel -> sky Jacobian) decides whether a flip is needed (mirrored optics). The residual rotation (|r| <= 45 deg)
+  is shown by an N / E compass on every sky image (also at r ~ 0). No celestial WCS -> FITS-natural view (row 0
+  at the bottom) with the visible note "orientation unknown (no WCS)"; never guessed.
+- DISPLAY ONLY: FITS pixels, WCS in files, CSV pixel coordinates and photometry unchanged. Markers, labels, crops
+  (MASTERSTAR QA "Detail", report / GUI aperture cutout, transient boxes) and plotly hover go through the same
+  transform (`apply_xy`, `inverse_xy`; 0-based pixel convention; exact round trip). Field maps keep the RA / Dec
+  grid through an in-memory APE-14 wrapper of the WCS (`mpl_wcs`).
+- Renders converted: MASTERSTAR QA map (Full frame / Detail), field_map.jpg + field_map_<id>.jpg (PDF + GUI +
+  exports), HRD field image (GUI) + HRD annotated field (PDF), frame preview (FITS QA), target cutout (PDF + GUI),
+  variability candidate field (PDF), transient boxes (GUI), TESS pixel map (PDF + GUI; cutout WCS now kept in
+  pixel_map.json as `wcs_header`), measurable-stars field scatter (GUI).
+- Supersedes the per-render orientations: field maps "keep the chip orientation" (FIELD-MAP-2026-10 module text),
+  G10-41 FITS-natural flip of the HRD field PNG (`field_annotation_y` removed), the MASTERSTAR QA map / frame
+  preview with FITS row 0 at the top. Tests: dev/tests/test_v12_orient_2026_11.py.
+
+## MASTERSTAR-TRAIL-2026-11 - the MASTERSTAR source is never a frame with a satellite trail (v12, 2026-11-05, Milan approved)
+
+- Finding (Milan PC, 2026-11-05): the MASTERSTAR of CX CVn (Light_059) and V842 Her (Light_116) had a satellite
+  trail. The source frame is the best of frame QC's ranking T/(FWHM*sigma_pix); a trail barely changes FWHM or the
+  pixel noise and nothing tested for it. The MASTERSTAR feeds detection / catalogue identity, the comparison pool
+  and the ePSF star list (V842 Her: 29 comp candidates, 3 targets, 11 ePSF stars on the trail line).
+- Rule: frame QC walks its ranking of kept frames (stored as `ranked_paths`) and takes the first frame without a
+  trail (`trail_checks`, `best_trail_free` in frame_qc.json; report line). Trail test = new module trail_detect.py:
+  median Radon transform (Stark et al. 2022, ACS ISR 2022-08) on bins of 3.5 FWHM, smooth background and CMOS
+  row / column medians removed, line significance against the sampling noise of a median, minus the significance of
+  the same lines in a reference frame of the group (frame QC's provisional reference, else the next-ranked frame):
+  lines fixed on the sky or the detector cancel, a trail is in one frame only. Null normalised by its own robust
+  spread; trail when Z >= 7.5 (calibration on 1057 frames of both rigs in the module docstring; ~0.5 % of clean
+  frames skipped, every frame with Z >= 13.7 a visible trail). Only the MASTERSTAR choice changes: frames with
+  trails stay in the photometry (per-star artifact flags handle them). When every kept frame has a trail the weakest
+  is used, WARNING + `best_trail_free=false`. The trail test reads the calibrated light (as MASTERSTAR does).
+- Known limit: short partial trails (a corner segment) can stay below the threshold (the median of a full line rises
+  only when the trail covers most of it); trails within ~0.4 deg of a detector axis are removed with the row/column
+  pattern. Cost: ~3-6 s per tested frame (1-2 frames typical).

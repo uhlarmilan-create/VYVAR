@@ -266,10 +266,19 @@ def rig(tmp_path_is_data_root: Path) -> dict:
         "INSERT INTO TELESCOPE (TELESCOPENAME, ALIAS, DIAMETER, FOCAL, ACTIVE) VALUES (?, ?, ?, ?, 'YES');",
         ("RC12", "RC", 300.0, 2400.0)).lastrowid)
     loc = db.insert_location(place_name="Observatory", latitude=50.1, longitude=14.4, altitude=400.0)
+    db.conn.execute("UPDATE EQUIPMENTS SET GAIN_ADU = 1.0, READNOISE_E = 3.0 WHERE ID = ?;", (int(eq),))
     db.conn.commit()
     db.close()
     src = root / "night"
     (src / "lights").mkdir(parents=True)
+    # v12 rig (SAMPLE-BOUNDED / RIG-GUARD-2026-11): the run preconditions read a light header of the source
+    # (no light frame = refused) and the camera's gain / read noise must resolve; this frame fits the rig
+    import numpy as np
+    from astropy.io import fits
+
+    fits.PrimaryHDU(np.zeros((4, 4), dtype=np.uint16), header=fits.Header({
+        "IMAGETYP": "LIGHT", "INSTRUME": "QHY600", "FOCALLEN": 2400.0,
+        "SITELAT": 50.1, "SITELONG": 14.4})).writeto(src / "lights" / "l1.fits")
     return {"root": root, "eq": int(eq), "tel": tel, "loc": int(loc), "src": src, "gaia": gaia}
 
 

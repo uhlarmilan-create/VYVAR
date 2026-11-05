@@ -316,21 +316,35 @@ def phase_figure(t: np.ndarray, m: np.ndarray, period: float, t0: float, *, bins
 
 
 def pixel_figure(pix: dict[str, Any], cid: str) -> go.Figure:
+    """TESS amplitude per pixel, North up / East left from the cutout WCS (SKY-ORIENT-2026-11; a pixel map
+    written before has no WCS and says "orientation unknown (no WCS)"). Hover shows the TESS cutout pixel."""
+    from sky_display_orient import compass_plotly_annotations, display_transform, header_from_string  # noqa: PLC0415
+
     amp = np.asarray(pix["amplitude"], float)
-    fig = go.Figure(go.Heatmap(z=amp, colorscale="Greys", showscale=False, hovertemplate="x %{x} y %{y}<br>amplitude %{z:.4f}<extra></extra>"))
+    orient = display_transform(header_from_string(pix.get("wcs_header")), amp.shape)
+    disp = orient.apply_image(amp)
+    hh, ww = disp.shape
+    rr, cc = np.mgrid[0:hh, 0:ww]
+    px, py = orient.inverse_xy(cc, rr)  # hover: the cutout pixel of each display cell
+    fig = go.Figure(go.Heatmap(z=disp, colorscale="Greys", showscale=False, customdata=np.dstack([px, py]),
+                               hovertemplate="x %{customdata[0]:.0f} y %{customdata[1]:.0f}<br>amplitude %{z:.4f}<extra></extra>"))
     my, mx = np.where(np.asarray(pix["mask"], int) > 0)
-    fig.add_trace(go.Scatter(x=mx, y=my, mode="markers", marker=dict(symbol="square-open", size=18, color=C_VSX, line=dict(width=2)),
+    mc, mr = orient.apply_xy(mx, my)
+    fig.add_trace(go.Scatter(x=mc, y=mr, mode="markers", marker=dict(symbol="square-open", size=18, color=C_VSX, line=dict(width=2)),
                              hovertemplate="aperture pixel<extra></extra>"))
     st_ids = list(pix.get("stars", {}))
     xy = np.array([pix["stars"][k] for k in st_ids]) if st_ids else np.zeros((0, 2))
     if len(xy):
+        xy = orient.apply_xy_array(xy)
         is_t = np.array([k == cid for k in st_ids])
         fig.add_trace(go.Scatter(x=xy[~is_t, 0], y=xy[~is_t, 1], mode="markers", marker=dict(size=6, color=C_FIELD),
                                  text=[k for k, t in zip(st_ids, is_t) if not t], hovertemplate="Gaia DR3 %{text}<extra>neighbour</extra>"))
         fig.add_trace(go.Scatter(x=xy[is_t, 0], y=xy[is_t, 1], mode="markers", marker=dict(size=10, color=C_SEL),
                                  hovertemplate="target<extra></extra>"))
-    fig.update_layout(height=360, margin=dict(l=40, r=10, t=10, b=40), showlegend=False)
-    fig.update_yaxes(scaleanchor="x", scaleratio=1)
+    fig.update_layout(height=360, margin=dict(l=40, r=10, t=10, b=40), showlegend=False,
+                      annotations=compass_plotly_annotations(orient))
+    fig.update_xaxes(showticklabels=False)
+    fig.update_yaxes(scaleanchor="x", scaleratio=1, autorange="reversed", showticklabels=False)
     return fig
 
 
@@ -540,8 +554,13 @@ def _transient_detail(r: pd.Series, phot: Path, ps: Path, frames_dir: Path, og: 
 
 
 def _cutout_figure(r: pd.Series, ps: Path, frames_dir: Path) -> go.Figure:
-    """MASTERSTAR, the first frame with the source and a frame before it (2 x 2 FWHM boxes)."""
+    """MASTERSTAR, the first frame with the source and a frame before it (2 x 2 FWHM boxes).
+
+    SKY-ORIENT-2026-11: every box is shown North up / East left by the MASTERSTAR display transform (the
+    aligned frames share the MASTERSTAR pixel grid: the same box is cut from each) with an N / E compass."""
     from astropy.io import fits  # noqa: PLC0415
+
+    from sky_display_orient import compass_plotly_annotations, display_transform, orient_from_fits  # noqa: PLC0415
 
     # G14-30: without the aligned frames (folder deleted / never written) only the MASTERSTAR panel is shown
     panels = [("MASTERSTAR", ps / "MASTERSTAR.fits")]
@@ -555,6 +574,9 @@ def _cutout_figure(r: pd.Series, ps: Path, frames_dir: Path) -> go.Figure:
             panels += [(f"frame {first + 1}", frames_dir / f"{stems[first]}.fits"),
                        (f"frame {before + 1}", frames_dir / f"{stems[before]}.fits")]
     fig = make_subplots(rows=1, cols=len(panels), subplot_titles=[p[0] for p in panels], horizontal_spacing=0.02)
+    ms = ps / "MASTERSTAR.fits"
+    # no MASTERSTAR: no WCS known, the boxes say "orientation unknown (no WCS)" (shape set per box)
+    orient = orient_from_fits(ms) if ms.is_file() else display_transform(None, (1, 1))
     h = 15
     x, y = int(round(float(r["x"]))), int(round(float(r["y"])))
     for j, (_t, p) in enumerate(panels, start=1):
@@ -562,11 +584,16 @@ def _cutout_figure(r: pd.Series, ps: Path, frames_dir: Path) -> go.Figure:
             # G14-27: cut the box out of the (memory-mapped) frame first, then convert only the box
             d = fits.getdata(p)[max(0, y - h): y + h + 1, max(0, x - h): x + h + 1].astype(float)
             lo, hi = np.nanpercentile(d, [5, 99.5])
-            fig.add_trace(go.Heatmap(z=d, zmin=lo, zmax=hi, colorscale="gray", showscale=False, hoverinfo="skip"), row=1, col=j)
+            o_box = orient.for_shape(d.shape)
+            fig.add_trace(go.Heatmap(z=o_box.apply_image(d), zmin=lo, zmax=hi, colorscale="gray", showscale=False,
+                                     hoverinfo="skip"), row=1, col=j)
         except (OSError, ValueError, IndexError):
             continue
         fig.update_xaxes(visible=False, row=1, col=j)
-        fig.update_yaxes(visible=False, scaleanchor=f"x{j if j > 1 else ''}", row=1, col=j)
+        fig.update_yaxes(visible=False, scaleanchor=f"x{j if j > 1 else ''}", autorange="reversed", row=1, col=j)
+        sfx = str(j) if j > 1 else ""
+        for a in compass_plotly_annotations(o_box, xref=f"x{sfx}", yref=f"y{sfx}"):
+            fig.add_annotation(a)
     fig.update_layout(height=230, margin=dict(l=4, r=4, t=26, b=4))
     return fig
 

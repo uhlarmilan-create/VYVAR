@@ -245,10 +245,14 @@ def render_cutout(
     *,
     neighbours: list[tuple[float, float, float]] | None = None,
     half: int | None = None,
+    orient: Any = None,
 ) -> Path | None:
     """Target cutout with the aperture (blue) and the sky annulus (orange); stars brighter
     than G 17 inside the annulus are labelled (they bias the sky estimate). ``image_fits`` is the
-    MASTERSTAR path or its already loaded data (the report renders every target from one read)."""
+    MASTERSTAR path or its already loaded data (the report renders every target from one read; then
+    ``orient``, the MASTERSTAR's :class:`sky_display_orient.DisplayOrient`, is required).
+    SKY-ORIENT-2026-11: the cutout is shown North up / East left with an N / E compass; ``x``, ``y`` and
+    the neighbours are 0-based MASTERSTAR pixels and go through the same display transform."""
     import matplotlib
 
     matplotlib.use("Agg")
@@ -256,17 +260,31 @@ def render_cutout(
     from astropy.io import fits
     from matplotlib.patches import Circle
 
+    from sky_display_orient import draw_compass_mpl, orient_from_fits  # noqa: PLC0415
+
     if not (math.isfinite(x) and math.isfinite(y) and math.isfinite(r_out)):
         return None
-    data = image_fits if isinstance(image_fits, np.ndarray) else fits.getdata(image_fits)
+    if isinstance(image_fits, np.ndarray):
+        if orient is None:
+            raise ValueError("render_cutout: the display orientation of an in-memory image is required")
+        data = image_fits
+    else:
+        data = fits.getdata(image_fits)
+        if data is not None and orient is None:
+            orient = orient_from_fits(image_fits, np.shape(data))
     if data is None:
         return None
-    data = np.asarray(data, dtype=float)
+    disp = orient.mpl_image(np.asarray(data))  # a view; rows bottom-up for origin="lower"
+    x, y = (float(t) for t in orient.apply_xy_mpl(x, y))
+    nb_disp = []
+    for nx_, ny_, g in neighbours or []:
+        cx_, cy_ = orient.apply_xy_mpl(nx_, ny_)
+        nb_disp.append((float(cx_), float(cy_), g))
     hw = int(half or math.ceil(r_out * 1.6))
     xi, yi = int(round(x)), int(round(y))
-    y0, y1 = max(0, yi - hw), min(data.shape[0], yi + hw + 1)
-    x0, x1 = max(0, xi - hw), min(data.shape[1], xi + hw + 1)
-    cut = data[y0:y1, x0:x1]
+    y0, y1 = max(0, yi - hw), min(disp.shape[0], yi + hw + 1)
+    x0, x1 = max(0, xi - hw), min(disp.shape[1], xi + hw + 1)
+    cut = np.asarray(disp[y0:y1, x0:x1], dtype=float)
     if cut.size == 0:
         return None
     lo, hi = np.nanpercentile(cut, [5, 99.7])
@@ -281,7 +299,7 @@ def render_cutout(
         # BLEND-CUTOUT-2026-10: every Gaia neighbour brighter than G 17 inside the sky annulus's
         # outer radius - in the aperture (blend light, red) or between aperture and annulus / in the
         # annulus (sky, orange) - is marked, also when it is not resolved on the image
-        for nx, ny, g in neighbours or []:
+        for nx, ny, g in nb_disp:
             d = math.hypot(nx - x, ny - y)
             if d < r_out and math.isfinite(g) and g < 17.0:
                 col = "#c62828" if d <= r_ap else "#bc4c00"
@@ -291,6 +309,7 @@ def render_cutout(
         ax.set_ylim(y0 - 0.5, y1 - 0.5)
         ax.set_xticks([])
         ax.set_yticks([])
+        draw_compass_mpl(ax, orient, anchor=(0.86, 0.80), length_pt=14.0, fontsize=8.0)
         out_png.parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(out_png, dpi=150)
     finally:

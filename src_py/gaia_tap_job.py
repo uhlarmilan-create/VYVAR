@@ -36,6 +36,7 @@ every job anyway, so the download deadline is not scaled per job.
 from __future__ import annotations
 
 import logging
+import re
 import time
 import urllib.parse
 import urllib.request
@@ -86,6 +87,17 @@ class TapTimeout(TimeoutError):
 
 class TapJobFailed(RuntimeError):
     """The archive reported the job as failed (ERROR / ABORTED / ARCHIVED) or stopped answering."""
+
+
+class TapJobRejected(TapJobFailed):
+    """The archive answered and put the job in phase ERROR: it rejected the query (ADQL it cannot
+    parse, an unknown column, a limit of the service). The archive is reachable - this is not an
+    outage, and retrying the same query cannot succeed (GAIA-TOPUP-ADQL-2026-11).
+    ``archive_error`` is the archive's own error text (echoed query replaced by ``'<query>'``)."""
+
+    def __init__(self, message: str, *, archive_error: str) -> None:
+        super().__init__(message)
+        self.archive_error = archive_error
 
 
 def fmt_duration(seconds: float) -> str:
@@ -186,6 +198,9 @@ def run_tap_job(
                                        f"({type(exc).__name__}: {exc}); {note}") from exc
             if phase == "COMPLETED":
                 break
+            if phase == "ERROR":
+                err = _job_error(job, _http)
+                raise TapJobRejected(f"{what}: job {jobid} {phase} on the archive: {err}", archive_error=err)
             if phase in _FAILED_PHASES:
                 raise TapJobFailed(f"{what}: job {jobid} {phase} on the archive: {_job_error(job, _http)}")
             el = _elapsed()
@@ -218,9 +233,24 @@ def run_tap_job(
                          jobid=jobid) from exc
 
 
+#: The archive echoes the whole query in its error text ("Cannot parse query 'SELECT ...' ...");
+#: the echo is replaced so that the reason after it is not cut off by the length limit. VYVAR ADQL
+#: has no string literals, so the echo ends at the next single quote.
+_ECHOED_QUERY = re.compile(r"'\s*SELECT\b[^']*'", re.IGNORECASE)
+#: Length of the archive error text kept in messages / run meta (the reason, not the query echo).
+_JOB_ERROR_MAX_CHARS = 600
+
+
+def compact_archive_error(text: str) -> str:
+    """The archive error text with the echoed query replaced by ``'<query>'``, one line, bounded."""
+    t = _ECHOED_QUERY.sub("'<query>'", str(text))
+    t = " ".join(t.split())
+    return t[:_JOB_ERROR_MAX_CHARS]
+
+
 def _job_error(job: Any, http: Callable[[Callable[[], Any], str], Any]) -> str:
     try:
-        return str(http(lambda: job.get_error(), "error"))[:300]
+        return compact_archive_error(str(http(lambda: job.get_error(), "error")))
     except Exception as exc:  # noqa: BLE001 - the phase already says the job failed
         return f"error text unavailable ({type(exc).__name__}: {exc})"
 

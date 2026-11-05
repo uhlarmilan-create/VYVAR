@@ -156,11 +156,18 @@ def render_field(data: np.ndarray, stars: pd.DataFrame, mode: FieldMode, *, fwhm
 
 
 def field_image_jpeg(fits_path: Path, stars: pd.DataFrame, mode: FieldMode, out_jpg: Path, *, fwhm_px: float = 2.2) -> Path:
-    """Render the field of one mode to a JPEG file."""
+    """Render the field of one mode to a JPEG file, North up / East left with an N / E compass
+    (SKY-ORIENT-2026-11; :func:`sky_display_orient.orient_from_fits` maps the markers the same way)."""
     from astropy.io import fits  # noqa: PLC0415
     from PIL import Image  # noqa: PLC0415
 
+    from sky_display_orient import display_transform, draw_compass_pil  # noqa: PLC0415
+
     out_jpg = Path(out_jpg)
-    data = np.asarray(fits.getdata(fits_path), dtype=float)
-    Image.fromarray(render_field(data, stars, mode, fwhm_px=fwhm_px)).save(out_jpg, quality=88)
+    with fits.open(fits_path, memmap=False) as hdul:
+        data = np.asarray(hdul[0].data, dtype=float)
+        orient = display_transform(hdul[0].header, data.shape)
+    im = Image.fromarray(np.ascontiguousarray(orient.apply_image(render_field(data, stars, mode, fwhm_px=fwhm_px))))
+    draw_compass_pil(im, orient)
+    im.save(out_jpg, quality=88)
     return out_jpg

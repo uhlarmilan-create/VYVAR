@@ -29,14 +29,12 @@ from typing import Any, Callable
 
 import pandas as pd
 
-from gaia_tap_job import TapTimeout, tap_dataframe
+from gaia_tap_job import TapJobRejected, TapTimeout, tap_dataframe
 from net_call import mark_unavailable, unavailable_reason
 from catalog_db import add_catalog_meta_rows, connect_ro, connect_rw, ra_intervals_deg, resolve_catalog_path
 
 LOGGER = logging.getLogger(__name__)
 
-#: Agreed margin around the field edges for a top-up (Milan 2026-10-14: "+- 1 degree around the field edges").
-TOPUP_MARGIN_DEG = 1.0
 _INSERT_BATCH = 8000
 _EPS_DEG = 1e-6
 
@@ -61,6 +59,9 @@ GAIA_ROW_COLUMNS: tuple[str, ...] = (
 )
 
 #: SELECT list of ``gaiadr3.gaia_source`` mapped to the ``gaia_dr3`` columns (builder and top-up).
+#: Plain ADQL 2.0 only (GAIA-TOPUP-ADQL-2026-11): ``NULLIF`` is not ADQL and the archive answered
+#: "Cannot parse query", so no top-up ever succeeded. The plain division is safe: every query with
+#: this list filters on ``phot_g_mean_mag``, which Gaia defines only for ``phot_g_mean_flux > 0``.
 GAIA_SOURCE_SELECT = """
             source_id,
             ra,
@@ -69,7 +70,7 @@ GAIA_SOURCE_SELECT = """
             phot_bp_mean_mag AS bp_mag,
             phot_rp_mean_mag AS rp_mag,
             bp_rp,
-            (phot_g_mean_flux_error / NULLIF(phot_g_mean_flux, 0.0)) AS g_flux_error_rel,
+            (phot_g_mean_flux_error / phot_g_mean_flux) AS g_flux_error_rel,
             parallax,
             parallax_error,
             parallax_over_error,
@@ -392,11 +393,11 @@ def insert_gaia_rows(conn: sqlite3.Connection, df: pd.DataFrame) -> int:
 
 
 # ------------------------------------------------------------------ boxes
-def field_box(center: Any, radius_deg: float, *, margin_deg: float = 0.0) -> tuple[float, float, float, float]:
-    """Sky box (ra_min, ra_max, dec_min, dec_max) of the field cone grown by ``margin_deg``."""
+def field_box(center: Any, radius_deg: float) -> tuple[float, float, float, float]:
+    """Sky box (ra_min, ra_max, dec_min, dec_max) of the field cone."""
     from catalog_db import cone_sky_box  # noqa: PLC0415
 
-    return cone_sky_box(center, float(radius_deg) + max(0.0, float(margin_deg)))
+    return cone_sky_box(center, float(radius_deg))
 
 
 def _box_inside(
@@ -625,6 +626,12 @@ def top_up_field(
                               on_rows=parts.append)
     except IncompleteDownload as exc:
         complete_error = str(exc)
+    except TapJobRejected as exc:
+        # GAIA-TOPUP-ADQL-2026-11: the archive answered and rejected the query - not an outage, so
+        # the service is not marked unavailable (that silently skipped every later top-up of the run).
+        out.update({"status": "query_rejected", "error": f"{type(exc).__name__}: {exc.archive_error}"})
+        LOGGER.warning("Gaia top-up query rejected by the archive: %s", exc.archive_error)
+        return out
     except Exception as exc:  # noqa: BLE001 - offline / archive down / timeout: continue with the local DB
         if fetch is None:
             mark_unavailable("gaia_tap_topup", exc)
@@ -692,12 +699,17 @@ def ensure_field_depth(
     g_needed: float,
     fetch: Callable[[str], pd.DataFrame] | None = None,
 ) -> dict[str, Any]:
-    """Make the main DB complete to ``g_needed`` over the field (+ TOPUP_MARGIN_DEG) if possible.
+    """Make the main DB complete to ``g_needed`` over the field if possible.
+
+    The field is the catalogue cone of the solved frame (``center``, ``radius_deg``) - the same cone
+    the field catalogue of the run is cut from, so the top-up fetches exactly the stars the run can
+    use (GAIA-TOPUP-ADQL-2026-11, Milan 2026-11-05: "only what we need there"; supersedes the
+    +-1 deg margin of FRAME-DEPTH-2026-10, a ~6 deg2 query at G 17.5-20.6 in the Cygnus field).
 
     Returns ``{"status": "covered"|"ok"|"offline"|"no_coverage"|..., "depth_before", "depth_after", ...}``.
     """
     field = field_box(center, radius_deg)
-    _warn_unverified_strips(db_path, field_box(center, radius_deg, margin_deg=TOPUP_MARGIN_DEG))
+    _warn_unverified_strips(db_path, field)
     before = covered_depth_g(db_path, field)
     res: dict[str, Any] = {"depth_before": before, "g_needed": round(float(g_needed), 3)}
     if before is None:
@@ -707,12 +719,8 @@ def ensure_field_depth(
     if float(g_needed) <= float(before) + 1e-3:
         res.update({"status": "covered", "depth_after": before})
         return res
-    box = field_box(center, radius_deg, margin_deg=TOPUP_MARGIN_DEG)
-    box_depth = covered_depth_g(db_path, box)
-    g_from = float(box_depth) if box_depth is not None else float(before)
-    if box_depth is None:
-        # The grown box leaves the DB Dec range: fetch from the bottom so the box is complete.
-        g_from = -10.0
+    box = field
+    g_from = float(before)
     top = top_up_field(db_path, box=box, g_from=g_from, g_to=float(g_needed), fetch=fetch)
     res.update(top)
     res["depth_after"] = covered_depth_g(db_path, field)

@@ -2,8 +2,10 @@
 
 FIELD-MAP-2026-10 (Milan 2026-10-21): JPEG (quality 90; -70 % against PNG, no visible difference),
 a fine RA / Dec grid, a scale bar and the N / E orientation, all from the MASTERSTAR WCS. Grid step
-and scale bar follow the field size, so every telescope / camera gets a readable map. The image keeps
-the chip orientation (the arrows show where north and east are).
+and scale bar follow the field size, so every telescope / camera gets a readable map.
+SKY-ORIENT-2026-11: the map is shown North up, East left through the lossless display transform of
+:mod:`sky_display_orient` (markers through the same transform); the compass shows the residual rotation.
+Without a WCS the map says "orientation unknown (no WCS)".
 
 The background (stretch, image, grid, scale, compass) is drawn once; each map adds its markers and
 title, is saved and the markers are removed again (OUTPUT-REVIEW-2026-10 step 7).
@@ -107,36 +109,49 @@ class FieldMapCanvas:
             raise ValueError("MASTERSTAR has no finite pixels")
         vmin = float(np.percentile(finite, percentile_lo))
         vmax = float(np.percentile(finite, percentile_hi))
+        from sky_display_orient import display_transform, draw_compass_mpl  # noqa: PLC0415
+
         self._plt = plt
         self.wcs = _celestial_wcs(header)
+        self.orient = display_transform(self.wcs, data.shape)
         self.fig = plt.figure(figsize=(18, 12))
-        if self.wcs is not None:
-            self.ax = self.fig.add_subplot(projection=self.wcs)
+        if self.wcs is not None and self.orient.has_wcs:
+            self.ax = self.fig.add_subplot(projection=self.orient.mpl_wcs(self.wcs))
         else:
             self.ax = self.fig.add_subplot()
-        self.ax.imshow(data, origin="lower", cmap="gray_r", vmin=vmin, vmax=vmax, aspect="equal")
+        self.ax.imshow(self.orient.mpl_image(data), origin="lower", cmap="gray_r", vmin=vmin, vmax=vmax,
+                       aspect="equal")
         # the view is the image: markers never widen it
-        self.ax.set_xlim(-0.5, data.shape[1] - 0.5)
-        self.ax.set_ylim(-0.5, data.shape[0] - 0.5)
+        h, w = self.orient.out_shape
+        self.ax.set_xlim(-0.5, w - 0.5)
+        self.ax.set_ylim(-0.5, h - 0.5)
         self.ax.set_autoscale_on(False)
         self.subtitle = ""
-        if self.wcs is not None:
+        if self.orient.has_wcs:
             try:
-                self._decorate(data.shape)
+                self._decorate()
             except Exception as exc:  # noqa: BLE001
                 LOGGER.warning("[FIELD MAP] grid / scale / orientation not drawn: %s", exc)
         else:
             self.ax.axis("off")
+            draw_compass_mpl(self.ax, self.orient)  # the no-WCS note
 
-    def _decorate(self, shape: tuple[int, ...]) -> None:
+    def xy(self, x: Any, y: Any) -> tuple[float, float]:
+        """Map coordinates of a 0-based MASTERSTAR pixel (the display transform of the image)."""
+        c, yu = self.orient.apply_xy_mpl(x, y)
+        return float(c), float(yu)
+
+    def _decorate(self) -> None:
         import astropy.units as u  # noqa: PLC0415
         from astropy.wcs.utils import proj_plane_pixel_scales  # noqa: PLC0415
 
+        from sky_display_orient import draw_compass_mpl  # noqa: PLC0415
+
         ax, w = self.ax, self.wcs
-        ny, nx = int(shape[0]), int(shape[1])
+        ny, nx = self.orient.out_shape  # displayed rows / columns
         scale = float(np.mean(proj_plane_pixel_scales(w))) * 3600.0  # arcsec / px
         w_am, h_am = nx * scale / 60.0, ny * scale / 60.0
-        center = w.pixel_to_world((nx - 1) / 2.0, (ny - 1) / 2.0)
+        center = w.pixel_to_world((self.orient.nx - 1) / 2.0, (self.orient.ny - 1) / 2.0)
         dec_step, ra_step = grid_steps(max(w_am, h_am), float(center.dec.deg))
         ra, de = ax.coords[0], ax.coords[1]
         ra.set_ticks(spacing=(ra_step * 15.0 / 3600.0) * u.deg)
@@ -157,32 +172,22 @@ class FieldMapCanvas:
         ax.text(x0 + bar_px / 2.0, y0 + 0.015 * ny, _bar_label(bar_am), ha="center", va="bottom", fontsize=10,
                 fontweight="bold", bbox=dict(fc="white", ec="none", alpha=0.7, pad=1))
 
-        # N / E arrows from the WCS, in a small panel right of the image (never over a marker)
-        cx, cy = (nx - 1) / 2.0, (ny - 1) / 2.0
-        c0 = w.pixel_to_world(cx, cy)
+        # N / E compass (sky_display_orient), in a small panel right of the image (never over a marker)
         self.ax.apply_aspect()
         pos = self.ax.get_position()
         inset = self.fig.add_axes([pos.x1 + 0.008, pos.y1 - 0.09, 0.07, 0.09])
-        inset.set_xlim(-1.7, 1.7)
-        inset.set_ylim(-1.7, 1.7)
-        inset.set_aspect("equal")
         inset.axis("off")
-        for lab, pa in (("N", 0.0), ("E", 90.0)):
-            px, py = w.world_to_pixel(c0.directional_offset_by(pa * u.deg, 60.0 * scale * u.arcsec))
-            dx, dy = float(px) - cx, float(py) - cy
-            n = math.hypot(dx, dy) or 1.0
-            dx, dy = dx / n, dy / n
-            inset.annotate("", xy=(dx, dy), xytext=(0.0, 0.0),
-                           arrowprops=dict(arrowstyle="-|>", color="#c2410c", lw=2))
-            inset.text(1.4 * dx, 1.4 * dy, lab, color="#c2410c", fontsize=12, fontweight="bold",
-                       ha="center", va="center")
-        self.subtitle = f'scale {scale:.2f}"/px, field {w_am / 60.0:.2f} x {h_am / 60.0:.2f} deg'
+        draw_compass_mpl(inset, self.orient, anchor=(0.5, 0.5), length_pt=22.0, fontsize=12.0)
+        self.subtitle = (f'scale {scale:.2f}"/px, field {w_am / 60.0:.2f} x {h_am / 60.0:.2f} deg, '
+                         f"{self.orient.note}")
 
-    def save(self, output_path: Path, title: str, draw: Callable[[Any], list[Any]]) -> Path:
-        """Draw the markers (``draw(ax)`` returns the artists it added), save as JPEG, remove them."""
+    def save(self, output_path: Path, title: str, draw: Callable[[Any, Callable[[Any, Any], tuple[float, float]]],
+                                                                 list[Any]]) -> Path:
+        """Draw the markers (``draw(ax, xy)`` returns the artists it added; ``xy`` maps a 0-based MASTERSTAR
+        pixel to the map), save as JPEG, remove them."""
         added: list[Any] = []
         try:
-            added = list(draw(self.ax) or [])
+            added = list(draw(self.ax, self.xy) or [])
             self.ax.set_title(title + (f"\n{self.subtitle}" if self.subtitle else ""), fontsize=10)
             output_path = Path(output_path)
             output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -204,13 +209,13 @@ def _inside(ax: Any, x: float, y: float) -> bool:
     return min(x0, x1) <= x <= max(x0, x1) and min(y0, y1) <= y <= max(y0, y1)
 
 
-def _target_markers(target_row: pd.Series, comp_rows: pd.DataFrame) -> Callable[[Any], list[Any]]:
-    def draw(ax: Any) -> list[Any]:
+def _target_markers(target_row: pd.Series, comp_rows: pd.DataFrame) -> Callable[..., list[Any]]:
+    def draw(ax: Any, xy: Callable[[Any, Any], tuple[float, float]]) -> list[Any]:
         import matplotlib.patches as mpatches  # noqa: PLC0415
 
         out: list[Any] = []
         try:
-            tx, ty = float(target_row["x"]), float(target_row["y"])
+            tx, ty = xy(float(target_row["x"]), float(target_row["y"]))
             if not _inside(ax, tx, ty):
                 raise ValueError("target outside the image")
             out.append(ax.add_patch(mpatches.Rectangle(
@@ -224,7 +229,7 @@ def _target_markers(target_row: pd.Series, comp_rows: pd.DataFrame) -> Callable[
             pass
         for i, (_, crow) in enumerate(comp_rows.iterrows(), 1):
             try:
-                cx, cy = float(crow["x"]), float(crow["y"])
+                cx, cy = xy(float(crow["x"]), float(crow["y"]))
             except (KeyError, TypeError, ValueError):
                 continue
             if not _inside(ax, cx, cy):
@@ -332,7 +337,7 @@ def save_field_map(
         return None
     target_ids = {t for t in (_normalize_gaia_id(r.get("catalog_id", "")) for _, r in active_targets.iterrows()) if t}
 
-    def draw(ax: Any) -> list[Any]:
+    def draw(ax: Any, xy: Callable[[Any, Any], tuple[float, float]]) -> list[Any]:
         import matplotlib.patches as mpatches  # noqa: PLC0415
 
         out: list[Any] = []
@@ -347,7 +352,7 @@ def save_field_map(
                 continue
             seen.add(cid)
             try:
-                xc, yc = float(row["x"]), float(row["y"])
+                xc, yc = xy(float(row["x"]), float(row["y"]))
             except (KeyError, TypeError, ValueError):
                 continue
             if not _inside(ax, xc, yc):
@@ -358,7 +363,7 @@ def save_field_map(
             logging.info("[FIELD MAP] Skipped %d comp markers - star is a known target", skipped)
         for _, row in active_targets.iterrows():
             try:
-                xc, yc = float(row["x"]), float(row["y"])
+                xc, yc = xy(float(row["x"]), float(row["y"]))
             except (KeyError, TypeError, ValueError):
                 continue
             if not _inside(ax, xc, yc):

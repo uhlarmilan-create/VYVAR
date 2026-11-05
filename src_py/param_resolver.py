@@ -24,7 +24,9 @@ from __future__ import annotations
 
 import logging
 import math
+import re
 from dataclasses import dataclass, field
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -59,9 +61,9 @@ HEADER_KEYS: dict[str, tuple[str, ...]] = {
     "gain": ("VY_EGAIN", "EGAIN", "GAIN"),
     "read_noise": ("VYRDNOIS", "RDNOISE", "READNOISE", "RDNOISEE", "RN"),
     "binning": ("XBINNING", "BINNING"),
-    "lat": ("SITELAT", "OBSLAT", "OBSGEO-B"),
-    "lon": ("SITELONG", "OBSLONG", "OBSGEO-L"),
-    "elev": ("SITEELEV", "OBSELEV", "OBSGEO-H", "ALTITUDE"),
+    "lat": ("SITELAT", "OBSLAT", "LAT-OBS", "OBSGEO-B"),
+    "lon": ("SITELONG", "OBSLONG", "LONG-OBS", "OBSGEO-L"),
+    "elev": ("SITEELEV", "OBSELEV", "ALT-OBS", "OBSGEO-H", "ALTITUDE"),
 }
 
 # Relative tolerance for header<->DB cross-check warnings (equipment-intrinsic).
@@ -540,13 +542,139 @@ class DraftSiteFacts:
         return dict(self.centre_row) if self.centre_row is not None else None
 
 
-def _header_site(header: Any) -> tuple[float, float, float] | None:
-    lat, _ = _header_value(header, "lat")
-    lon, _ = _header_value(header, "lon")
-    if lat is None or lon is None:
+@dataclass(frozen=True)
+class HeaderSite:
+    """The observing site a FITS header states (``HEADER_KEYS`` lat / lon / elev families), the keywords that
+    carried it and half the last stated digit of each coordinate (its rounding, deg; SITE-MATCH-2026-11)."""
+
+    lat: float
+    lon: float
+    elev: float | None
+    lat_key: str
+    lon_key: str
+    lat_half_quantum_deg: float = 0.0
+    lon_half_quantum_deg: float = 0.0
+
+
+# SITE-SEXA-2026-11: "+50 05 30", "50:05:30", "-14 41 53.7", "50d05m30s", "50 05 30 N", decimal "50.112"
+_ANGLE_RE = re.compile(
+    r"^\s*([+-]?)\s*(\d+(?:\.\d*)?)"
+    r"(?:\s*[\s:dD]\s*(\d+(?:\.\d*)?))?"
+    r"(?:\s*[\s:mM']\s*(\d+(?:\.\d*)?))?"
+    r"\s*[sS\"]?\s*([NSEWnsew]?)\s*$"
+)
+
+
+def _half_quantum(text: str) -> float:
+    exp = Decimal(text).as_tuple().exponent
+    return 0.5 * 10.0 ** exp if isinstance(exp, int) else 0.0
+
+
+def parse_angle_deg(text: Any) -> tuple[float, float] | None:
+    """(degrees, half the last stated digit in degrees) of a decimal or sexagesimal angle text; None when it is
+    not one. The rounding of the last component is scaled by its unit (1, 1/60, 1/3600 deg); a trailing S or W
+    makes the angle negative."""
+    t = str(text if text is not None else "").strip()
+    if not t:
+        return None
+    m = _ANGLE_RE.match(t)
+    if m is None:
+        try:  # exponent notation of a float card ("5.0112E+01")
+            v = float(Decimal(t))
+            return (v, _half_quantum(t)) if math.isfinite(v) else None
+        except (InvalidOperation, ValueError):
+            return None
+    sign, d, mi, se, hemi = m.groups()
+    parts = [p for p in (d, mi, se) if p is not None]
+    if len(parts) > 1 and any("." in p for p in parts[:-1]):
+        return None  # only the last component may carry decimals
+    val = sum(float(p) / 60.0 ** i for i, p in enumerate(parts))
+    neg = sign == "-" or hemi.upper() in ("S", "W")
+    if sign == "-" and hemi.upper() in ("S", "W"):
+        return None  # contradictory signs
+    return (-val if neg else val), _half_quantum(parts[-1]) / 60.0 ** (len(parts) - 1)
+
+
+def _card_text(header: Any, key: str) -> str:
+    """The value as written in the card (astropy ``Card.image``), else ``str`` of the value."""
+    try:
+        image = str(header.cards[key].image)
+        if image[8:10] == "= ":
+            txt = image[10:]
+            if txt.lstrip().startswith("'"):
+                return txt.lstrip()[1:].split("'", 1)[0].strip()
+            return txt.split("/", 1)[0].strip()
+    except (AttributeError, KeyError, IndexError, TypeError, ValueError):
+        pass
+    v = header[key]
+    return repr(float(v)) if isinstance(v, float) else str(v)
+
+
+def _header_angle(header: Any, param: str) -> tuple[float, str, float] | None:
+    """First valid lat / lon of the header family: (deg, keyword, half quantum deg); decimal or sexagesimal."""
+    if header is None:
+        return None
+    for key in HEADER_KEYS.get(param, ()):
+        try:
+            if key not in header:
+                continue
+            got = parse_angle_deg(_card_text(header, key))
+        except (TypeError, ValueError):
+            continue
+        if got is not None and _is_valid(param, got[0]):
+            return got[0], key, got[1]
+    return None
+
+
+def header_site_reading(header: Any) -> HeaderSite | None:
+    """THE header site reader (resolve_site, auto-detect, run guard): decimal degrees from the first valid
+    keyword of each family (decimal or sexagesimal text, SITE-SEXA-2026-11), None without lat and lon."""
+    la = _header_angle(header, "lat")
+    lo = _header_angle(header, "lon")
+    if la is None or lo is None:
         return None
     elev, _ = _header_value(header, "elev")
-    return float(lat), float(lon), float(elev if elev is not None else 0.0)
+    return HeaderSite(la[0], lo[0], None if elev is None else float(elev), la[1], lo[1], la[2], lo[2])
+
+
+#: SITE-MATCH-2026-11: radius within which two coordinates are the same observing site. One LOCATION row
+#: stands for one site (an observatory's domes, a garden pier); its coordinates as written by a capture
+#: program (GPS fix, typed-in profile) scatter by tens to hundreds of metres. Moving the observer by 1 km
+#: changes the barycentric light time by <= 1 km / c = 3.3 us and the zenith distance by
+#: 1 km / R_earth = 0.009 deg (airmass change <= 1.3e-3 at 70 deg zenith distance, < 0.3 mmag at
+#: k = 0.2 mag/airmass), far below VYVAR's timing and extinction error budget, while separate sites of
+#: one observer (Jirny - Dablice ~ 15 km) stay distinct. The header's own rounding is added on top
+#: (:func:`site_match_tolerance_m`).
+SITE_SAME_RADIUS_M = 1000.0
+
+
+def _earth_radius_m() -> float:
+    from astropy.constants import R_earth  # noqa: PLC0415
+
+    return float(R_earth.to_value("m"))
+
+
+def site_distance_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Great-circle distance of two sites on a sphere of the IAU nominal Earth radius [m]."""
+    from sky_separation import angular_distance_deg  # noqa: PLC0415
+
+    return math.radians(angular_distance_deg(float(lon1), float(lat1), float(lon2), float(lat2))) * _earth_radius_m()
+
+
+def site_match_tolerance_m(hs: HeaderSite) -> float:
+    """SITE-MATCH-2026-11 (the one same-site rule): ``SITE_SAME_RADIUS_M`` plus the ground length of the header's
+    rounding (half the last stated digit of latitude and longitude, decimal or sexagesimal)."""
+    m_per_deg = math.radians(1.0) * _earth_radius_m()
+    q_lat = hs.lat_half_quantum_deg * m_per_deg
+    q_lon = hs.lon_half_quantum_deg * m_per_deg * math.cos(math.radians(hs.lat))
+    return SITE_SAME_RADIUS_M + math.hypot(q_lat, q_lon)
+
+
+def _header_site(header: Any) -> tuple[float, float, float] | None:
+    hs = header_site_reading(header)
+    if hs is None:
+        return None
+    return hs.lat, hs.lon, float(hs.elev if hs.elev is not None else 0.0)
 
 
 def is_null_island_coords(
@@ -620,14 +748,14 @@ def resolve_site(
         la, lo, el = drv
         res.lat, res.lon, res.elev = _clamp_param_sanity("lat", la), _clamp_param_sanity("lon", lo), _clamp_param_sanity("elev", el)
         res.source, res.ok = "draft", True
-        # Cross-check header site if present.
-        hsv = _header_site(header)
-        if hsv is not None and (
-            abs(hsv[0] - res.lat) > 0.01 or abs(hsv[1] - res.lon) > 0.01
-        ):
+        # Cross-check the header site (SITE-MATCH-2026-11: the same-site rule of auto-detect and the run guard).
+        hs = header_site_reading(header)
+        if hs is not None and site_distance_m(hs.lat, hs.lon, res.lat, res.lon) > site_match_tolerance_m(hs):
             msg = (
                 f"[RESOLVE site] draft ID_LOCATION ({res.lat:.4f},{res.lon:.4f}) disagrees with "
-                f"header SITELAT/LONG ({hsv[0]:.4f},{hsv[1]:.4f}); using draft location"
+                f"header {hs.lat_key}/{hs.lon_key} ({hs.lat:.4f},{hs.lon:.4f}): "
+                f"{site_distance_m(hs.lat, hs.lon, res.lat, res.lon):.0f} m > same-site tolerance "
+                f"{site_match_tolerance_m(hs):.0f} m; using draft location"
             )
             res.warnings.append(msg)
             _warn_once_logger("xcheck_site", msg)
