@@ -132,6 +132,7 @@ def test_topup_box_is_the_field_cone_without_a_degree_margin(monkeypatch) -> Non
         return {"status": "ok", "n_fetched": 0, "n_new": 0, "error": None}
 
     monkeypatch.setattr(gc, "top_up_field", _top_up)
+    monkeypatch.setattr(gc, "coverage_cells", lambda _db, box: [(box, 17.5)])
     monkeypatch.setattr(gc, "covered_depth_g", lambda _db, _box: 17.5)
     monkeypatch.setattr(gc, "_warn_unverified_strips", lambda _db, _box: None)
     center = SkyCoord(320.36 * u.deg, 51.82 * u.deg)  # 4h Cyg, cone r 0.476 deg

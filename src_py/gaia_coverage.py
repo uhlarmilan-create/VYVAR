@@ -532,28 +532,78 @@ def record_coverage(
         conn.close()
 
 
-def covered_depth_g(db_path: str | Path, box: tuple[float, float, float, float]) -> float | None:
-    """Faintest G to which the DB is complete over the whole ``box``; None when no record covers it
-    (a field outside the Dec range of the DB: TODO-GAIA-COVERAGE-DEC).
+def _breaks(lo: float, hi: float, edges: list[float]) -> list[float]:
+    """Sorted cell edges of [lo, hi]: the interval ends plus every edge strictly inside (merged within _EPS_DEG)."""
+    out = [lo]
+    for e in sorted(e for e in edges if lo + _EPS_DEG < e < hi - _EPS_DEG):
+        if e - out[-1] > _EPS_DEG:
+            out.append(e)
+    if hi - out[-1] > _EPS_DEG:
+        out.append(hi)
+    else:
+        out[-1] = hi
+    return out
 
-    G05-03: a box touching a strip the COUNT check found truncated (strip_progress verified 0) is
-    not covered by the whole-DB records (build / registration); only a top-up record (complete by
-    its own COUNT check) can cover it."""
+
+def coverage_cells(
+    db_path: str | Path, box: tuple[float, float, float, float]
+) -> list[tuple[tuple[float, float, float, float], float | None]]:
+    """The ``box`` cut along every coverage-record edge inside it: ``[(cell_box, depth_g | None), ...]``.
+
+    TOPUP-UNION-2026-11 (Milan's Brno 4h Cyg N1, 2026-11-05): the depth of a field is the union of all
+    coverage records, not the best single record containing the whole field - the r field, 4" off the
+    g field just topped up, had to fetch the whole field again (20 935 rows, 8 new). Each cell lies
+    wholly inside or outside every record, so its depth is the deepest record containing its centre.
+    G05-03: in a cell touching a strip known truncated only top-up records (COUNT-checked) count."""
     conn = connect_ro(_db_path(db_path))
     try:
-        holes = [h for h in _truncated_strip_boxes(conn) if _boxes_overlap(box, h)]
+        holes = _truncated_strip_boxes(conn)
     finally:
         conn.close()
-    best: float | None = None
+    recs: list[tuple[float, float, float, float, float, bool]] = []
     for rec in load_coverage(db_path):
-        if holes and rec["source"] != "gaia_tap_topup":
-            continue
-        outer = (rec["ra_min"], rec["ra_max"], rec["dec_min"], rec["dec_max"])
-        if _box_inside(box, outer):
-            g = float(rec["g_max"])
-            if best is None or g > best:
-                best = g
-    return best
+        for c, d in ra_intervals_deg(rec["ra_min"], rec["ra_max"]):
+            recs.append((c, d, float(rec["dec_min"]), float(rec["dec_max"]), float(rec["g_max"]),
+                         rec["source"] == "gaia_tap_topup"))
+    cells: list[tuple[tuple[float, float, float, float], float | None]] = []
+    for a, b in ra_intervals_deg(box[0], box[1]):
+        near = [r for r in recs if r[0] < b and r[1] > a and r[2] < box[3] and r[3] > box[2]]
+        ra_e = _breaks(a, b, [v for r in near for v in (r[0], r[1])])
+        de_e = _breaks(float(box[2]), float(box[3]), [v for r in near for v in (r[2], r[3])])
+        for d0, d1 in zip(de_e[:-1], de_e[1:]):
+            for r0, r1 in zip(ra_e[:-1], ra_e[1:]):
+                cell = (r0, r1, d0, d1)
+                rm, dm = 0.5 * (r0 + r1), 0.5 * (d0 + d1)
+                in_hole = any(_boxes_overlap(cell, h) for h in holes)
+                depth: float | None = None
+                for c, d, e0, e1, g, topup in near:
+                    if c <= rm <= d and e0 <= dm <= e1 and (topup or not in_hole):
+                        depth = g if depth is None else max(depth, g)
+                cells.append((cell, depth))
+    return cells
+
+
+def covered_depth_g(db_path: str | Path, box: tuple[float, float, float, float]) -> float | None:
+    """Faintest G to which the DB is complete over the whole ``box`` (the union of the coverage
+    records, TOPUP-UNION-2026-11); None when a part of the box has no record (a field outside the Dec
+    range of the DB: TODO-GAIA-COVERAGE-DEC)."""
+    depths = [d for _c, d in coverage_cells(db_path, box)]
+    if not depths or any(d is None for d in depths):
+        return None
+    return float(min(depths))
+
+
+def _merge_row_cells(cells: list[tuple[float, float, float, float]]) -> list[tuple[float, float, float, float]]:
+    """Join cells of one Dec row that touch in RA (fewer boxes in the ADQL and the coverage table)."""
+    out: list[list[float]] = []
+    for c in sorted(cells, key=lambda c: (c[2], c[3], c[0])):
+        last = out[-1] if out else None
+        if (last is not None and abs(last[2] - c[2]) <= _EPS_DEG and abs(last[3] - c[3]) <= _EPS_DEG
+                and abs(last[1] - c[0]) <= _EPS_DEG):
+            last[1] = c[1]
+        else:
+            out.append(list(c))
+    return [tuple(b) for b in out]  # type: ignore[misc]
 
 
 def coverage_summary(db_path: str | Path) -> list[dict[str, Any]]:
@@ -588,12 +638,14 @@ def _fetch_tap(adql: str) -> pd.DataFrame:
 def top_up_field(
     db_path: str | Path,
     *,
-    box: tuple[float, float, float, float],
+    box: tuple[float, float, float, float] | None = None,
     g_from: float,
     g_to: float,
     fetch: Callable[[str], pd.DataFrame] | None = None,
+    boxes: list[tuple[float, float, float, float]] | None = None,
 ) -> dict[str, Any]:
-    """Fetch the field box from the Gaia archive for g_from < G <= g_to into the main DB.
+    """Fetch ``box`` (or the union of ``boxes``, one query) from the Gaia archive for g_from < G <= g_to
+    into the main DB; one coverage record per box.
 
     Fail-open: without the archive the result says why (``status='offline'``) and nothing changes.
     Coverage is recorded only after every row is stored, so a broken download never claims depth.
@@ -601,10 +653,16 @@ def top_up_field(
     (split in four and retried otherwise, as the builder does); when it cannot be made complete the
     verified rows are kept but no coverage is recorded (``status='incomplete'``, WARNING).
     """
+    if (box is None) == (boxes is None) or (boxes is not None and not boxes):
+        raise ValueError("top_up_field: give exactly one of box / boxes (non-empty)")
+    all_boxes = [tuple(box)] if box is not None else [tuple(b) for b in boxes]  # type: ignore[union-attr]
     out: dict[str, Any] = {
         "status": "skipped", "g_from": round(float(g_from), 3), "g_to": round(float(g_to), 3),
-        "box": [round(float(v), 5) for v in box], "n_fetched": 0, "n_new": 0, "error": None,
+        "box": [round(float(v), 5) for v in all_boxes[0]], "n_fetched": 0, "n_new": 0, "error": None,
     }
+    if len(all_boxes) > 1:
+        out["boxes"] = [[round(float(v), 5) for v in b] for b in all_boxes]
+    region = [sb for b in all_boxes for sb in _topup_region(b)]
     if not (math.isfinite(float(g_from)) and math.isfinite(float(g_to))) or float(g_to) <= float(g_from):
         out["error"] = "nothing to fetch"
         return out
@@ -621,7 +679,7 @@ def top_up_field(
     parts: list[pd.DataFrame] = []
     complete_error: str | None = None
     try:
-        fetch_region_complete(fetch or _fetch_tap, _topup_region(box), select=GAIA_SOURCE_SELECT,
+        fetch_region_complete(fetch or _fetch_tap, region, select=GAIA_SOURCE_SELECT,
                               table="gaiadr3.gaia_source", mag_where=_topup_mag_where(g_from, g_to),
                               on_rows=parts.append)
     except IncompleteDownload as exc:
@@ -650,7 +708,9 @@ def top_up_field(
         finally:
             conn.close()
         if complete_error is None:
-            record_coverage(db_path, box=box, g_max=float(g_to), source="gaia_tap_topup", n_stars=int(len(df)))
+            for b in all_boxes:
+                record_coverage(db_path, box=b, g_max=float(g_to), source="gaia_tap_topup",
+                                n_stars=int(len(df)) if len(all_boxes) == 1 else None)
     except sqlite3.Error as exc:  # read-only / locked main DB: the run continues with what it has
         out.update({"status": "db_not_writable", "n_fetched": int(len(df)),
                     "error": f"{type(exc).__name__}: {str(exc)[:200]}"})
@@ -710,12 +770,56 @@ def ensure_field_depth(
     """
     field = field_box(center, radius_deg)
     _warn_unverified_strips(db_path, field)
-    before = covered_depth_g(db_path, field)
+    cells = coverage_cells(db_path, field)
+    depths = [d for _c, d in cells]
+    before = None if (not depths or any(d is None for d in depths)) else float(min(depths))
     res: dict[str, Any] = {"depth_before": before, "g_needed": round(float(g_needed), 3)}
     if before is None:
         # Field outside the Dec range of the DB (TODO-GAIA-COVERAGE-DEC): no base to extend.
         res.update({"status": "no_coverage", "depth_after": None})
         return res
+    if float(g_needed) <= float(before) + 1e-3:
+        res.update({"status": "covered", "depth_after": before})
+        return res
+    # TOPUP-UNION-2026-11: fetch only the cells short of g_needed, each from its own depth - one
+    # query per starting depth (usually one: the slivers of a field shifted against an earlier one).
+    by_from: dict[float, list[tuple[float, float, float, float]]] = {}
+    for c, d in cells:
+        if float(g_needed) > float(d) + 1e-3:  # type: ignore[arg-type]
+            by_from.setdefault(round(float(d), 4), []).append(c)  # type: ignore[arg-type]
+    parts: list[dict[str, Any]] = []
+    for g_from, cell_boxes in sorted(by_from.items()):
+        merged = _merge_row_cells(cell_boxes)
+        kw: dict[str, Any] = {"box": merged[0]} if len(merged) == 1 else {"boxes": merged}
+        top = top_up_field(db_path, g_from=g_from, g_to=float(g_needed), fetch=fetch, **kw)
+        area = sum((b[1] - b[0]) * math.cos(math.radians(0.5 * (b[2] + b[3]))) * (b[3] - b[2]) for b in merged)
+        if top["status"] == "ok":
+            _log(
+                f"GAIA TOP-UP: {len(merged)} box(es) {area:.3f} deg2 of field RA {field[0]:.3f}..{field[1]:.3f} "
+                f"Dec {field[2]:.3f}..{field[3]:.3f}, G {g_from:.2f}..{float(g_needed):.2f}: {top['n_fetched']} "
+                f"stars fetched, {top['n_new']} new"
+            )
+        parts.append(top | {"area_deg2": round(area, 4)})
+        if top["status"] != "ok":
+            break
+    bad = [t for t in parts if t["status"] != "ok"]
+    res.update(bad[0] if bad else parts[0])
+    res.update({
+        "status": bad[0]["status"] if bad else "ok",
+        "n_fetched": sum(int(t.get("n_fetched") or 0) for t in parts),
+        "n_new": sum(int(t.get("n_new") or 0) for t in parts),
+        "field_box": [round(float(v), 5) for v in field],
+        "parts": parts,
+    })
+    res["depth_after"] = covered_depth_g(db_path, field)
+    if bad:
+        _log(
+            f"WARNING: GAIA TOP-UP not possible ({bad[0].get('status')}: {bad[0].get('error')}); continuing with the "
+            f"local DB complete to G {before:.2f} (frame reaches G {float(g_needed):.2f})"
+        )
+    else:
+        _log(f"GAIA TOP-UP: field depth G {res['depth_after']}")
+    return res
     if float(g_needed) <= float(before) + 1e-3:
         res.update({"status": "covered", "depth_after": before})
         return res

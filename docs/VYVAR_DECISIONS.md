@@ -8379,3 +8379,28 @@ literature (cited bands with known colours only) / off).
 - Known limit: short partial trails (a corner segment) can stay below the threshold (the median of a full line rises
   only when the trail covers most of it); trails within ~0.4 deg of a detector axis are removed with the row/column
   pattern. Cost: ~3-6 s per tested frame (1-2 frames typical).
+
+## TOPUP-UNION-2026-11 - the Gaia field depth is the union of all coverage records; a top-up fetches only what is missing (v12b, 2026-11-05, Milan approved)
+
+- Finding (Milan PC, Brno 4h Cyg N1 2026-10-02, draft 546): the g channel topped the field up to G 19.5 (22 761
+  stars); the r channel, its field ~4" off, then fetched the whole field again from G 17.5 (20 935 stars, 8 new).
+  `covered_depth_g` took the deepest single coverage record containing the whole field; a field shifted by
+  0.001 deg was in none, so it fell back to the whole-DB depth. Every later night of the same field would repeat it.
+- Rule: the field box is cut along every coverage-record edge inside it (`coverage_cells`); each cell has the
+  depth of the deepest record containing it (G05-03 kept per cell: a cell touching a strip known truncated counts
+  top-up records only). Field depth = minimum over the cells; None when a cell has no record (no_coverage, as
+  before). The top-up fetches only the cells short of g_needed, each from its own depth, one query per starting
+  depth (cells of one Dec row joined in RA); one coverage record per fetched box. The COUNT check of the download
+  (NEW-2) is unchanged. pipeline_meta `gaia_topup` keeps its keys and adds `parts` (box, G range, area, status per
+  query) and `field_box`. Tests: dev/tests/test_v12b_2026_11.py (Brno g/r geometry: slivers < 0.01 deg2 fetched,
+  DB then holds exactly the r field stars).
+
+## TRAIL-PATH-2026-11 - the frame-QC trail test reads the calibrated light of every setup, never a stand-in (v12b, 2026-11-05, Milan approved)
+
+- Finding (same run): "MASTERSTAR: could not map RAW/non_calibrated path to processed" for the r frames, and their
+  trail test read the RAW frame. The MASTERSTAR mapper without a setup name searches only the first setup folder
+  (calibrated/lights/g_120_4); frame_qc then fell back to the manifest path (RAW).
+- Rule: the trail test maps Raw/lights/<setup>/<name> -> calibrated/lights/<setup>/<name> structurally
+  (`night_run.frame_qc_image_path`, the preprocess mapping `_archive_raw_to_calibrated_light`; a pre-calibrated
+  draft tests its import frame). An unmapped frame is not trail-tested: WARNING in the run log and
+  `tested=false` in frame_qc.json - never another image in its place. MASTERSTAR-TRAIL-2026-11 otherwise unchanged.

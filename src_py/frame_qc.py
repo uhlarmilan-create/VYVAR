@@ -29,6 +29,7 @@ Results: manifest (``inspection.is_rejected`` + ``qc_reason``) and ``frame_qc.js
 from __future__ import annotations
 
 import json
+import logging
 import math
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -39,6 +40,8 @@ import numpy as np
 from fits_meta import normalize_filter_name
 from infolog import log_event
 from stats_core import MAD_TO_SIGMA, median_mad
+LOGGER = logging.getLogger(__name__)
+
 FRAME_QC_JSON = "frame_qc.json"
 QC_STARS_JSON = Path("qc") / "qc_stars.json"
 SPEC = "QC-PER-GROUP-2026-10 / QC-METRICS-2026-10 / MASTERSTAR-TRAIL-2026-11"
@@ -524,7 +527,12 @@ def fits_trail_check(
     planes: dict[tuple[str, int], Any] = {}
 
     def _read(path: str) -> np.ndarray | None:
-        target = (image_path_for(path) if image_path_for is not None else path) or path
+        target = image_path_for(path) if image_path_for is not None else path
+        if not target:
+            # TRAIL-PATH-2026-11: never test another image (e.g. the RAW frame) in its place
+            LOGGER.warning("[FRAME-QC] trail test: no calibrated image for %s - frame not trail-tested", Path(path).name)
+            log_event(f"[FRAME-QC] trail test: no calibrated image for {Path(path).name} - frame not trail-tested")
+            return None
         try:
             data = fits.getdata(str(target))
         except (OSError, ValueError, TypeError) as exc:

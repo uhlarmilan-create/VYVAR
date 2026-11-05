@@ -556,6 +556,40 @@ def _write_failure_log(cfg: Any | None, *, step: str, exc: BaseException, db: An
         return None
 
 
+def frame_qc_image_path(
+    archive: Path | None,
+    path_any: str,
+    *,
+    draft_id: int | None = None,
+    db: Any = None,
+) -> str:
+    """The calibrated light of a manifest FILE_PATH for the frame-QC trail test; "" when it does not exist.
+
+    TRAIL-PATH-2026-11 (Milan's Brno 4h Cyg N1, 2026-11-05): the MASTERSTAR mapper without a setup
+    searches only the first setup folder (g_120_4), so every r frame fell back to the RAW frame.
+    The mapping here is structural - Raw/lights/<setup>/<name> -> calibrated/lights/<setup>/<name>
+    (``_archive_raw_to_calibrated_light``, the preprocess mapping); a pre-calibrated draft tests its
+    import frame. No basename search, no RAW fallback: an unmapped frame is reported untested."""
+    from draft_provenance import is_pre_calibrated_draft  # noqa: PLC0415
+    from pipeline_preprocess import _archive_raw_to_calibrated_light  # noqa: PLC0415
+
+    p = (path_any or "").strip()
+    if not p or archive is None:
+        return ""
+    hit = _archive_raw_to_calibrated_light(Path(archive), p)
+    if hit is not None:
+        return str(hit[0])
+    try:
+        pre_cal = is_pre_calibrated_draft(Path(archive), draft_id=draft_id, db=db)
+    except Exception:  # noqa: BLE001
+        pre_cal = False
+    if pre_cal:
+        q = Path(p) if Path(p).is_absolute() else Path(archive) / p
+        if q.is_file():
+            return str(q)
+    return ""
+
+
 def _masterstar_candidate_path_for_job(
     archive: Path | None,
     path_any: str,
@@ -1645,7 +1679,7 @@ def _nr_frame_qc(
         k=float(cfg.auto_fwhm_k_factor),
         reject=bool(cfg.auto_fwhm_enabled),
         # MASTERSTAR-TRAIL-2026-11: the trail test reads the calibrated light (as MASTERSTAR does)
-        image_path_for=lambda p: _masterstar_candidate_path_for_job(ap_root, p, draft_id=draft_id, db=pipeline.db),
+        image_path_for=lambda p: frame_qc_image_path(ap_root, p, draft_id=draft_id, db=pipeline.db),
     )
     _t("frame_qc", t0)
     # Rejections are in IS_REJECTED; preprocess applies no extra pooled FWHM cap.
