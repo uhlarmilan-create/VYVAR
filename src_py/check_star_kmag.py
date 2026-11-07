@@ -16,6 +16,11 @@ from config import AppConfig
 from gaia_catalog_id import normalize_gaia_source_id
 from photometry_lightcurve import ensemble_normalize
 
+#: CHECK-ONE-2026-10 (G08-41): AAVSO Guide to Photometric Uncertainty, Technique 2 - a check star "within 2
+#: magnitudes" of the variable; beyond it a WARNING (not a gate). CHECK-KMAG-PREF-2026-11: inside a colour step
+#: the selection prefers candidates within this window.
+CHECK_TARGET_DMAG_WARN = 2.0
+
 
 
 def normalize_comp_df_export_columns(
@@ -256,10 +261,14 @@ def select_check_star(
             w["_dm"] = (pd.to_numeric(w[_mc], errors="coerce") - _tm).abs()
         else:
             w["_dm"] = 0.0
+        # CHECK-KMAG-PREF-2026-11 (Milan's Brno runs 2026-11-06: checks 2.5-5 mag brighter than faint targets):
+        # inside a colour step a candidate within the AAVSO window (CHECK_TARGET_DMAG_WARN of the target) comes
+        # first, then the lowest LOO rms; a star outside the window is taken only when none is inside.
+        w["_out"] = (w["_dm"] > CHECK_TARGET_DMAG_WARN).astype(int) if math.isfinite(_tm) and _mc else 0
         for _lim in _bprp_tier_ladder_for_selection(_cfg, float(getattr(_cfg, "comp_max_delta_bprp", 0.79))):
             cand = w[w["_dc"].le(float(_lim)) & w["_rms"].notna()]
             if not cand.empty:
-                cand = cand.sort_values(["_rms", "_dm"], ascending=[True, True], kind="mergesort")
+                cand = cand.sort_values(["_out", "_rms", "_dm"], ascending=[True, True, True], kind="mergesort")
                 return df.loc[cand.index[0]]
 
     tier_col = "tier" if "tier" in df.columns else ("comp_tier" if "comp_tier" in df.columns else None)

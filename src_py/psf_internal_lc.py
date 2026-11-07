@@ -368,7 +368,9 @@ def write_one_internal_psf_lc(
     target_mag = np.full(n, np.nan, dtype=np.float64)
     target_mag[usable] = flux_to_mag(psf_flux)[usable]
 
-    if len(comp_ids) < 3:
+    from photometry_lightcurve import ENSEMBLE_ERR_MIN_COMPS  # noqa: PLC0415
+
+    if len(comp_ids) < ENSEMBLE_ERR_MIN_COMPS:
         # ENSEMBLE-ERR-CC06-2026-10 (G08-08): the ensemble error needs >= 3 comps
         LOGGER.warning("[PSF-LC] %s: only %d ensemble member(s) with a PSF measurement - no PSF light curve "
                        "(the ensemble error needs >= 3 comps)", tid, len(comp_ids))

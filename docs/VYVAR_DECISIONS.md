@@ -8404,3 +8404,43 @@ literature (cited bands with known colours only) / off).
   (`night_run.frame_qc_image_path`, the preprocess mapping `_archive_raw_to_calibrated_light`; a pre-calibrated
   draft tests its import frame). An unmapped frame is not trail-tested: WARNING in the run log and
   `tested=false` in frame_qc.json - never another image in its place. MASTERSTAR-TRAIL-2026-11 otherwise unchanged.
+
+## XMATCH-HOLD-2026-11 - an online catalogue that did not answer is not asked again for every candidate (v12c, 2026-11-06, Milan approved)
+
+- Finding (Milan PC, Brno 4h Cyg N2 2026-10-03, 2026-11-06): SIMBAD did not answer from the PC; each of the 32
+  variability candidates of g waited the full 30 s bound of the online catalogue check (~16 min).
+- Rule: a catalogue of `check_candidate_in_catalogs` that timed out or raised a connection error (OSError) is held
+  unavailable (net_call, service `xmatch:<catalogue>`, UNAVAILABLE_HOLD_S as for Gaia, G10-36); the next candidates
+  record "not reachable a moment ago (...)" for it without a query. Other query errors (bad table, parse) do not hold.
+
+## STATUS-REPLACE-2026-11 - the run status write survives a Windows sharing violation (v12c, 2026-11-06, Milan approved)
+
+- Finding: "run_job: status update ... failed: [WinError 5] Access is denied" (N1, MN Boo): Windows refuses
+  os.replace while the GUI monitor has run_status.json open for reading. The update was lost (the next one 1 s later
+  succeeded); a lost final update would leave the GUI on RUNNING.
+- Rule: `_write_json_atomic` retries os.replace on PermissionError with a linear back-off (10 tries, <= 2.75 s
+  total), then raises as before.
+
+## CHECK-KMAG-PREF-2026-11 - the check star within 2 mag of the target is preferred (v12c, 2026-11-06, Milan approved)
+
+- Finding: Brno runs, faint targets (G 17-19): [CHECK-KMAG] warnings with check stars 2.5-5 mag brighter; the
+  selection took the lowest LOO rms (the brightest star) and used |dmag| only as a tie-break.
+- Rule: inside a colour step of `select_check_star` a candidate within CHECK_TARGET_DMAG_WARN (2 mag, AAVSO
+  uncertainty guide Technique 2) comes first, then the lowest rms; outside the window only when none is inside
+  (WARNING as before). The constant has one definition (check_star_kmag).
+
+## Note (2026-11-06): N1 g variability noise scale a = 3.10
+
+- 4h Cyg N1 g: the field noise model scale is 3.1 (r 1.05, other nights 0.9-1.0). The g run chose aperture k_ref 1.25
+  (r 0.75): r_ap 9.6 px in a crowded field; the field FWHM response is -0.026 mag/px (r +0.003): neighbour light
+  entering the larger aperture with the seeing. A property of the aperture choice in a crowded field, not a code
+  fault; revisited with the blend / neighbour-light work (COMP_BLEND_NEIGHBOUR_LIGHT, 2026-11).
+
+## COMP-FEW-2026-11 - a target with fewer than 3 comparison stars is skipped, not the whole run (v12c, 2026-11-06)
+
+- Finding (injection run on FI Boo, 2026-11-06): COMP-SMART left NSVS J1516424+501551 with 2 comparison stars; the
+  aperture path called the ensemble error (G08-08, singular for N = 2), which raised, and the photometry of the
+  whole setup stopped (0 light curves). The ePSF path already skipped such a target with a WARNING.
+- Rule: the aperture path checks the comparison set before the ensemble: fewer than ENSEMBLE_ERR_MIN_COMPS (3, one
+  definition in photometry_lightcurve, also used by psf_internal_lc) -> WARNING, summary row with
+  skip_reason `too_few_comps`, the other targets go on.

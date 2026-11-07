@@ -105,12 +105,27 @@ def job_to_params(job: dict[str, Any], **extra: Any) -> Any:
     return NightRunParams(**kw)
 
 
+#: STATUS-REPLACE-2026-11: os.replace attempts on a Windows sharing violation, linear back-off (total <= 2.75 s;
+#: a reader holds the file for one json.load).
+_REPLACE_TRIES = 10
+_REPLACE_WAIT_S = 0.05
+
+
 def _write_json_atomic(path: Path, data: dict[str, Any]) -> None:
     """G12-39: temp name per process and thread (parent and child never share a temp file)."""
     tmp = path.with_name(f"{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
     try:
         tmp.write_text(json.dumps(data, indent=2, default=str), encoding="utf-8")
-        os.replace(tmp, path)
+        # STATUS-REPLACE-2026-11 (Milan PC 2026-11-06, WinError 5): Windows refuses to replace a file another
+        # process (the GUI monitor) has open for reading; the reader closes it within milliseconds - retry briefly.
+        for attempt in range(_REPLACE_TRIES):
+            try:
+                os.replace(tmp, path)
+                break
+            except PermissionError:
+                if attempt == _REPLACE_TRIES - 1:
+                    raise
+                time.sleep(_REPLACE_WAIT_S * (attempt + 1))
     finally:
         tmp.unlink(missing_ok=True)
 

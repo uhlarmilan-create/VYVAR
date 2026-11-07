@@ -26,6 +26,8 @@ from photometry_lightcurve import (
     _exclude_err_scatter_unmatched_epochs,
     _get_comp_bjd_series,
     _get_lc,
+    ENSEMBLE_ERR_MIN_COMPS,
+    _aperture_empty_comp_summary_row,
     _aperture_skip_empty_comps_target,
     _recompute_bjd_hjd_with_status,
     check_comparison_stability,
@@ -40,11 +42,7 @@ from photometry_lightcurve import (
 from mag_constants import MAG_ERR_SCALE
 from photometry_defs import LOGGER
 
-
-
-#: CHECK-ONE-2026-10 (G08-41): AAVSO Guide to Photometric Uncertainty, Technique 2 - a check star "within 2
-#: magnitudes" of the variable; beyond it a WARNING (not a gate).
-CHECK_TARGET_DMAG_WARN = 2.0
+from check_star_kmag import CHECK_TARGET_DMAG_WARN  # noqa: F401 - CHECK-KMAG-PREF-2026-11: one definition
 
 
 def _vsx_name_of(target_row: Any) -> str:
@@ -1630,6 +1628,17 @@ def _aperture_process_one_target(
         target_cid=target_cid,
         target_comps=target_comps,
     )
+    if len(comp_ids) < ENSEMBLE_ERR_MIN_COMPS:
+        # COMP-FEW-2026-11 (injection run on FI Boo, 2026-11-06: one target with 2 comps stopped the photometry of
+        # the whole group): the ensemble error is not defined - this target is skipped, as on the ePSF path
+        _why = (f"only {len(comp_ids)} comparison star(s); the ensemble error needs >= {ENSEMBLE_ERR_MIN_COMPS} "
+                "(G08-08)")
+        logging.warning("[APERTURE] Target %s (%s): %s - skipped", target_name, target_cid, _why)
+        log_event(f"[APERTURE] Target {target_name} ({target_cid}): {_why} - skipped")
+        summary_rows.append(_aperture_empty_comp_summary_row(
+            target_cid=target_cid, target_name=target_name, zone_flag=_zf_row, vsx_type=target_vsx_type,
+            skip_reason="too_few_comps"))
+        return summary_rows, n_lc
 
 
     _chk_cid_pref, _chk_dmag = _tgt_choose_check_star(

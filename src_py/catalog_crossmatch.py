@@ -14,6 +14,8 @@ from typing import Any, Callable
 
 import numpy as np
 import pandas as pd
+
+import net_call
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.utils.exceptions import AstropyWarning
@@ -565,6 +567,11 @@ _CATALOG_WORKERS: list[tuple[str, Callable[[SkyCoord, float], list[CatalogMatch]
 ]
 
 
+def _xmatch_service(label: str) -> str:
+    """net_call service name of an online catalogue of the candidate check (XMATCH-HOLD-2026-11)."""
+    return f"xmatch:{label}"
+
+
 def check_candidate_in_catalogs(
     ra: float,
     dec: float,
@@ -586,9 +593,19 @@ def check_candidate_in_catalogs(
         except Exception as exc:  # noqa: BLE001
             errors["VSX (local)"] = str(exc)
 
-    workers: list[tuple[str, Callable[[SkyCoord, float], list[CatalogMatch]]]] = [
-        (lab, fn) for lab, fn in _CATALOG_WORKERS if not (lab == "VSX" and matches.get("VSX"))
-    ]
+    workers: list[tuple[str, Callable[[SkyCoord, float], list[CatalogMatch]]]] = []
+    for lab, fn in _CATALOG_WORKERS:
+        if lab == "VSX" and matches.get("VSX"):
+            continue
+        # XMATCH-HOLD-2026-11 (Milan's Brno N2, 2026-11-06: SIMBAD did not answer, 32 candidates waited 30 s
+        # each): a catalogue that timed out or could not be reached is not asked again for the hold period
+        down = net_call.unavailable_reason(_xmatch_service(lab))
+        if down is not None:
+            errors[lab] = f"not reachable a moment ago ({down})"
+            continue
+        workers.append((lab, fn))
+
+    exc_unreachable: dict[str, bool] = {}
 
     def _job(label: str, fn: Callable[[SkyCoord, float], list[CatalogMatch]]) -> tuple[str, list[CatalogMatch] | None, str | None]:
         # a failed web query is recorded per catalogue (``errors``), the candidate keeps the others; library
@@ -599,6 +616,8 @@ def check_candidate_in_catalogs(
                 warnings.simplefilter("ignore", UserWarning)
                 return label, fn(coord, float(radius_arcsec)), None
         except Exception as exc:  # noqa: BLE001
+            # OSError covers socket / requests connection errors and timeouts: the service is not reachable
+            exc_unreachable[label] = isinstance(exc, OSError)
             return label, None, str(exc)
 
     # G10-09: the 30 s bound must hold - a hung query is abandoned (shutdown without waiting), not joined
@@ -615,6 +634,8 @@ def check_candidate_in_catalogs(
                     continue
                 if err:
                     errors[label] = err
+                    if exc_unreachable.get(label):
+                        net_call.mark_unavailable(_xmatch_service(label), RuntimeError(err))
                 elif lst is not None:
                     matches[label] = lst
         except concurrent.futures.TimeoutError:
@@ -631,6 +652,7 @@ def check_candidate_in_catalogs(
                 else:
                     fut.cancel()
                     errors[lab] = "timeout (30s)"
+                    net_call.mark_unavailable(_xmatch_service(lab), TimeoutError("timeout (30s)"))
     finally:
         ex.shutdown(wait=False, cancel_futures=True)
 

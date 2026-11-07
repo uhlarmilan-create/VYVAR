@@ -155,6 +155,16 @@ def _isolated(ms: pd.DataFrame, field_xy: np.ndarray, field_mag: np.ndarray, rad
 # --------------------------------------------------------------------------- plan
 
 
+def _gaia_variable(ms: pd.DataFrame) -> pd.Series:
+    """Gaia DR3 variability flag of MASTERSTAR rows (column renamed over the versions of masterstars_full_match)."""
+    for col in ("phot_variable_flag", "var_flag"):
+        if col in ms.columns:
+            return ms[col].astype(str).str.upper().eq("VARIABLE")
+    if "gaia_dr3_variable_catalog" in ms.columns:
+        return ms["gaia_dr3_variable_catalog"].astype(str).str.strip().str.lower().isin({"true", "1", "yes"})
+    raise SystemExit("masterstars_full_match.csv has no Gaia variability column")
+
+
 def cmd_plan(a: argparse.Namespace) -> None:
     from astropy.wcs import WCS
 
@@ -175,7 +185,7 @@ def cmd_plan(a: argparse.Namespace) -> None:
         & ms["x"].between(a.edge_px, w - a.edge_px)
         & ms["y"].between(a.edge_px, h - a.edge_px)
         & ms["cid"].str.fullmatch(r"\d{6,}")
-        & ~ms["phot_variable_flag"].astype(str).str.upper().eq("VARIABLE")
+        & ~_gaia_variable(ms)
         & ~ms["non_single_star"].fillna(0).astype(float).astype(bool)
     )
     vt = pd.read_csv(ps / "variable_targets.csv", low_memory=False, dtype={"catalog_id": str})
@@ -496,7 +506,7 @@ def _select_isolated(draft: Path, *, snr_min: float, peak_frac: float, edge_px: 
         & (pd.to_numeric(ms["peak_max_adu"], errors="coerce") < peak_frac * pd.to_numeric(ms["saturate_limit_adu"], errors="coerce"))
         & ms["x"].between(edge_px, w - edge_px) & ms["y"].between(edge_px, h - edge_px)
         & ms["cid"].str.fullmatch(r"\d{6,}")
-        & ~ms["phot_variable_flag"].astype(str).str.upper().eq("VARIABLE")
+        & ~_gaia_variable(ms)
         & ~ms["non_single_star"].fillna(0).astype(float).astype(bool)
     )
     vt = pd.read_csv(ps / "variable_targets.csv", low_memory=False, dtype={"catalog_id": str})
@@ -554,21 +564,36 @@ def cmd_plan_new(a: argparse.Namespace) -> None:
     def _far_from_placed(x: float, y: float) -> bool:
         return all(math.hypot(x - px, y - py) > 2.5 * r_st for px, py in placed)
 
+    # BLEND-INJECT-2026-11 (one neighbour per host): every (separation, dmag) combination on its own host, the
+    # neighbour carrying a sine of --neighbour-amp - a variable target blended with a constant star (dilution and
+    # ePSF separation); hosts constant. Without --one-per-host the step-B layout (all separations on every host).
+    combos = [(s_, d_) for d_ in a.dmag for s_ in a.sep_fwhm] if a.one_per_host else None
+    if combos is not None and len(hosts_pool) < len(combos):
+        hosts_pool = cand.loc[~cand["cid"].isin(tmpl_ids) & cand["mag"].between(a.host_mag_min, a.host_mag_max)]
+        hosts_pool = hosts_pool.sample(frac=1.0, random_state=a.seed).head(len(combos))
+        if len(hosts_pool) < len(combos):
+            raise SystemExit(f"only {len(hosts_pool)} isolated hosts for {len(combos)} combinations")
     for i, (_, hr) in enumerate(hosts_pool.iterrows()):
-        hsig = Signal("sine", a.host_amp, period_d=0.6 * span, t0=t_lo + rng.uniform(0, 0.6 * span)) if i % 2 == 0 \
-            else Signal("null")
+        if combos is not None and i >= len(combos):
+            break
+        hsig = Signal("null") if combos is not None else (
+            Signal("sine", a.host_amp, period_d=0.6 * span, t0=t_lo + rng.uniform(0, 0.6 * span)) if i % 2 == 0
+            else Signal("null"))
         hosts.append({"catalog_id": str(hr["cid"]), "ra_deg": float(hr["ra_deg"]), "dec_deg": float(hr["dec_deg"]),
                       "x_ref": float(hr["x"]), "y_ref": float(hr["y"]), "mag": float(hr["mag"]),
                       "bp_rp": float(pd.to_numeric(hr.get("bp_rp"), errors="coerce")), "mag_bin": 0,
                       "signal": asdict(hsig)})
         placed.append((float(hr["x"]), float(hr["y"])))
         ang0 = rng.uniform(0, 2 * np.pi)
-        for j, sep in enumerate(a.sep_fwhm):
-            ang = ang0 + 2 * np.pi * j / len(a.sep_fwhm)
+        layout = [combos[i]] if combos is not None else [(sep, a.dmag[0]) for sep in a.sep_fwhm]
+        for j, (sep, dmag) in enumerate(layout):
+            ang = ang0 + 2 * np.pi * j / len(layout)
             x = float(hr["x"]) + sep * fwhm * math.cos(ang)
             y = float(hr["y"]) + sep * fwhm * math.sin(ang)
-            _add("neighbour", x, y, float(hr["mag"]) + a.dmag, Signal("null"),
-                 {"host_id": str(hr["cid"]), "sep_fwhm": float(sep), "dmag": float(a.dmag),
+            nsig = Signal("sine", a.neighbour_amp, period_d=0.6 * span, t0=t_lo + rng.uniform(0, 0.6 * span)) \
+                if a.neighbour_amp > 0 else Signal("null")
+            _add("neighbour", x, y, float(hr["mag"]) + dmag, nsig,
+                 {"host_id": str(hr["cid"]), "sep_fwhm": float(sep), "dmag": float(dmag),
                   "host_signal": asdict(hsig)})
     # empty-sky stars on a magnitude grid
     n_try = 0
@@ -963,7 +988,11 @@ def main(argv: list[str] | None = None) -> int:
     pn.add_argument("--host-mag-max", type=float, default=11.0)
     pn.add_argument("--host-amp", type=float, default=0.2, help="sine on every other host (leakage source)")
     pn.add_argument("--sep-fwhm", type=float, nargs="+", default=[1.5, 2.5, 4.0])
-    pn.add_argument("--dmag", type=float, default=3.0, help="neighbour stars this much fainter than the host")
+    pn.add_argument("--dmag", type=float, nargs="+", default=[3.0],
+                    help="neighbour stars this much fainter than the host (several with --one-per-host)")
+    pn.add_argument("--one-per-host", action="store_true",
+                    help="one neighbour per host, every (sep, dmag) combination on its own host (BLEND-INJECT-2026-11)")
+    pn.add_argument("--neighbour-amp", type=float, default=0.0, help="sine amplitude of the neighbour stars (0: constant)")
     pn.add_argument("--empty-mags", type=float, nargs="+", default=[10, 11, 12, 13, 13.5, 14, 14.5, 15])
     pn.add_argument("--per-mag", type=int, default=3)
     pn.add_argument("--empty-amp", type=float, default=0.05)

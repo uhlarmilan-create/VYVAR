@@ -23,14 +23,20 @@ from ensemble_weights import BROEG_MAX_ITER, BROEG_TOL, _loo_sigma, broeg_weight
 from photometry_defs import LOGGER, TIME_BASE_BJD_TDB, TIME_BASE_COL, TIME_BASE_JD_FALLBACK
 
 
+#: ENSEMBLE-ERR-CC06-2026-10 (G08-08): the leave-one-out system of the ensemble error is singular for N = 2.
+#: COMP-FEW-2026-11: a target whose comparison set is smaller is skipped (both photometries), not the whole run.
+ENSEMBLE_ERR_MIN_COMPS = 3
+
+
 def _aperture_empty_comp_summary_row(
     *,
     target_cid: str,
     target_name: str,
     zone_flag: str,
     vsx_type: str = "",
+    skip_reason: str = "no_comps",
 ) -> dict[str, Any]:
-    """Summary stub when an active target has no per-target comparison stars."""
+    """Summary stub when an active target has no (or too few) per-target comparison stars."""
     return {
         "catalog_id": target_cid,
         "vsx_name": target_name,
@@ -44,7 +50,7 @@ def _aperture_empty_comp_summary_row(
         "aperture_px": float("nan"),
         "lc_csv": "",
         "lc_png": "",
-        "skip_reason": "no_comps",
+        "skip_reason": skip_reason,
     }
 
 def _aperture_skip_empty_comps_target(
@@ -416,9 +422,9 @@ def ensemble_error_per_frame(
     """
     ids = [str(c) for c in weights]
     n = len(ids)
-    if n <= 2:
-        raise ValueError(f"ensemble error needs >= 3 comparison stars, got {n} (G08-08: the comps' own noise "
-                         "is not identifiable from 2 stars)")
+    if n < ENSEMBLE_ERR_MIN_COMPS:
+        raise ValueError(f"ensemble error needs >= {ENSEMBLE_ERR_MIN_COMPS} comparison stars, got {n} (G08-08: the "
+                         "comps' own noise is not identifiable from 2 stars)")
     n_frames = max(int(np.asarray(v).size) for v in comp_noise_mag.values()) if comp_noise_mag else 0
     y = np.full((n, n_frames), np.nan)
     p2 = np.full((n, n_frames), np.nan)
